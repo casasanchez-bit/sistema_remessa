@@ -431,12 +431,12 @@
       </div>
       <a href="/remessas" class="{{ 'active' if request.path == '/remessas' }}">Remessas</a>
       <a href="/retornos" class="{{ 'active' if request.path == '/retornos' }}">Retornos</a>
-      <a href="/fechamento" class="{{ 'active' if request.path == '/fechamento' }}">Fechamento Mensal</a>
+      {% if tem_permissao('ver_fechamento') %}<a href="/fechamento" class="{{ 'active' if request.path == '/fechamento' }}">Fechamento Mensal</a>{% endif %}
       <a href="/backups" class="{{ 'active' if request.path == '/backups' }}">Backups</a>
-      <a href="/importar-cadastros" class="{{ 'active' if request.path == '/importar-cadastros' }}">Exportar/Importar em Massa</a>
-      <a href="/historico" class="{{ 'active' if request.path == '/historico' }}">Histórico</a>
-      <a href="/ajuda" class="{{ 'active' if request.path == '/ajuda' }}">Ajuda</a>
-      <a href="/aprendizado-sql" class="{{ 'active' if request.path == '/aprendizado-sql' }}">📚 Aprender SQL</a>
+      {% if tem_permissao('ver_exportar_importar') %}<a href="/importar-cadastros" class="{{ 'active' if request.path == '/importar-cadastros' }}">Exportar/Importar em Massa</a>{% endif %}
+      {% if tem_permissao('ver_historico') %}<a href="/historico" class="{{ 'active' if request.path == '/historico' }}">Histórico</a>{% endif %}
+      {% if tem_permissao('ver_ajuda') %}<a href="/ajuda" class="{{ 'active' if request.path == '/ajuda' }}">Ajuda</a>{% endif %}
+      {% if tem_permissao('ver_aprender_sql') %}<a href="/aprendizado-sql" class="{{ 'active' if request.path == '/aprendizado-sql' }}">📚 Aprender SQL</a>{% endif %}
     </nav>
     {% if session.usuario_nome %}
     <div style="margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:#d9c6b3;">

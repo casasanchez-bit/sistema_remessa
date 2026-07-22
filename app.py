@@ -23,6 +23,17 @@ FOTOS_PLANO_DIR.mkdir(parents=True, exist_ok=True)
 
 EXTENSOES_FOTO = {".jpg", ".jpeg", ".png", ".webp"}
 
+PERMISSOES_DISPONIVEIS = [
+    ("ver_fechamento", "Ver menu Fechamento Mensal"),
+    ("ver_exportar_importar", "Ver menu Exportar/Importar em Massa"),
+    ("ver_historico", "Ver menu Histórico"),
+    ("ver_ajuda", "Ver menu Ajuda"),
+    ("ver_aprender_sql", "Ver menu Aprender SQL"),
+    ("alterar_excluir_remessa", "Editar/Excluir Remessas e itens"),
+    ("alterar_excluir_retorno", "Editar/Excluir Retornos"),
+    ("alterar_excluir_fechamento", "Pagar/Desfazer Fechamento"),
+]
+
 
 def _migrar_banco():
     con = sqlite3.connect(DB_PATH)
@@ -81,6 +92,12 @@ def _migrar_banco():
         "ALTER TABLE planos_corte ADD COLUMN comprimento_fundo_menor_cm REAL",
         "ALTER TABLE remessas ADD COLUMN usuario_nome TEXT",
         "ALTER TABLE retornos ADD COLUMN usuario_nome TEXT",
+        """CREATE TABLE IF NOT EXISTS permissoes_usuario (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+            permissao TEXT NOT NULL,
+            UNIQUE(usuario_id, permissao)
+        )""",
     ]
     for sql in migrações:
         try:
@@ -320,6 +337,24 @@ def registrar_historico(db, tabela, registro_id, descricao):
     )
 
 
+def tem_permissao(chave):
+    usuario_id = session.get("usuario_id")
+    if not usuario_id:
+        return False
+    if "permissoes" not in g:
+        db = get_db()
+        rows = db.execute(
+            "SELECT permissao FROM permissoes_usuario WHERE usuario_id = ?", (usuario_id,)
+        ).fetchall()
+        g.permissoes = {r["permissao"] for r in rows}
+    return chave in g.permissoes
+
+
+@app.context_processor
+def injetar_permissoes():
+    return {"tem_permissao": tem_permissao}
+
+
 @app.before_request
 def exigir_login():
     if request.endpoint in ENDPOINTS_PUBLICOS or request.endpoint is None:
@@ -353,10 +388,16 @@ def primeiro_acesso():
         elif len(senha) < 4:
             flash("A senha deve ter pelo menos 4 caracteres.", "erro")
         else:
-            db.execute(
+            cur = db.execute(
                 "INSERT INTO usuarios (usuario, senha_hash, criado_em) VALUES (?, ?, ?)",
                 (usuario, generate_password_hash(senha), date.today().isoformat()),
             )
+            usuario_id = cur.lastrowid
+            for chave, _ in PERMISSOES_DISPONIVEIS:
+                db.execute(
+                    "INSERT OR IGNORE INTO permissoes_usuario (usuario_id, permissao) VALUES (?, ?)",
+                    (usuario_id, chave),
+                )
             db.commit()
             flash("Usuário administrador criado com sucesso. Faça login para continuar.", "sucesso")
             return redirect(url_for("login"))
@@ -398,7 +439,17 @@ def logout():
 def cadastros_usuarios():
     db = get_db()
     usuarios = db.execute("SELECT id, usuario, criado_em FROM usuarios ORDER BY usuario").fetchall()
-    return render_template("cadastro_usuarios.html", usuarios=usuarios)
+    permissoes_por_usuario = {}
+    for u in usuarios:
+        rows = db.execute(
+            "SELECT permissao FROM permissoes_usuario WHERE usuario_id = ?", (u["id"],)
+        ).fetchall()
+        permissoes_por_usuario[u["id"]] = {r["permissao"] for r in rows}
+    return render_template(
+        "cadastro_usuarios.html", usuarios=usuarios,
+        permissoes_disponiveis=PERMISSOES_DISPONIVEIS,
+        permissoes_por_usuario=permissoes_por_usuario,
+    )
 
 
 @app.route("/cadastros/usuario", methods=["POST"])
@@ -412,13 +463,41 @@ def add_usuario():
     else:
         db = get_db()
         try:
-            db.execute(
+            cur = db.execute(
                 "INSERT INTO usuarios (usuario, senha_hash, criado_em) VALUES (?, ?, ?)",
                 (usuario, generate_password_hash(senha), date.today().isoformat()),
             )
+            usuario_id = cur.lastrowid
+            permissoes_marcadas = request.form.getlist("permissao")
+            for chave, _ in PERMISSOES_DISPONIVEIS:
+                if chave in permissoes_marcadas:
+                    db.execute(
+                        "INSERT OR IGNORE INTO permissoes_usuario (usuario_id, permissao) VALUES (?, ?)",
+                        (usuario_id, chave),
+                    )
             db.commit()
         except sqlite3.IntegrityError:
             flash(f'Já existe um usuário com o nome "{usuario}".', "erro")
+    return redirect(url_for("cadastros_usuarios"))
+
+
+@app.route("/usuarios/<int:usuario_id>/permissoes", methods=["POST"])
+def salvar_permissoes_usuario(usuario_id):
+    db = get_db()
+    usuario = db.execute("SELECT * FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+    if usuario is None:
+        flash("Usuário não encontrado.", "erro")
+        return redirect(url_for("cadastros_usuarios"))
+    permissoes_marcadas = set(request.form.getlist("permissao"))
+    db.execute("DELETE FROM permissoes_usuario WHERE usuario_id = ?", (usuario_id,))
+    for chave, _ in PERMISSOES_DISPONIVEIS:
+        if chave in permissoes_marcadas:
+            db.execute(
+                "INSERT INTO permissoes_usuario (usuario_id, permissao) VALUES (?, ?)",
+                (usuario_id, chave),
+            )
+    db.commit()
+    flash(f"Permissões de {usuario['usuario']} atualizadas.", "sucesso")
     return redirect(url_for("cadastros_usuarios"))
 
 
@@ -431,6 +510,7 @@ def excluir_usuario(usuario_id):
     elif usuario_id == session.get("usuario_id"):
         flash("Você não pode excluir o próprio usuário enquanto estiver logado com ele.", "erro")
     else:
+        db.execute("DELETE FROM permissoes_usuario WHERE usuario_id = ?", (usuario_id,))
         db.execute("DELETE FROM usuarios WHERE id = ?", (usuario_id,))
         db.commit()
     return redirect(url_for("cadastros_usuarios"))
@@ -1592,6 +1672,9 @@ def excluir_servico_item(isr_id):
 
 @app.route("/remessas/<int:remessa_id>/excluir", methods=["POST"])
 def excluir_remessa(remessa_id):
+    if not tem_permissao("alterar_excluir_remessa"):
+        flash("Você não tem permissão para excluir remessas.", "erro")
+        return redirect(url_for("remessas"))
     db = get_db()
     em_uso = db.execute(
         """SELECT COUNT(*) AS n FROM itens_retorno
@@ -2076,6 +2159,9 @@ def ver_retorno(retorno_id):
 
 @app.route("/retornos/<int:retorno_id>/editar", methods=["GET", "POST"])
 def editar_retorno(retorno_id):
+    if not tem_permissao("alterar_excluir_retorno"):
+        flash("Você não tem permissão para editar retornos.", "erro")
+        return redirect(url_for("retornos"))
     db = get_db()
     retorno = db.execute("SELECT * FROM retornos WHERE id = ?", (retorno_id,)).fetchone()
     if retorno is None:
@@ -2120,6 +2206,9 @@ def editar_retorno(retorno_id):
 
 @app.route("/retornos/<int:retorno_id>/excluir", methods=["POST"])
 def excluir_retorno(retorno_id):
+    if not tem_permissao("alterar_excluir_retorno"):
+        flash("Você não tem permissão para excluir retornos.", "erro")
+        return redirect(url_for("retornos"))
     db = get_db()
     if retorno_pago(db, retorno_id):
         flash("Este retorno não pode mais ser excluído: o pagamento do período já foi confirmado.", "erro")
@@ -2382,6 +2471,9 @@ def fechamento():
 
 @app.route("/fechamento/pagar", methods=["POST"])
 def marcar_pagamento():
+    if not tem_permissao("alterar_excluir_fechamento"):
+        flash("Você não tem permissão para confirmar pagamentos.", "erro")
+        return redirect(url_for("fechamento"))
     db = get_db()
     terceirizado_id = request.form.get("terceirizado_id", "").strip()
     mes = request.form.get("mes", "").strip()
@@ -2427,6 +2519,9 @@ def marcar_pagamento():
 
 @app.route("/fechamento/desfazer-pagamento", methods=["POST"])
 def desfazer_pagamento():
+    if not tem_permissao("alterar_excluir_fechamento"):
+        flash("Você não tem permissão para desfazer pagamentos.", "erro")
+        return redirect(url_for("fechamento"))
     db = get_db()
     pagamento_id = request.form.get("pagamento_id", "").strip()
     terceirizado_id = request.form.get("terceirizado_id", "").strip()

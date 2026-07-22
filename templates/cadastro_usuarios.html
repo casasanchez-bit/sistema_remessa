@@ -13,27 +13,41 @@
         <input type="password" name="senha" required minlength="4">
       </div>
     </div>
+    <label style="margin-top:10px;display:block;">Permissões (desmarcado = bloqueado)</label>
+    <div class="small" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:4px 14px;margin:6px 0 12px;">
+      {% for chave, rotulo in permissoes_disponiveis %}
+      <label style="font-weight:normal;display:flex;align-items:center;gap:6px;">
+        <input type="checkbox" name="permissao" value="{{ chave }}"> {{ rotulo }}
+      </label>
+      {% endfor %}
+    </div>
     <button class="btn" type="submit">Adicionar usuário</button>
   </form>
 </div>
 
 <div class="card">
   <h2>Usuários cadastrados</h2>
-  <table>
-    <tr><th>Usuário</th><th>Criado em</th><th>Ações</th></tr>
-    {% for u in usuarios %}
-    <tr>
-      <td>{{ u.usuario }}</td>
-      <td>{{ u.criado_em|brdate }}</td>
-      <td class="actions">
-        <form method="post" action="/usuarios/{{ u.id }}/excluir" onsubmit="return confirm('Excluir o usuário {{ u.usuario }}?');">
-          <button class="btn-mini excluir" type="submit">EXCLUIR</button>
-        </form>
-      </td>
-    </tr>
-    {% else %}
-    <tr><td colspan="3" class="small">Nenhum usuário cadastrado.</td></tr>
-    {% endfor %}
-  </table>
+  {% for u in usuarios %}
+  <div style="border:1px solid #eee;border-radius:8px;padding:10px 14px;margin-bottom:10px;">
+    <div class="small" style="display:flex;justify-content:space-between;align-items:center;">
+      <span><b>{{ u.usuario }}</b> — criado em {{ u.criado_em|brdate }}</span>
+      <form method="post" action="/usuarios/{{ u.id }}/excluir" onsubmit="return confirm('Excluir o usuário {{ u.usuario }}?');">
+        <button class="btn-mini excluir" type="submit">EXCLUIR</button>
+      </form>
+    </div>
+    <form method="post" action="/usuarios/{{ u.id }}/permissoes">
+      <div class="small" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:4px 14px;margin:8px 0;">
+        {% for chave, rotulo in permissoes_disponiveis %}
+        <label style="font-weight:normal;display:flex;align-items:center;gap:6px;">
+          <input type="checkbox" name="permissao" value="{{ chave }}" {% if chave in permissoes_por_usuario.get(u.id, []) %}checked{% endif %}> {{ rotulo }}
+        </label>
+        {% endfor %}
+      </div>
+      <button class="btn secondary" type="submit" style="font-size:13px;padding:6px 14px;">Salvar permissões</button>
+    </form>
+  </div>
+  {% else %}
+  <p class="small">Nenhum usuário cadastrado.</p>
+  {% endfor %}
 </div>
 {% endblock %}
