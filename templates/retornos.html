@@ -1,0 +1,465 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .erp-wrap { display: grid; grid-template-columns: 1fr 200px; gap: 0; border: 1px solid #c8b49a; border-radius: 10px; overflow: hidden; background: #fff; margin-bottom: 18px; }
+  .erp-main { padding: 0; }
+  .erp-header { background: #5a3e2b; color: #fff; padding: 8px 16px; font-size: 13px; font-weight: 700; letter-spacing: .5px; }
+  .erp-cabecalho { display: grid; grid-template-columns: auto 1fr auto; gap: 0; border-bottom: 2px solid #e7d7c4; }
+  .erp-field { padding: 8px 14px; border-right: 1px solid #e7d7c4; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .erp-field:last-child { border-right: none; }
+  .erp-field label { font-size: 11px; color: #888; font-weight: 700; text-transform: uppercase; white-space: nowrap; margin: 0; display: inline; opacity:1; }
+  .erp-field .ctrl-num { font-size: 18px; font-weight: 800; color: var(--laranja); }
+  .erp-field input { border: none; border-bottom: 1px solid #d9c6b3; border-radius: 0; padding: 3px 6px; font-size: 13px; width: auto; background: transparent; }
+  .erp-field input:focus { outline: none; border-bottom-color: var(--laranja); background: #fffaf7; }
+  .erp-terceirizado { grid-column: 1 / -1; border-top: 1px solid #e7d7c4; padding: 8px 14px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .erp-terceirizado label { font-size: 11px; color: #888; font-weight: 700; text-transform: uppercase; white-space: nowrap; margin: 0; display: inline; opacity:1; }
+  .erp-aviso { padding: 10px 14px; font-size: 13px; color: #a0522d; background: #fff9f5; border-bottom: 1px solid #f1e4d6; display: none; }
+  .erp-grid-header { background: #f5ede4; border-bottom: 2px solid #d9c6b3; display: grid; gap: 0; font-size: 11px; font-weight: 700; color: #5a3e2b; text-transform: uppercase; }
+  .erp-grid-header span, .erp-item-row > * { padding: 6px 10px; border-right: 1px solid #e7d7c4; }
+  .erp-grid-header span:last-child, .erp-item-row > *:last-child { border-right: none; }
+  .erp-item-row { display: grid; gap: 0; border-bottom: 1px solid #e7d7c4; align-items: center; cursor: pointer; transition: background .12s; background: #fdfaf7; }
+  .erp-item-row:hover { background: #fff4ea; }
+  .erp-item-row.selecionado { background: #fff8e6; border-left: 3px solid var(--laranja); outline: none; }
+  .erp-item-row.selecionado .num-col { color: var(--laranja); }
+  .erp-item-row select, .erp-item-row input[type="number"] { border: none; background: transparent; font-size: 13px; padding: 2px 4px; width: 100%; }
+  .erp-item-row select:focus, .erp-item-row input:focus { background: #fffaf7; outline: 1px solid var(--laranja); border-radius: 3px; }
+  .erp-item-row .num-col { text-align: center; font-weight: 700; color: #aaa; font-size: 12px; }
+  .erp-obs { padding: 8px 14px; border-top: 1px solid #e7d7c4; }
+  .erp-obs label { font-size: 11px; color: #888; font-weight: 700; text-transform: uppercase; margin: 0 0 4px; display:block; opacity:1; }
+  .erp-obs textarea { width: 100%; font-size: 13px; padding: 5px 8px; border: 1px solid #d9c6b3; border-radius: 5px; resize: vertical; }
+  .erp-botoes-item { padding: 8px 14px; border-top: 1px solid #e7d7c4; display: flex; gap: 8px; align-items: center; }
+  .erp-painel { background: #f5ede4; border-left: 2px solid #d9c6b3; display: flex; flex-direction: column; }
+  .erp-painel-title { background: #5a3e2b; color: #fff; padding: 8px 12px; font-size: 12px; font-weight: 700; text-align: center; letter-spacing: .5px; }
+  .erp-painel-btn { margin: 8px 10px 0; padding: 10px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; text-align: center; text-decoration: none; display: block; line-height: 1.3; }
+  .erp-painel-btn.confirmar { background: #4d6b3a; color: #fff; }
+  .erp-painel-btn.confirmar:hover { background: #3a5229; }
+  .erp-painel-btn.cancelar { background: #f3d9d6; color: var(--terracota); border: 1px solid #e0b0aa; margin-top: auto; margin-bottom: 10px; }
+  .col-ret { grid-template-columns: 30px 50px 2.5fr 80px 80px 30px; }
+  .col-ret-header { grid-template-columns: 30px 50px 2.5fr 80px 80px 30px; }
+  .erp-terceirizado .combo { flex:1; min-width:0; }
+  .erp-terceirizado .combo-input { width:100%; box-sizing:border-box; }
+</style>
+
+<form method="post" action="/retornos/novo" id="formRetorno">
+<div class="erp-wrap">
+  {# ── Painel principal ── #}
+  <div class="erp-main">
+    <div class="erp-header">REGISTRO DE RETORNO DE PRODUÇÃO</div>
+
+    {# Cabeçalho #}
+    <div class="erp-cabecalho">
+      <div class="erp-field">
+        <label>Controle</label>
+        <span class="ctrl-num">{{ proximo_numero }}</span>
+      </div>
+      <div class="erp-field">
+        <label>Data do Retorno</label>
+        <input type="date" name="data_retorno" value="{{ hoje }}" required style="width:130px;">
+      </div>
+      <div class="erp-field" style="flex:1;min-width:0;">
+        <label>Nº Retorno</label>
+        <span style="font-size:13px;color:#888;">#{{ proximo_numero }}</span>
+      </div>
+    </div>
+    <div class="erp-terceirizado">
+      <label>Prestador de Serviço</label>
+      <select name="terceirizado_id" id="terceirizadoSelect" data-placeholder="Buscar pelo nome..." data-search="contains" required style="flex:1;border:none;border-bottom:1px solid #d9c6b3;border-radius:0;font-size:13px;padding:3px 6px;background:transparent;">
+        <option value=""></option>
+        {% for t in terceirizados %}<option value="{{ t.id }}">{{ t.codigo }} - {{ t.nome }}</option>{% endfor %}
+      </select>
+    </div>
+
+    {# Aviso sem remessas pendentes #}
+    <div id="avisoSemRemessa" class="erp-aviso">
+      Este prestador não possui remessas pendentes de retorno.
+    </div>
+    <div id="avisoSelecioneTerceirizado" class="erp-aviso" style="display:block;">
+      Selecione o prestador de serviço para ver as remessas pendentes.
+    </div>
+
+    {# Tabela de itens #}
+    <div>
+      <div class="erp-grid-header col-ret" style="display:grid;">
+        <span style="text-align:center;">#</span>
+        <span></span>
+        <span>Remessa / Produto / Serviço</span>
+        <span style="text-align:center;">Qtde Máx.</span>
+        <span style="text-align:center;">Qtde Retorno</span>
+        <span></span>
+      </div>
+      <div id="itens"></div>
+    </div>
+
+    {# Observação #}
+    <div class="erp-obs">
+      <label>Observação (opcional)</label>
+      <textarea name="observacao" rows="2" placeholder="Observações sobre este retorno..."></textarea>
+    </div>
+
+    {# Botões de item #}
+    <div class="erp-botoes-item">
+      <button type="button" class="btn" id="addItem" style="font-size:12px;padding:7px 14px;" disabled>＋ Incluir Item</button>
+      <button type="button" class="btn secondary" id="btnRemoverItem" style="font-size:12px;padding:7px 14px;" disabled>✕ Remover Item</button>
+      <span id="totalItens" style="margin-left:auto;font-size:12px;color:#888;">0 item(ns)</span>
+    </div>
+  </div>
+
+  {# ── Painel de ações (direita) ── #}
+  <div class="erp-painel">
+    <div class="erp-painel-title">FECHAMENTO</div>
+    <button type="submit" id="btnConfirmarRetorno" class="erp-painel-btn confirmar" disabled title="Adicione ao menos um item com quantidade preenchida">✓ Confirmar<br>Retorno</button>
+    <div style="flex:1;"></div>
+    <a href="/retornos" class="erp-painel-btn cancelar" style="text-align:center;">✕ Cancelar<br>Retorno</a>
+  </div>
+</div>
+</form>
+
+{# ── Histórico de Retornos ── #}
+<div class="card">
+  <h2>Histórico de Retornos</h2>
+  <form method="get" action="/retornos" style="display:flex;gap:8px;align-items:end;margin-bottom:14px;flex-wrap:wrap;">
+    <div>
+      <label>Terceirizado</label>
+      <select name="filtro_terceirizado_id" id="filtroTerceirizadoSelect" data-placeholder="Todos (buscar pelo nome)..." data-search="contains">
+        <option value="">Todos</option>
+        {% for t in todos_terceirizados %}
+        <option value="{{ t.id }}" {{ "selected" if filtro_terceirizado_id == t.id|string }}>{{ t.codigo }} - {{ t.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>De</label>
+      <input type="date" name="filtro_data_inicio" value="{{ filtro_data_inicio }}">
+    </div>
+    <div>
+      <label>Até</label>
+      <input type="date" name="filtro_data_fim" value="{{ filtro_data_fim }}">
+    </div>
+    <button class="btn" type="submit">Filtrar</button>
+    {% if filtro_terceirizado_id or filtro_data_inicio or filtro_data_fim %}
+    <a class="btn secondary" href="/retornos">Limpar filtro</a>
+    {% endif %}
+    <a id="excelRetornosLink" class="btn secondary" href="/retornos/exportar-excel" style="margin-left:auto;">⬇ Exportar Excel</a>
+  </form>
+
+  {% if not buscou %}
+  <p class="small">Use os filtros acima para buscar retornos.</p>
+  {% else %}
+  <div id="barraAcoesRet" style="display:none;position:sticky;top:0;z-index:100;background:#fff;border:1px solid #d4a96a;border-radius:8px;padding:10px 14px;margin-bottom:10px;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);">
+    <span id="barraInfoRet" style="flex:1;font-size:13px;font-weight:600;color:#5a3e2b;"></span>
+    <a id="btnVisualizarRet" href="#" class="btn secondary" style="font-size:13px;padding:6px 14px;">✎ Visualizar/Editar</a>
+    <a id="btnImprimirRet" href="#" target="_blank" class="btn secondary" style="font-size:13px;padding:6px 14px;">🖨 Imprimir</a>
+    <button id="btnCancelarRet" type="button" class="btn-mini excluir" style="font-size:13px;padding:6px 14px;">Cancelar Retorno</button>
+    <button type="button" class="btn secondary" style="font-size:13px;padding:6px 12px;" onclick="desselecionarRetorno()">✕</button>
+  </div>
+  <form id="formCancelarRet" method="post" style="display:none;"></form>
+
+  {% for ret in historico %}
+  <div class="retorno-card" data-id="{{ ret.id }}" data-numero="{{ ret.numero }}"
+       data-view="/retornos/{{ ret.id }}/editar"
+       data-print="/retornos/{{ ret.id }}/imprimir"
+       data-cancel="/retornos/{{ ret.id }}/excluir"
+       data-confirm="Cancelar o retorno Nº {{ ret.numero }}? As remessas vinculadas voltarão a ficar pendentes. Esta ação não pode ser desfeita."
+       style="border:1px solid #eee;border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer;transition:border-color .15s,background .15s;">
+    <div class="small" style="display:flex;justify-content:space-between;align-items:center;">
+      <span><b>Retorno Nº {{ ret.numero }}</b> — {{ ret.terceirizado_nome }} — {{ ret.data_retorno|brdate }} —
+        {% if ret.pago %}<span class="badge b-pago">PAGO</span>{% else %}<span class="badge b-pendente">NÃO PAGO</span>{% endif %}
+      </span>
+    </div>
+    <table>
+      <tr><th>Nº Remessa</th><th>Produto</th><th>Cor/Estampa</th><th>Serviço</th><th>Qtde Retornada</th><th>Finalizado</th></tr>
+      {% for item in ret.itens %}
+      <tr>
+        <td>{{ item.remessa_numero }}</td>
+        <td><b>{{ item.produto_codigo }}</b> - {{ item.produto_descricao }}</td>
+        <td>{{ item.cor_descricao }}</td>
+        <td>{{ item.servico_descricao }}</td>
+        <td>{{ item.qtd_retornada }}</td>
+        <td>{{ "SIM" if item.finalizado else "NÃO" }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% else %}
+  <p class="small">Nenhum retorno encontrado para os filtros informados.</p>
+  {% endfor %}
+  {% endif %}
+</div>
+
+<script>
+  const remessas = [
+    {% for r in remessas_abertas %}
+    {id: {{ r.id }}, terceirizadoId: {{ r.terceirizado_id }}, label: {{ ('Nº ' ~ r.remessa_numero ~ ' — ' ~ r.produto_codigo ~ ' - ' ~ r.produto_descricao ~ ' / ' ~ r.cor_descricao ~ ' / ' ~ r.servico_descricao ~ ' (pendente: ' ~ r.pendente ~ ')') | tojson }}, pendente: {{ r.pendente }}, foto: {{ (('/static/fotos_estampas/' ~ r.cor_foto) if r.cor_foto else None) | tojson }}},
+    {% endfor %}
+  ];
+
+  const terceirizadoSelect = document.getElementById('terceirizadoSelect');
+  const addItemBtn = document.getElementById('addItem');
+  const itensDiv = document.getElementById('itens');
+  var itemSelecionado = null;
+  var contadorItens = 0;
+
+  function remessasDoTerceirizado() {
+    const tid = parseInt(terceirizadoSelect.value);
+    return remessas.filter(r => r.terceirizadoId === tid);
+  }
+
+  function selecionarItem(row) {
+    if (itemSelecionado) itemSelecionado.classList.remove('selecionado');
+    itemSelecionado = row;
+    if (row) row.classList.add('selecionado');
+    document.getElementById('btnRemoverItem').disabled = !row;
+  }
+
+  function atualizarTotal() {
+    const total = document.querySelectorAll('#itens .erp-item-row').length;
+    document.getElementById('totalItens').textContent = total + ' item(ns)';
+  }
+
+  function addItemRow() {
+    const disponiveis = remessasDoTerceirizado();
+    if (!disponiveis.length) return;
+    contadorItens++;
+    const row = document.createElement('div');
+    row.className = 'erp-item-row col-ret';
+    const options = disponiveis.map(r => `<option value="${r.id}" data-pendente="${r.pendente}" data-foto="${r.foto || ''}">${r.label}</option>`).join('');
+    row.innerHTML = `
+      <span class="num-col">${contadorItens}</span>
+      <div style="padding:2px 6px;display:flex;align-items:center;justify-content:center;">
+        <img class="fotoRetPreview" src="" alt="" style="width:36px;height:36px;object-fit:cover;border-radius:5px;border:1px solid #d9c6b3;display:none;">
+      </div>
+      <div style="padding:2px 4px;">
+        <select name="item_remessa_id" class="itemRemessaSelect" data-placeholder="Buscar por produto, código ou nº remessa..." data-search="contains" style="width:100%;border:none;font-size:13px;background:transparent;">
+          <option value=""></option>
+          ${options}
+        </select>
+      </div>
+      <div style="padding:2px 4px;text-align:center;">
+        <span class="qtd-max-hint" style="font-size:12px;color:#a0522d;font-weight:600;">—</span>
+      </div>
+      <div style="padding:2px 4px;text-align:center;">
+        <input type="number" name="qtd_retornada" min="1" style="width:65px;text-align:center;border:none;border-bottom:1px solid #d9c6b3;background:transparent;font-size:13px;">
+      </div>
+      <span style="text-align:center;color:#ccc;font-size:10px;">▶</span>
+    `;
+    const select = row.querySelector('select[name="item_remessa_id"]');
+    const qtdInput = row.querySelector('input[name="qtd_retornada"]');
+    const hint = row.querySelector('.qtd-max-hint');
+    const fotoPreview = row.querySelector('.fotoRetPreview');
+    select.addEventListener('change', function() {
+      const opt = select.options[select.selectedIndex];
+      const pendente = opt && opt.value ? opt.dataset.pendente : '';
+      qtdInput.max = pendente;
+      hint.textContent = pendente ? pendente : '—';
+      if (pendente) qtdInput.value = pendente;
+      // Atualiza miniatura
+      const itemId = opt && opt.value ? parseInt(opt.value) : null;
+      const itemData = remessas.find(r => r.id === itemId);
+      if (itemData && itemData.foto) {
+        fotoPreview.src = itemData.foto;
+        fotoPreview.style.display = 'block';
+      } else {
+        fotoPreview.style.display = 'none';
+        fotoPreview.src = '';
+      }
+    });
+    row.addEventListener('click', function(e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+      selecionarItem(row);
+    });
+    itensDiv.appendChild(row);
+    searchableSelect(select);
+    atualizarTotal();
+    selecionarItem(row);
+    verificarRetornoCompleto();
+
+    // ── Fluxo guiado com bloqueio progressivo ──
+    function comboInputRet(sel) {
+      var w = sel.closest ? sel.closest('.combo') : null;
+      return w ? w.querySelector('.combo-input') : null;
+    }
+
+    // Qtde começa travada
+    qtdInput.style.pointerEvents = 'none';
+    qtdInput.style.opacity = '0.35';
+    qtdInput.style.cursor = 'not-allowed';
+    qtdInput.dataset.travado = '1';
+    qtdInput.title = 'Selecione o item de remessa primeiro';
+
+    // Item de Remessa → desbloqueia Qtde
+    select.addEventListener('change', function() {
+      if (select.value) {
+        qtdInput.style.pointerEvents = '';
+        qtdInput.style.opacity = '';
+        qtdInput.style.cursor = '';
+        delete qtdInput.dataset.travado;
+        qtdInput.title = '';
+        setTimeout(function() { qtdInput.focus(); qtdInput.select(); }, 80);
+      } else {
+        qtdInput.style.pointerEvents = 'none';
+        qtdInput.style.opacity = '0.35';
+        qtdInput.style.cursor = 'not-allowed';
+        qtdInput.dataset.travado = '1';
+        qtdInput.title = 'Selecione o item de remessa primeiro';
+      }
+      verificarRetornoCompleto();
+    });
+    // Qtde Enter → "+ Incluir Item" ou "Confirmar Retorno"
+    qtdInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && qtdInput.value) {
+        e.preventDefault();
+        var btnAdd = document.getElementById('addItem');
+        if (btnAdd && !btnAdd.disabled) btnAdd.focus();
+        else document.querySelector('.erp-painel-btn.confirmar').focus();
+      }
+    });
+    qtdInput.addEventListener('input', function() {
+      verificarRetornoCompleto();
+    });
+  }
+
+  terceirizadoSelect.addEventListener('change', function() {
+    itensDiv.innerHTML = '';
+    itemSelecionado = null;
+    document.getElementById('btnRemoverItem').disabled = true;
+    atualizarTotal();
+    const disponiveis = remessasDoTerceirizado();
+    const temTerceirizado = terceirizadoSelect.value !== '';
+    document.getElementById('avisoSelecioneTerceirizado').style.display = temTerceirizado ? 'none' : 'block';
+    document.getElementById('avisoSemRemessa').style.display = (temTerceirizado && !disponiveis.length) ? 'block' : 'none';
+    addItemBtn.disabled = !temTerceirizado || !disponiveis.length;
+    if (temTerceirizado && disponiveis.length > 0) addItemRow();
+  });
+
+  addItemBtn.addEventListener('click', addItemRow);
+
+  document.getElementById('btnRemoverItem').addEventListener('click', function() {
+    if (!itemSelecionado) return;
+    if (confirm('Remover este item do retorno?')) {
+      itemSelecionado.remove();
+      itemSelecionado = null;
+      document.getElementById('btnRemoverItem').disabled = true;
+      atualizarTotal();
+      verificarRetornoCompleto();
+    }
+  });
+
+  function verificarRetornoCompleto() {
+    var btn = document.getElementById('btnConfirmarRetorno');
+    if (!btn) return;
+    var linhas = document.querySelectorAll('#itens .erp-item-row');
+    if (linhas.length === 0) { btn.disabled = true; btn.title = 'Adicione ao menos um item'; return; }
+    var pendentes = [];
+    linhas.forEach(function(linha, idx) {
+      var sel = linha.querySelector('select[name="item_remessa_id"]');
+      var semItem = !sel || !sel.value;
+      var qtdInput = linha.querySelector('input[name="qtd_retornada"]');
+      var semQtd = !qtdInput || !qtdInput.value || parseInt(qtdInput.value) < 1;
+      if (semItem || semQtd) {
+        var msg = 'Item ' + (idx + 1) + ': ';
+        if (semItem && semQtd) msg += 'selecione a remessa e informe a quantidade';
+        else if (semItem) msg += 'selecione a remessa';
+        else msg += 'informe a quantidade';
+        pendentes.push(msg);
+      }
+    });
+    if (pendentes.length === 0) {
+      btn.disabled = false;
+      btn.title = '';
+    } else {
+      btn.disabled = true;
+      btn.title = pendentes.join('\n');
+    }
+  }
+
+  // Validação antes de gravar
+  document.getElementById('formRetorno').addEventListener('submit', function(e) {
+    document.querySelectorAll('#itens .erp-item-row').forEach(function(linha) {
+      var sel = linha.querySelector('select[name="item_remessa_id"]');
+      if (!sel || !sel.value) linha.remove();
+    });
+    atualizarTotal();
+
+    var linhas = document.querySelectorAll('#itens .erp-item-row');
+    if (linhas.length === 0) {
+      e.preventDefault();
+      showToast('Adicione ao menos um item com remessa selecionada antes de confirmar.', 'erro');
+      return;
+    }
+
+    var erros = [];
+    linhas.forEach(function(linha) { linha.style.outline = ''; linha.style.background = ''; });
+
+    linhas.forEach(function(linha, idx) {
+      var qtdInput = linha.querySelector('input[name="qtd_retornada"]');
+      var qtdVazia = !qtdInput || !qtdInput.value || parseInt(qtdInput.value) < 1;
+      if (qtdVazia) {
+        linha.style.outline = '2px solid #c0392b';
+        linha.style.background = '#fff5f5';
+        erros.push('Item ' + (idx + 1) + ': quantidade não pode ser zero');
+      }
+    });
+
+    if (erros.length > 0) {
+      e.preventDefault();
+      showToast('Corrija antes de salvar:\n' + erros.join('\n'), 'erro');
+      var primeiroErro = document.querySelector('#itens .erp-item-row[style*="outline"]');
+      if (primeiroErro) primeiroErro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(function() {
+        var btn = document.querySelector('.erp-painel-btn.confirmar');
+        if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.pointerEvents = ''; }
+      }, 50);
+    }
+  });
+
+  searchableSelect(terceirizadoSelect);
+  searchableSelect(document.getElementById('filtroTerceirizadoSelect'));
+
+  // Sincroniza link Excel
+  function atualizarLinkExcelRet() {
+    var terc = document.querySelector('[name="filtro_terceirizado_id"]');
+    var ini  = document.querySelector('[name="filtro_data_inicio"]');
+    var fim  = document.querySelector('[name="filtro_data_fim"]');
+    var p = new URLSearchParams();
+    if (terc && terc.value) p.set('filtro_terceirizado_id', terc.value);
+    if (ini  && ini.value)  p.set('filtro_data_inicio', ini.value);
+    if (fim  && fim.value)  p.set('filtro_data_fim', fim.value);
+    var link = document.getElementById('excelRetornosLink');
+    if (link) link.href = '/retornos/exportar-excel' + (p.toString() ? '?' + p.toString() : '');
+  }
+  atualizarLinkExcelRet();
+  document.querySelectorAll('[name="filtro_terceirizado_id"],[name="filtro_data_inicio"],[name="filtro_data_fim"]')
+    .forEach(function(el){ el.addEventListener('change', atualizarLinkExcelRet); el.addEventListener('input', atualizarLinkExcelRet); });
+
+  // Seleção de retorno no histórico
+  var retornoSelecionado = null;
+  function desselecionarRetorno() {
+    if (retornoSelecionado) {
+      retornoSelecionado.style.borderColor = '#eee';
+      retornoSelecionado.style.background = '';
+      retornoSelecionado = null;
+    }
+    document.getElementById('barraAcoesRet').style.display = 'none';
+  }
+  document.querySelectorAll('.retorno-card').forEach(function(card) {
+    card.addEventListener('click', function() {
+      if (retornoSelecionado === card) { desselecionarRetorno(); return; }
+      desselecionarRetorno();
+      retornoSelecionado = card;
+      card.style.borderColor = '#a0522d';
+      card.style.background = '#fdf6f0';
+      document.getElementById('barraInfoRet').textContent = 'Retorno Nº ' + card.dataset.numero + ' selecionado';
+      document.getElementById('btnVisualizarRet').href = card.dataset.view;
+      document.getElementById('btnImprimirRet').href = card.dataset.print;
+      document.getElementById('btnCancelarRet').onclick = function() {
+        if (confirm(card.dataset.confirm)) {
+          var form = document.getElementById('formCancelarRet');
+          form.action = card.dataset.cancel;
+          form.submit();
+        }
+      };
+      document.getElementById('barraAcoesRet').style.display = 'flex';
+    });
+  });
+</script>
+{% endblock %}

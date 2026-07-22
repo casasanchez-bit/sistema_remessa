@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .aprend-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .aprend-nav a { background: var(--linen); color: var(--marrom); border: 1px solid #d9c6b3; padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; text-decoration: none; }
+  .aprend-nav a:hover, .aprend-nav a.ativo { background: var(--laranja); color: #fff; border-color: var(--laranja); }
+  .modulo { display: none; }
+  .modulo.ativo { display: block; }
+  .code-block { background: #2d2d2d; color: #f8f8f2; border-radius: 8px; padding: 14px 16px; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.7; margin: 10px 0; overflow-x: auto; }
+  .code-block .kw { color: #66d9ef; } /* SELECT, FROM, WHERE */
+  .code-block .fn { color: #a6e22e; } /* COUNT, SUM */
+  .code-block .str { color: #e6db74; } /* strings */
+  .code-block .cm { color: #75715e; font-style: italic; } /* comentários */
+  .destaque { background: #fbe4d5; border-left: 4px solid var(--laranja); padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 12px 0; font-size: 13px; }
+  .diagrama { background: #f9f3ee; border: 1px solid #e7d7c4; border-radius: 8px; padding: 14px; font-family: monospace; font-size: 12.5px; line-height: 1.8; margin: 10px 0; overflow-x: auto; }
+  .exercicio { border: 1px solid #d9c6b3; border-radius: 8px; padding: 14px; margin: 12px 0; }
+  .exercicio h4 { margin: 0 0 8px; color: var(--laranja); font-size: 14px; }
+  .resposta { display: none; margin-top: 10px; }
+  .resposta.aberta { display: block; }
+  .btn-resposta { background: var(--linen); color: var(--marrom); border: 1px solid #d9c6b3; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+  .btn-resposta:hover { background: var(--laranja); color: #fff; }
+  .tabela-exemplo { border-collapse: collapse; font-size: 12.5px; margin: 10px 0; }
+  .tabela-exemplo th { background: var(--linen); color: var(--marrom); padding: 6px 10px; border: 1px solid #d9c6b3; font-size: 11px; text-transform: uppercase; }
+  .tabela-exemplo td { padding: 6px 10px; border: 1px solid #e7d7c4; }
+  .tag-nivel { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; margin-left: 6px; }
+  .tag-nivel.facil { background: #e3e8d8; color: #4d6b3a; }
+  .tag-nivel.medio { background: #fbe4d5; color: var(--laranja); }
+  .tag-nivel.dificil { background: #f3d9d6; color: var(--terracota); }
+  .progresso-wrap { background: #f1e4d6; border-radius: 10px; height: 8px; margin: 4px 0 10px; }
+  .progresso-barra { background: var(--laranja); border-radius: 10px; height: 8px; transition: width .4s; }
+</style>
+
+<div class="card">
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+    <div style="font-size:36px;">📚</div>
+    <div>
+      <h2 style="margin:0;">Aprendizado — SQL e Lógica de Programação</h2>
+      <p class="small" style="margin:4px 0 0;">Seu caderno de estudos personalizado com exemplos reais do Casa Sanchez</p>
+    </div>
+  </div>
+
+  <nav class="aprend-nav">
+    <a href="#" class="ativo" onclick="trocarModulo('m1', this)">1 · Banco de Dados</a>
+    <a href="#" onclick="trocarModulo('m2', this)">2 · SQL Básico</a>
+    <a href="#" onclick="trocarModulo('m3', this)">3 · JOIN</a>
+    <a href="#" onclick="trocarModulo('m4', this)">4 · Funções</a>
+    <a href="#" onclick="trocarModulo('m5', this)">5 · Exercícios</a>
+    <a href="#" onclick="trocarModulo('m6', this)">6 · Glossário</a>
+  </nav>
+
+  {# ── MÓDULO 1 ── #}
+  <div id="m1" class="modulo ativo">
+    <h2>Módulo 1 — O que é um Banco de Dados?</h2>
+
+    <div class="destaque">
+      💡 <b>Resumo em uma frase:</b> Um banco de dados é um conjunto de "planilhas" interligadas que guardam as informações do seu sistema de forma organizada.
+    </div>
+
+    <h3 style="font-size:14px;margin-top:18px;">A analogia das planilhas</h3>
+    <p style="font-size:13px;">Pense que você tem várias planilhas no Excel, cada uma com um assunto. No banco de dados do Casa Sanchez é exatamente isso:</p>
+
+    <table class="tabela-exemplo">
+      <tr><th>Como você conhece</th><th>Nome no banco de dados</th><th>O que guarda</th></tr>
+      <tr><td>Lista de terceirizados</td><td><code>terceirizados</code></td><td>Ana Paula, Cintia, Daiana...</td></tr>
+      <tr><td>Lista de produtos</td><td><code>produtos</code></td><td>Almofada Albania, Almofada Cheia...</td></tr>
+      <tr><td>Remessas enviadas</td><td><code>remessas</code></td><td>Cabeçalho de cada remessa</td></tr>
+      <tr><td>Itens das remessas</td><td><code>itens_remessa</code></td><td>Cada produto/cor dentro de uma remessa</td></tr>
+      <tr><td>Retornos recebidos</td><td><code>retornos</code></td><td>Cada talão de retorno</td></tr>
+    </table>
+
+    <h3 style="font-size:14px;margin-top:18px;">O que é um ID?</h3>
+    <p style="font-size:13px;">Todo registro no banco tem um número único chamado <b>ID</b>. É como o CPF — não se repete.</p>
+
+    <div class="diagrama">
+Tabela: terceirizados
+┌────┬─────────┬──────────────────────────────┐
+│ id │ codigo  │ nome                         │
+├────┼─────────┼──────────────────────────────┤
+│  1 │ T-0001  │ CINTIA MONIQUE RODRIGUES     │
+│  6 │ T-0006  │ ANA PAULA LEITE MARQUES      │
+│  9 │ T-0009  │ HUGO HENRIQUE FERREIRA       │
+└────┴─────────┴──────────────────────────────┘
+    </div>
+
+    <div class="destaque">
+      🔑 <b>Por que usar ID?</b><br>
+      Quando o sistema cria uma remessa para a Ana Paula, ele não grava o nome "ANA PAULA LEITE MARQUES" — ele grava só o número <code>6</code>. Isso evita erros de digitação e economiza espaço. O banco busca o nome quando precisar.
+    </div>
+
+    <div style="margin-top:20px;padding:14px;background:#f9f3ee;border-radius:8px;">
+      <b style="font-size:13px;">✅ Você concluiu o Módulo 1!</b><br>
+      <span class="small">Próximo: aprender a fazer perguntas ao banco usando SQL.</span><br>
+      <button class="btn" style="margin-top:10px;font-size:12px;padding:7px 14px;" onclick="trocarModulo('m2', document.querySelectorAll('.aprend-nav a')[1])">Ir para Módulo 2 →</button>
+    </div>
+  </div>
+
+  {# ── MÓDULO 2 ── #}
+  <div id="m2" class="modulo">
+    <h2>Módulo 2 — A Linguagem SQL</h2>
+
+    <div class="destaque">
+      💡 SQL (fala-se "ésse-quê-éle") é a linguagem que usamos para <b>conversar com o banco de dados</b>. Você faz perguntas, o banco responde com dados.
+    </div>
+
+    <h3 style="font-size:14px;margin-top:18px;">As palavras principais</h3>
+    <table class="tabela-exemplo">
+      <tr><th>Palavra em SQL</th><th>Tradução</th><th>Para que serve</th></tr>
+      <tr><td><code>SELECT</code></td><td>"Me mostre..."</td><td>Escolhe quais colunas exibir</td></tr>
+      <tr><td><code>FROM</code></td><td>"...da tabela..."</td><td>Diz de onde buscar os dados</td></tr>
+      <tr><td><code>WHERE</code></td><td>"...onde/quando..."</td><td>Filtra os resultados</td></tr>
+      <tr><td><code>ORDER BY</code></td><td>"...ordenado por..."</td><td>Define a ordem de exibição</td></tr>
+    </table>
+
+    <h3 style="font-size:14px;margin-top:18px;">Sua primeira consulta</h3>
+    <p style="font-size:13px;"><b>Pergunta:</b> "Me mostre todos os terceirizados"</p>
+    <div class="code-block">
+<span class="kw">SELECT</span> *
+<span class="kw">FROM</span> terceirizados
+    </div>
+    <p style="font-size:12.5px;color:#888;">O <code>*</code> significa "todas as colunas". Poderia escrever <code>SELECT nome, codigo</code> para ver só esses dois campos.</p>
+
+    <h3 style="font-size:14px;margin-top:18px;">Filtrando com WHERE</h3>
+    <p style="font-size:13px;"><b>Pergunta:</b> "Me mostre só a Ana Paula"</p>
+    <div class="code-block">
+<span class="kw">SELECT</span> *
+<span class="kw">FROM</span> terceirizados
+<span class="kw">WHERE</span> nome = <span class="str">'ANA PAULA LEITE MARQUES'</span>
+    </div>
+
+    <p style="font-size:13px;margin-top:14px;"><b>Pergunta:</b> "Mostre terceirizados cujo nome contém ANA"</p>
+    <div class="code-block">
+<span class="kw">SELECT</span> *
+<span class="kw">FROM</span> terceirizados
+<span class="kw">WHERE</span> nome <span class="kw">LIKE</span> <span class="str">'%ANA%'</span>
+    </div>
+
+    <div class="destaque">
+      🔍 <b>O símbolo %</b> funciona como "qualquer coisa":<br>
+      <code>'ANA%'</code> → começa com ANA<br>
+      <code>'%ANA'</code> → termina com ANA<br>
+      <code>'%ANA%'</code> → contém ANA em qualquer posição
+    </div>
+
+    <h3 style="font-size:14px;margin-top:18px;">Ordenando resultados</h3>
+    <div class="code-block">
+<span class="cm">-- Remessas mais recentes primeiro</span>
+<span class="kw">SELECT</span> numero, data_envio
+<span class="kw">FROM</span> remessas
+<span class="kw">ORDER BY</span> data_envio <span class="kw">DESC</span>
+    </div>
+    <p style="font-size:12.5px;color:#888;"><code>DESC</code> = do maior para o menor (decrescente). <code>ASC</code> = do menor para o maior (padrão).</p>
+
+    <div style="margin-top:20px;padding:14px;background:#f9f3ee;border-radius:8px;">
+      <b style="font-size:13px;">✅ Módulo 2 concluído!</b><br>
+      <button class="btn" style="margin-top:10px;font-size:12px;padding:7px 14px;" onclick="trocarModulo('m3', document.querySelectorAll('.aprend-nav a')[2])">Ir para Módulo 3 →</button>
+    </div>
+  </div>
+
+  {# ── MÓDULO 3 ── #}
+  <div id="m3" class="modulo">
+    <h2>Módulo 3 — Conectando Tabelas (JOIN)</h2>
+
+    <div class="destaque">
+      💡 <b>JOIN</b> é a parte mais poderosa do SQL. Ele liga duas tabelas pela chave em comum — como uma ponte entre planilhas.
+    </div>
+
+    <h3 style="font-size:14px;margin-top:18px;">O problema que o JOIN resolve</h3>
+    <p style="font-size:13px;">A tabela <code>remessas</code> guarda só o número <code>6</code> (ID da Ana Paula), não o nome dela. O JOIN vai buscar o nome na tabela <code>terceirizados</code> automaticamente.</p>
+
+    <div class="diagrama">
+remessas                          terceirizados
+┌────┬────────┬────────────────┐  ┌────┬──────────────────────┐
+│ id │ numero │ terceirizado_id│  │ id │ nome                 │
+├────┼────────┼────────────────┤  ├────┼──────────────────────┤
+│  1 │      1 │      6    ─────┼──┼──▶ │ ANA PAULA LEITE      │
+│  2 │      2 │      1    ─────┼──┼──▶ │ CINTIA MONIQUE       │
+└────┴────────┴────────────────┘  └────┴──────────────────────┘
+
+Resultado do JOIN:
+┌────────┬──────────────────────┬────────────┐
+│ numero │ nome                 │ data_envio │
+├────────┼──────────────────────┼────────────┤
+│      1 │ ANA PAULA LEITE      │ 2026-06-10 │
+│      2 │ CINTIA MONIQUE       │ 2026-06-15 │
+└────────┴──────────────────────┴────────────┘
+    </div>
+
+    <h3 style="font-size:14px;margin-top:18px;">Como escrever o JOIN</h3>
+    <div class="code-block">
+<span class="cm">-- "Me mostre as remessas com o nome do terceirizado"</span>
+<span class="kw">SELECT</span> remessas.numero, remessas.data_envio, terceirizados.nome
+<span class="kw">FROM</span> remessas
+<span class="kw">JOIN</span> terceirizados <span class="kw">ON</span> terceirizados.id = remessas.terceirizado_id
+    </div>
+
+    <div class="destaque">
+      🌉 <b>O ON é a ponte:</b><br>
+      <code>ON terceirizados.id = remessas.terceirizado_id</code><br>
+      Tradução: "ligue o ID da tabela terceirizados com o campo terceirizado_id da tabela remessas"
+    </div>
+
+    <h3 style="font-size:14px;margin-top:18px;">JOIN com mais de duas tabelas</h3>
+    <p style="font-size:13px;">Você pode encadear vários JOINs. Exemplo real do sistema:</p>
+    <div class="code-block">
+<span class="cm">-- Itens de remessa com nome do produto e do terceirizado</span>
+<span class="kw">SELECT</span>
+  remessas.numero,
+  terceirizados.nome,
+  produtos.descricao,
+  itens_remessa.qtd_enviada
+<span class="kw">FROM</span> itens_remessa
+<span class="kw">JOIN</span> remessas     <span class="kw">ON</span> remessas.id     = itens_remessa.remessa_id
+<span class="kw">JOIN</span> terceirizados <span class="kw">ON</span> terceirizados.id = remessas.terceirizado_id
+<span class="kw">JOIN</span> produtos      <span class="kw">ON</span> produtos.id      = itens_remessa.produto_id
+    </div>
+
+    <div style="margin-top:20px;padding:14px;background:#f9f3ee;border-radius:8px;">
+      <b style="font-size:13px;">✅ Módulo 3 concluído!</b><br>
+      <button class="btn" style="margin-top:10px;font-size:12px;padding:7px 14px;" onclick="trocarModulo('m4', document.querySelectorAll('.aprend-nav a')[3])">Ir para Módulo 4 →</button>
+    </div>
+  </div>
+
+  {# ── MÓDULO 4 ── #}
+  <div id="m4" class="modulo">
+    <h2>Módulo 4 — Contando e Somando (Funções)</h2>
+
+    <div class="destaque">
+      💡 SQL também faz cálculos para você — sem precisar de calculadora ou Excel!
+    </div>
+
+    <table class="tabela-exemplo" style="margin-top:14px;">
+      <tr><th>Função</th><th>O que faz</th><th>Exemplo de pergunta</th></tr>
+      <tr><td><code>COUNT(*)</code></td><td>Conta quantos registros existem</td><td>Quantas remessas foram feitas?</td></tr>
+      <tr><td><code>SUM(campo)</code></td><td>Soma os valores de uma coluna</td><td>Total de peças enviadas?</td></tr>
+      <tr><td><code>AVG(campo)</code></td><td>Calcula a média</td><td>Média de peças por remessa?</td></tr>
+      <tr><td><code>MAX(campo)</code></td><td>Pega o maior valor</td><td>Maior remessa em quantidade?</td></tr>
+      <tr><td><code>MIN(campo)</code></td><td>Pega o menor valor</td><td>Menor remessa em quantidade?</td></tr>
+    </table>
+
+    <h3 style="font-size:14px;margin-top:18px;">Exemplo: contar remessas por terceirizado</h3>
+    <div class="code-block">
+<span class="kw">SELECT</span> terceirizados.nome, <span class="fn">COUNT</span>(*) <span class="kw">AS</span> total_remessas
+<span class="kw">FROM</span> remessas
+<span class="kw">JOIN</span> terceirizados <span class="kw">ON</span> terceirizados.id = remessas.terceirizado_id
+<span class="kw">GROUP BY</span> terceirizados.nome
+<span class="kw">ORDER BY</span> total_remessas <span class="kw">DESC</span>
+    </div>
+
+    <div class="destaque">
+      📦 <b>GROUP BY</b> agrupa os resultados.<br>
+      Sem ele, o COUNT contaria tudo junto e daria um só número. Com ele, você obtém o total separado por terceirizado.
+    </div>
+
+    <h3 style="font-size:14px;margin-top:18px;">Exemplo: total de peças enviadas vs retornadas</h3>
+    <div class="code-block">
+<span class="kw">SELECT</span>
+  terceirizados.nome,
+  <span class="fn">SUM</span>(itens_remessa.qtd_enviada)   <span class="kw">AS</span> enviado,
+  <span class="fn">SUM</span>(itens_remessa.qtd_retornada) <span class="kw">AS</span> retornado,
+  <span class="fn">SUM</span>(itens_remessa.qtd_enviada - itens_remessa.qtd_retornada) <span class="kw">AS</span> pendente
+<span class="kw">FROM</span> itens_remessa
+<span class="kw">JOIN</span> remessas      <span class="kw">ON</span> remessas.id      = itens_remessa.remessa_id
+<span class="kw">JOIN</span> terceirizados <span class="kw">ON</span> terceirizados.id  = remessas.terceirizado_id
+<span class="kw">GROUP BY</span> terceirizados.nome
+    </div>
+    <p style="font-size:12.5px;color:#888;">Essa consulta é exatamente o que o Dashboard do sistema executa nos bastidores!</p>
+
+    <div style="margin-top:20px;padding:14px;background:#f9f3ee;border-radius:8px;">
+      <b style="font-size:13px;">✅ Módulo 4 concluído!</b><br>
+      <button class="btn" style="margin-top:10px;font-size:12px;padding:7px 14px;" onclick="trocarModulo('m5', document.querySelectorAll('.aprend-nav a')[4])">Ir para os Exercícios →</button>
+    </div>
+  </div>
+
+  {# ── MÓDULO 5 ── #}
+  <div id="m5" class="modulo">
+    <h2>Módulo 5 — Exercícios Práticos</h2>
+    <p style="font-size:13px;">Tente montar a consulta antes de ver a resposta. Não tem certo ou errado — é para treinar o raciocínio!</p>
+
+    <div class="exercicio">
+      <h4>Exercício 1 <span class="tag-nivel facil">⭐ Fácil</span></h4>
+      <p style="font-size:13px;margin:0 0 8px;"><b>Pergunta:</b> "Quantos produtos estão cadastrados no sistema?"</p>
+      <p style="font-size:12.5px;color:#888;">Dica: você precisa de <code>SELECT</code>, <code>COUNT(*)</code> e <code>FROM</code>.</p>
+      <button class="btn-resposta" onclick="toggleResposta(this)">Ver resposta</button>
+      <div class="resposta">
+        <div class="code-block">
+<span class="kw">SELECT</span> <span class="fn">COUNT</span>(*) <span class="kw">AS</span> total_produtos
+<span class="kw">FROM</span> produtos
+        </div>
+        <p style="font-size:12.5px;color:#4d6b3a;">✅ O banco vai responder com um único número — a quantidade de produtos cadastrados.</p>
+      </div>
+    </div>
+
+    <div class="exercicio">
+      <h4>Exercício 2 <span class="tag-nivel facil">⭐ Fácil</span></h4>
+      <p style="font-size:13px;margin:0 0 8px;"><b>Pergunta:</b> "Quais remessas foram enviadas em julho de 2026?"</p>
+      <p style="font-size:12.5px;color:#888;">Dica: use <code>WHERE data_envio LIKE '2026-07%'</code></p>
+      <button class="btn-resposta" onclick="toggleResposta(this)">Ver resposta</button>
+      <div class="resposta">
+        <div class="code-block">
+<span class="kw">SELECT</span> numero, data_envio
+<span class="kw">FROM</span> remessas
+<span class="kw">WHERE</span> data_envio <span class="kw">LIKE</span> <span class="str">'2026-07%'</span>
+<span class="kw">ORDER BY</span> data_envio
+        </div>
+      </div>
+    </div>
+
+    <div class="exercicio">
+      <h4>Exercício 3 <span class="tag-nivel medio">⭐⭐ Médio</span></h4>
+      <p style="font-size:13px;margin:0 0 8px;"><b>Pergunta:</b> "Quantas peças foram enviadas no total para cada terceirizado?"</p>
+      <p style="font-size:12.5px;color:#888;">Dica: você vai precisar de JOIN, SUM e GROUP BY.</p>
+      <button class="btn-resposta" onclick="toggleResposta(this)">Ver resposta</button>
+      <div class="resposta">
+        <div class="code-block">
+<span class="kw">SELECT</span> terceirizados.nome, <span class="fn">SUM</span>(itens_remessa.qtd_enviada) <span class="kw">AS</span> total_pecas
+<span class="kw">FROM</span> itens_remessa
+<span class="kw">JOIN</span> remessas      <span class="kw">ON</span> remessas.id      = itens_remessa.remessa_id
+<span class="kw">JOIN</span> terceirizados <span class="kw">ON</span> terceirizados.id  = remessas.terceirizado_id
+<span class="kw">GROUP BY</span> terceirizados.nome
+<span class="kw">ORDER BY</span> total_pecas <span class="kw">DESC</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="exercicio">
+      <h4>Exercício 4 <span class="tag-nivel dificil">⭐⭐⭐ Difícil</span></h4>
+      <p style="font-size:13px;margin:0 0 8px;"><b>Pergunta:</b> "Qual produto foi mais enviado em quantidade total?"</p>
+      <p style="font-size:12.5px;color:#888;">Dica: JOIN entre itens_remessa e produtos, depois SUM + GROUP BY + ORDER BY + LIMIT 1.</p>
+      <button class="btn-resposta" onclick="toggleResposta(this)">Ver resposta</button>
+      <div class="resposta">
+        <div class="code-block">
+<span class="kw">SELECT</span> produtos.descricao, <span class="fn">SUM</span>(itens_remessa.qtd_enviada) <span class="kw">AS</span> total
+<span class="kw">FROM</span> itens_remessa
+<span class="kw">JOIN</span> produtos <span class="kw">ON</span> produtos.id = itens_remessa.produto_id
+<span class="kw">GROUP BY</span> produtos.descricao
+<span class="kw">ORDER BY</span> total <span class="kw">DESC</span>
+<span class="kw">LIMIT</span> 1
+        </div>
+        <p style="font-size:12.5px;color:#888;"><code>LIMIT 1</code> = "me mostra só o primeiro resultado" — ou seja, o campeão de quantidade.</p>
+      </div>
+    </div>
+  </div>
+
+  {# ── MÓDULO 6 ── #}
+  <div id="m6" class="modulo">
+    <h2>Módulo 6 — Glossário Rápido</h2>
+    <p style="font-size:13px;">Consulte aqui sempre que aparecer um termo que não lembrar.</p>
+
+    <table class="tabela-exemplo" style="margin-top:10px;">
+      <tr><th>Termo</th><th>Significado simples</th></tr>
+      <tr><td><b>Banco de dados</b></td><td>Conjunto organizado de tabelas interligadas</td></tr>
+      <tr><td><b>Tabela</b></td><td>Uma "planilha" dentro do banco (ex: <code>remessas</code>)</td></tr>
+      <tr><td><b>Coluna</b></td><td>Um campo da tabela (ex: nome, data_envio, qtd_enviada)</td></tr>
+      <tr><td><b>Linha / Registro</b></td><td>Uma entrada completa (ex: os dados da Remessa Nº 3)</td></tr>
+      <tr><td><b>ID</b></td><td>Número único que identifica cada registro — como um CPF</td></tr>
+      <tr><td><b>SQL</b></td><td>Linguagem para fazer perguntas ao banco de dados</td></tr>
+      <tr><td><b>SELECT</b></td><td>"Me mostre estas colunas..."</td></tr>
+      <tr><td><b>FROM</b></td><td>"...desta tabela"</td></tr>
+      <tr><td><b>WHERE</b></td><td>Filtro — "somente onde esta condição for verdadeira"</td></tr>
+      <tr><td><b>JOIN</b></td><td>Liga duas tabelas pela chave em comum</td></tr>
+      <tr><td><b>ON</b></td><td>Define qual campo é a ponte entre as tabelas</td></tr>
+      <tr><td><b>GROUP BY</b></td><td>Agrupa resultados para usar com COUNT, SUM etc.</td></tr>
+      <tr><td><b>ORDER BY</b></td><td>Define a ordem dos resultados</td></tr>
+      <tr><td><b>DESC / ASC</b></td><td>Ordem decrescente / crescente</td></tr>
+      <tr><td><b>LIMIT</b></td><td>Limita quantos resultados mostrar</td></tr>
+      <tr><td><b>COUNT(*)</b></td><td>Conta quantos registros existem</td></tr>
+      <tr><td><b>SUM(campo)</b></td><td>Soma os valores de uma coluna</td></tr>
+      <tr><td><b>LIKE '%x%'</b></td><td>Busca por texto que contém "x" em qualquer posição</td></tr>
+      <tr><td><b>PRIMARY KEY</b></td><td>O ID principal de uma tabela — único e obrigatório</td></tr>
+      <tr><td><b>FOREIGN KEY</b></td><td>Campo que aponta para o ID de outra tabela</td></tr>
+    </table>
+  </div>
+
+</div>
+
+<script>
+  function trocarModulo(id, linkClicado) {
+    document.querySelectorAll('.modulo').forEach(function(m) { m.classList.remove('ativo'); });
+    document.getElementById(id).classList.add('ativo');
+    document.querySelectorAll('.aprend-nav a').forEach(function(a) { a.classList.remove('ativo'); });
+    if (linkClicado) linkClicado.classList.add('ativo');
+    window.scrollTo(0, 0);
+    return false;
+  }
+  function toggleResposta(btn) {
+    var resp = btn.nextElementSibling;
+    var aberta = resp.classList.toggle('aberta');
+    btn.textContent = aberta ? 'Ocultar resposta' : 'Ver resposta';
+  }
+</script>
+{% endblock %}

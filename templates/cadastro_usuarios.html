@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Novo usuário do sistema</h2>
+  <form method="post" action="/cadastros/usuario">
+    <div class="grid">
+      <div>
+        <label>Usuário</label>
+        <input type="text" name="usuario" required>
+      </div>
+      <div>
+        <label>Senha</label>
+        <input type="password" name="senha" required minlength="4">
+      </div>
+    </div>
+    <button class="btn" type="submit">Adicionar usuário</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Usuários cadastrados</h2>
+  <table>
+    <tr><th>Usuário</th><th>Criado em</th><th>Ações</th></tr>
+    {% for u in usuarios %}
+    <tr>
+      <td>{{ u.usuario }}</td>
+      <td>{{ u.criado_em|brdate }}</td>
+      <td class="actions">
+        <form method="post" action="/usuarios/{{ u.id }}/excluir" onsubmit="return confirm('Excluir o usuário {{ u.usuario }}?');">
+          <button class="btn-mini excluir" type="submit">EXCLUIR</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3" class="small">Nenhum usuário cadastrado.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

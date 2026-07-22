@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Item da Remessa Nº {{ item.remessa_numero }}</h2>
+  <table>
+    <tr><th>Terceirizado</th><td>{{ item.terceirizado_nome }}</td></tr>
+    <tr><th>Prioridade de produção</th><td>{{ item.prioridade ~ "º" if item.prioridade else "Sem prioridade definida" }}</td></tr>
+    <tr><th>Produto</th><td><b>{{ item.produto_codigo }}</b> - {{ item.produto_descricao }}</td></tr>
+    <tr><th>Cor/Estampa</th><td>{{ item.cor_descricao }}</td></tr>
+    <tr><th>Serviço</th><td>{{ item.servico_descricao }}</td></tr>
+    <tr><th>Quantidade enviada</th><td>{{ item.qtd_enviada }}</td></tr>
+    <tr><th>Data de envio</th><td>{{ item.data_envio|brdate }}</td></tr>
+    <tr><th>Quantidade retornada</th><td>{{ retornado }}</td></tr>
+    <tr><th>Saldo pendente</th><td>{{ pendente }}</td></tr>
+  </table>
+  <div class="actions" style="margin-top:10px;">
+    <a href="/remessas" class="btn secondary">Voltar</a>
+    <a class="btn-mini editar" href="/itens-remessa/{{ item.id }}/editar">EDITAR</a>
+    <form method="post" action="/itens-remessa/{{ item.id }}/excluir" onsubmit="return confirm('Excluir este item da remessa?');">
+      <button class="btn-mini excluir" type="submit">EXCLUIR</button>
+    </form>
+  </div>
+</div>
+<div class="card">
+  <h2>Retornos vinculados a este item</h2>
+  <table>
+    <tr><th>Nº Retorno</th><th>Data</th><th>Qtde retornada</th><th>Finalizado</th></tr>
+    {% for r in retornos %}
+    <tr>
+      <td>{{ r.retorno_numero }}</td>
+      <td>{{ r.data_retorno|brdate }}</td>
+      <td>{{ r.qtd_retornada }}</td>
+      <td>{{ "SIM" if r.finalizado else "NÃO" }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="small">Nenhum retorno registrado ainda.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

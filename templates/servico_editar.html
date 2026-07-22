@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Editar serviço ({{ servico.codigo }})</h2>
+  <form method="post">
+    <div class="grid">
+      <div><label>Produto (atribuição)</label>
+        <input value="{% for p in produtos %}{% if p.id == servico.produto_id %}{{ p.codigo }} - {{ p.descricao }}{% endif %}{% endfor %}" disabled style="background:#f1f1f3;">
+      </div>
+      <div><label>Descrição do serviço</label><input name="descricao" value="{{ servico.descricao }}" required></div>
+      <div><label>Valor com Registro (R$)</label><input name="valor_com_registro" type="number" step="0.01" value="{{ servico.valor_com_registro }}" required></div>
+      <div><label>Valor sem Registro (R$)</label><input name="valor_sem_registro" type="number" step="0.01" value="{{ servico.valor_sem_registro }}" required></div>
+    </div>
+    <p class="small">Não é possível alterar o produto de um serviço já cadastrado. Para isso, exclua e crie um novo.</p>
+    <button class="btn" type="submit">Salvar</button>
+    <a href="/cadastros/servicos" class="btn secondary">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

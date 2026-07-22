@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Editar produto</h2>
+  <form method="post">
+    <div class="grid">
+      <div><label>Código</label><input name="codigo" value="{{ produto.codigo }}" required></div>
+      <div><label>Descrição do Produto</label><input name="descricao" value="{{ produto.descricao }}" required></div>
+    </div>
+    <button class="btn" type="submit">Salvar</button>
+    <a href="/cadastros" class="btn secondary">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

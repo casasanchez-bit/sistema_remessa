@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Editar cor/estampa ({{ cor.codigo }})</h2>
+  <form method="post">
+    <div class="grid">
+      <div><label>Descrição</label><input name="descricao" value="{{ cor.descricao }}" required></div>
+    </div>
+    <button class="btn" type="submit">Salvar</button>
+    <a href="/cadastros" class="btn secondary">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

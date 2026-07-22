@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Cor/Estampa: {{ cor.descricao }}</h2>
+  <p class="small">Código: {{ cor.codigo }} — Produto: {{ cor.produto_descricao }}</p>
+  <div class="actions" style="margin-top:10px;">
+    <a href="/cadastros/cores-estampas" class="btn secondary">Voltar</a>
+    <a class="btn-mini editar" href="/cores-estampas/{{ cor.id }}/editar">EDITAR</a>
+    <form method="post" action="/cores-estampas/{{ cor.id }}/excluir" onsubmit="return confirm('Excluir esta cor/estampa?');">
+      <button class="btn-mini excluir" type="submit">EXCLUIR</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

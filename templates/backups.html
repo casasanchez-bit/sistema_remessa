@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Backup do banco de dados</h2>
+  <p class="small">Cria uma cópia datada do arquivo de dados (controle_remessa.db). Recomendado fazer um backup antes de excluir cadastros em massa ou periodicamente (ex: ao final de cada mês).</p>
+  <form method="post" action="/backups/novo">
+    <button class="btn" type="submit">Fazer Backup Agora</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Backups existentes</h2>
+  <table>
+    <tr><th>Arquivo</th><th>Data</th><th>Tamanho</th><th>Ações</th></tr>
+    {% for b in backups %}
+    <tr>
+      <td>{{ b.nome }}</td>
+      <td>{{ b.data }}</td>
+      <td>{{ b.tamanho_kb }} KB</td>
+      <td class="actions">
+        <a class="btn-mini ver" href="/backups/{{ b.nome }}/download">BAIXAR</a>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="small">Nenhum backup criado ainda.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

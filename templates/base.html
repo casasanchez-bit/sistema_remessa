@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Controle de Remessa - Terceirização</title>
+  <style>
+    :root {
+      --terracota: #C4574E;
+      --laranja: #AF4005;
+      --linen: #F9E9DC;
+      --marrom: #5C442C;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: Segoe UI, Arial, sans-serif; margin: 0; background: var(--linen); color: var(--marrom); }
+    header { background: var(--marrom); color: var(--linen); padding: 14px 24px; display: flex; align-items: center; gap: 24px; }
+    header h1 { font-size: 16px; margin: 0; font-weight: 700; color: #fff; }
+    nav { display: flex; gap: 14px; }
+    nav a { color: #d9c6b3; text-decoration: none; font-size: 13px; font-weight: 600; padding: 6px 10px; border-radius: 6px; display: inline-block; }
+    nav a.active, nav a:hover { background: var(--terracota); color: #fff; }
+    .nav-item { position: relative; }
+    .nav-item > .nav-trigger { color: #d9c6b3; text-decoration: none; font-size: 13px; font-weight: 600; padding: 6px 10px; border-radius: 6px; cursor: pointer; display: inline-block; background: none; border: none; font-family: inherit; }
+    .nav-item > .nav-trigger.active, .nav-item:hover > .nav-trigger, .nav-item.open > .nav-trigger { background: var(--terracota); color: #fff; }
+    .nav-trigger::after { content: " ▾"; font-size: 9px; }
+    .submenu { display: none; position: absolute; top: 100%; left: 0; background: #fff; border: 1px solid #e7d7c4; border-radius: 8px; min-width: 190px; padding: 6px; box-shadow: 0 6px 16px rgba(0,0,0,0.15); z-index: 20; }
+    .nav-item:hover > .submenu, .nav-item.open > .submenu { display: block; }
+    .submenu a { display: block; color: var(--marrom); padding: 8px 10px; border-radius: 6px; font-size: 13px; font-weight: 600; }
+    .submenu a:hover { background: var(--linen); color: var(--marrom); }
+    main { max-width: 1100px; margin: 24px auto; padding: 0 20px; }
+    .card { background: #fff; border: 1px solid #e7d7c4; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid #f1e4d6; }
+    th { color: var(--marrom); opacity: 0.7; font-size: 11.5px; text-transform: uppercase; font-weight: 700; }
+    input, select { padding: 7px 9px; border: 1px solid #d9c6b3; border-radius: 6px; font-size: 13px; width: 100%; }
+    input[type="date"], input[type="month"] { width: auto; min-width: 0; }
+    label { font-size: 11.5px; color: var(--marrom); opacity: 0.75; display: block; margin-bottom: 3px; font-weight: 600; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px; }
+    .btn { background: var(--laranja); color: #fff; border: none; padding: 9px 16px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; text-align: center; line-height: 1.2; }
+    .btn:hover { background: var(--terracota); }
+    .btn.secondary { background: var(--linen); color: var(--marrom); border: 1px solid #d9c6b3; }
+    .kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .kpi .card { text-align: center; margin-bottom: 0; }
+    .kpi .num { font-size: 24px; font-weight: 800; color: var(--laranja); }
+    .badge { padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .b-pendente { background: #fbe4d5; color: var(--laranja); }
+    .b-parcial { background: #f3d9d6; color: var(--terracota); }
+    .b-concluida { background: #e3e8d8; color: #4d6b3a; }
+    .b-pago { background: #e3e8d8; color: #4d6b3a; padding: 4px 10px; }
+    h2 { font-size: 15px; margin: 0 0 12px; color: var(--marrom); }
+    .small { font-size: 11.5px; color: var(--marrom); opacity: 0.7; }
+    .item-row { display: grid; grid-template-columns: 2fr 1fr auto; gap: 8px; margin-bottom: 6px; align-items: end; }
+    .flash { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
+    .flash.erro { background: #f3d9d6; color: var(--terracota); border: 1px solid var(--terracota); }
+    .flash.sucesso { background: #e3e8d8; color: #4d6b3a; border: 1px solid #4d6b3a; }
+    /* ── Toasts ── */
+    #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+    .toast { background: #fff; border-radius: 8px; padding: 12px 16px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,.18); max-width: 360px; display: flex; align-items: flex-start; gap: 10px; pointer-events: all; animation: toastIn .25s ease; border-left: 4px solid #999; }
+    .toast.sucesso { border-color: #4d6b3a; color: #4d6b3a; }
+    .toast.erro { border-color: var(--terracota); color: var(--terracota); }
+    .toast.info { border-color: var(--laranja); color: var(--laranja); }
+    .toast-msg { flex: 1; line-height: 1.4; }
+    .toast-close { background: none; border: none; cursor: pointer; font-size: 16px; line-height: 1; color: inherit; opacity: .6; padding: 0; flex-shrink: 0; margin-top: -1px; }
+    .toast-close:hover { opacity: 1; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    /* ── Spinner no botão ── */
+    .btn-loading { position: relative; pointer-events: none; opacity: .8; }
+    .btn-loading::after { content: ''; display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.5); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; margin-left: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    /* ── Validação ── */
+    input:user-invalid, select:user-invalid { border-color: var(--terracota) !important; background: #fff8f7; }
+    .actions { display: flex; gap: 6px; }
+    .actions form { display: inline; }
+    .btn-mini { padding: 4px 9px; border-radius: 5px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; text-align: center; line-height: 1.2; }
+    .nav-trigger { display: inline-flex; align-items: center; justify-content: center; text-align: center; }
+    .btn-calendario { display: inline-flex; align-items: center; justify-content: center; text-align: center; width: 32px; height: 32px; padding: 0; border-radius: 6px; border: 1px solid #d9c6b3; background: #fff; cursor: pointer; font-size: 14px; line-height: 1; vertical-align: middle; }
+    .btn-calendario:hover { background: var(--linen); }
+    .campo-data { display: inline-flex; align-items: center; gap: 6px; }
+    .btn-mini.ver { background: var(--linen); color: var(--marrom); border: 1px solid #d9c6b3; }
+    .btn-mini.editar { background: #fbe4d5; color: var(--laranja); }
+    .btn-mini.excluir { background: #f3d9d6; color: var(--terracota); }
+    .link-celula { color: inherit; text-decoration: none; display: block; }
+    .link-celula:hover { text-decoration: underline; color: var(--laranja); cursor: pointer; }
+    .combo { position: relative; }
+    .combo-input { background: #fff; }
+    .combo-list { position: fixed; z-index: 9999; background: #fff; border: 1px solid #d9c6b3; border-radius: 6px; max-height: 300px; overflow-y: auto; display: none; box-shadow: 0 6px 16px rgba(0,0,0,0.12); width: max-content; max-width: 480px; }
+    .combo-list div { padding: 7px 9px; font-size: 13px; cursor: pointer; }
+    .combo-list div:hover { background: var(--linen); }
+    .combo-list div.empty { color: #999; font-style: italic; cursor: default; }
+    .combo-list div.empty:hover { background: none; }
+    .combo-list div.com-foto { display: flex; align-items: center; gap: 10px; padding: 5px 9px; min-height: 110px; }
+    .combo-list div.com-foto img { width: 100px; height: 100px; object-fit: cover; border-radius: 6px; border: 1px solid #d9c6b3; flex-shrink: 0; }
+    .combo-list div.com-foto .combo-sem-foto { width: 100px; height: 100px; border-radius: 6px; border: 1px dashed #d9c6b3; flex-shrink: 0; background: #faf7f4; }
+    .combo-list div.com-foto span { font-size: 13px; line-height: 1.3; }
+    @media print {
+      header, nav, .no-print { display: none !important; }
+      body { background: #fff !important; }
+      main { max-width: 100%; margin: 0; padding: 0; }
+      .card { border: 1px solid #ccc !important; page-break-inside: avoid; }
+    }
+  </style>
+  <script>
+    function searchableSelect(select) {
+      if (!select || select.dataset.comboInit) return;
+      select.dataset.comboInit = '1';
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'combo';
+      select.parentNode.insertBefore(wrapper, select);
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'combo-input';
+      input.placeholder = select.dataset.placeholder || 'Digite para buscar...';
+      input.autocomplete = 'off';
+      wrapper.appendChild(input);
+
+      select.style.display = 'none';
+      wrapper.appendChild(select);
+
+      const list = document.createElement('div');
+      list.className = 'combo-list';
+      wrapper.appendChild(list);
+
+      function opcoes() {
+        return Array.from(select.options).filter(function (o) { return o.value !== ''; });
+      }
+
+      function renderLista(filtro) {
+        const termo = (filtro || '').toLowerCase().trim();
+        const usaContains = select.dataset.search === 'contains';
+        const opts = opcoes().filter(function (o) {
+          const txt = o.textContent.toLowerCase().trim();
+          if (!termo) return true;
+          if (usaContains) return txt.includes(termo);
+          // match exato ou "começa com" — evita que "30" mostre "130", "230", "300"
+          return txt === termo || txt.startsWith(termo + ' ') || txt.startsWith(termo + '-');
+        });
+        list.innerHTML = '';
+        if (opts.length === 0) {
+          const vazio = document.createElement('div');
+          vazio.className = 'empty';
+          vazio.textContent = 'Nenhum resultado';
+          list.appendChild(vazio);
+        } else {
+          opts.forEach(function (o) {
+            const div = document.createElement('div');
+            const foto = o.dataset.foto;
+            if (foto !== undefined) {
+              div.className = 'com-foto';
+              if (foto) {
+                const img = document.createElement('img');
+                img.src = foto;
+                img.alt = '';
+                div.appendChild(img);
+              } else {
+                const ph = document.createElement('div');
+                ph.className = 'combo-sem-foto';
+                div.appendChild(ph);
+              }
+              const txt = document.createElement('span');
+              txt.textContent = o.textContent;
+              div.appendChild(txt);
+            } else {
+              div.textContent = o.textContent;
+            }
+            div.addEventListener('mousedown', function (e) {
+              e.preventDefault();
+              select.value = o.value;
+              input.value = o.textContent;
+              list.style.display = 'none';
+              select.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            list.appendChild(div);
+          });
+        }
+        var rect = input.getBoundingClientRect();
+        list.style.top  = (rect.bottom + 2) + 'px';
+        list.style.left = rect.left + 'px';
+        list.style.minWidth = rect.width + 'px';
+        list.style.display = 'block';
+      }
+
+      function sincronizarComSelect() {
+        const sel = select.options[select.selectedIndex];
+        const temValor = !!(sel && sel.value !== '');
+        input.value = temValor ? sel.textContent : '';
+        input.readOnly = temValor;
+        input.style.background = temValor ? '#f5f0eb' : '';
+        input.style.cursor = temValor ? 'pointer' : '';
+      }
+
+      sincronizarComSelect();
+      select.addEventListener('comboRefresh', sincronizarComSelect);
+
+      input.addEventListener('focus', function () {
+        if (input.readOnly) {
+          input.readOnly = false;
+          input.style.background = '';
+          input.style.cursor = '';
+          input.value = '';
+        }
+        renderLista(input.value);
+      });
+      input.addEventListener('input', function () { renderLista(input.value); });
+      input.addEventListener('click', function () { renderLista(input.value); });
+      input.addEventListener('blur', function () {
+        setTimeout(function () {
+          list.style.display = 'none';
+          sincronizarComSelect();
+        }, 120);
+      });
+      document.addEventListener('click', function (e) {
+        if (!wrapper.contains(e.target)) list.style.display = 'none';
+      });
+    }
+
+    function mascaraCelular(input) {
+      if (!input || input.dataset.maskInit) return;
+      input.dataset.maskInit = '1';
+      input.setAttribute('inputmode', 'numeric');
+      input.setAttribute('placeholder', '(11) 91234-5678');
+      input.setAttribute('maxlength', '15');
+      function formatar() {
+        let digitos = input.value.replace(/\D/g, '').slice(0, 11);
+        let formatado = digitos;
+        if (digitos.length > 2) formatado = '(' + digitos.slice(0, 2) + ') ' + digitos.slice(2);
+        if (digitos.length > 7) formatado = '(' + digitos.slice(0, 2) + ') ' + digitos.slice(2, 7) + '-' + digitos.slice(7);
+        input.value = formatado;
+      }
+      input.addEventListener('input', formatar);
+      formatar();
+    }
+
+    function mascaraDataBR(visivel) {
+      if (!visivel || visivel.dataset.maskInit) return;
+      visivel.dataset.maskInit = '1';
+      const nomeOriginal = visivel.getAttribute('name');
+      const valorInicial = visivel.value;
+      const eraRequired = visivel.hasAttribute('required');
+
+      visivel.removeAttribute('name');
+      visivel.setAttribute('type', 'text');
+      visivel.setAttribute('inputmode', 'numeric');
+      visivel.setAttribute('placeholder', 'dd/mm/aaaa');
+      visivel.setAttribute('maxlength', '10');
+      visivel.style.width = '110px';
+
+      const wrapper = document.createElement('span');
+      wrapper.className = 'campo-data';
+      visivel.parentNode.insertBefore(wrapper, visivel);
+      wrapper.appendChild(visivel);
+
+      const oculto = document.createElement('input');
+      oculto.type = 'date';
+      oculto.name = nomeOriginal;
+      oculto.style.position = 'absolute';
+      oculto.style.opacity = '0';
+      oculto.style.width = '1px';
+      oculto.style.height = '1px';
+      oculto.style.pointerEvents = 'none';
+      if (eraRequired) oculto.required = false;
+      wrapper.appendChild(oculto);
+
+      const botaoCalendario = document.createElement('button');
+      botaoCalendario.type = 'button';
+      botaoCalendario.className = 'btn-calendario';
+      botaoCalendario.textContent = '📅';
+      botaoCalendario.title = 'Abrir calendário';
+      botaoCalendario.tabIndex = -1;
+      wrapper.appendChild(botaoCalendario);
+
+      function isoParaBr(iso) {
+        const partes = (iso || '').split('-');
+        if (partes.length !== 3) return '';
+        const [a, m, d] = partes;
+        return `${d}/${m}/${a}`;
+      }
+      function brParaIso(br) {
+        const digitos = br.replace(/\D/g, '');
+        if (digitos.length !== 8) return '';
+        return `${digitos.slice(4, 8)}-${digitos.slice(2, 4)}-${digitos.slice(0, 2)}`;
+      }
+      function formatar() {
+        let digitos = visivel.value.replace(/\D/g, '').slice(0, 8);
+        let formatado = digitos;
+        if (digitos.length > 2) formatado = digitos.slice(0, 2) + '/' + digitos.slice(2);
+        if (digitos.length > 4) formatado = digitos.slice(0, 2) + '/' + digitos.slice(2, 4) + '/' + digitos.slice(4);
+        visivel.value = formatado;
+        oculto.value = brParaIso(formatado);
+      }
+      visivel.value = isoParaBr(valorInicial);
+      oculto.value = brParaIso(visivel.value);
+      visivel.addEventListener('input', formatar);
+
+      oculto.addEventListener('change', function () {
+        visivel.value = isoParaBr(oculto.value);
+        visivel.setCustomValidity('');
+      });
+
+      function abrirCalendario(e) {
+        e.preventDefault();
+        if (oculto.showPicker) {
+          try { oculto.showPicker(); return; } catch (err) { /* segue para o fallback */ }
+        }
+        oculto.focus();
+        oculto.click();
+      }
+      botaoCalendario.addEventListener('click', abrirCalendario);
+      visivel.addEventListener('focus', abrirCalendario);
+
+      if (eraRequired) {
+        visivel.addEventListener('blur', function () {
+          if (oculto.value === '') {
+            visivel.setCustomValidity('Informe uma data válida (dd/mm/aaaa).');
+          } else {
+            visivel.setCustomValidity('');
+          }
+        });
+        visivel.required = true;
+      }
+    }
+
+    // ── Toast notifications ────────────────────────────────────────────────
+    function showToast(msg, tipo) {
+      var container = document.getElementById('toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+      }
+      var toast = document.createElement('div');
+      toast.className = 'toast ' + (tipo || 'info');
+      toast.innerHTML = '<span class="toast-msg">' + msg + '</span>'
+        + '<button class="toast-close" onclick="this.parentElement.remove()">✕</button>';
+      container.appendChild(toast);
+      setTimeout(function () {
+        toast.style.transition = 'opacity .4s, transform .4s';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(8px)';
+        setTimeout(function () { toast.remove(); }, 420);
+      }, 4500);
+    }
+
+    // ── Proteção contra duplo clique em botões de submit ──────────────────
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('input[name="telefone"]').forEach(mascaraCelular);
+      document.querySelectorAll('input[type="date"]').forEach(mascaraDataBR);
+
+      document.querySelectorAll('form').forEach(function (form) {
+        form.addEventListener('submit', function () {
+          var btn = form.querySelector('button[type="submit"], button:not([type])');
+          if (btn && !btn.classList.contains('btn-loading')) {
+            setTimeout(function () { btn.classList.add('btn-loading'); }, 0);
+          }
+        });
+      });
+    });
+
+    function ativarSelecaoLinha(barraId, infoId, btnVerId, btnExcluirId, formExcluirId) {
+      var linhaSelecionada = null;
+      function desselecionar() {
+        if (linhaSelecionada) {
+          linhaSelecionada.style.background = '';
+          linhaSelecionada.style.outline = '';
+          linhaSelecionada = null;
+        }
+        var barra = document.getElementById(barraId);
+        if (barra) barra.style.display = 'none';
+      }
+      window.desselecionar = desselecionar;
+      document.querySelectorAll('.linha-selecionavel').forEach(function(tr) {
+        tr.addEventListener('click', function(e) {
+          if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON' || e.target.closest('form')) return;
+          if (linhaSelecionada === tr) { desselecionar(); return; }
+          desselecionar();
+          linhaSelecionada = tr;
+          tr.style.background = '#fdf6f0';
+          tr.style.outline = '2px solid #a0522d';
+          var barra = document.getElementById(barraId);
+          document.getElementById(infoId).textContent = tr.dataset.label + ' selecionado(a)';
+          var btnVer = document.getElementById(btnVerId);
+          if (btnVer) btnVer.href = tr.dataset.view;
+          var btnExcluir = document.getElementById(btnExcluirId);
+          if (btnExcluir) btnExcluir.onclick = function() {
+            if (confirm(tr.dataset.confirm)) {
+              var form = document.getElementById(formExcluirId);
+              form.action = tr.dataset.delete;
+              form.submit();
+            }
+          };
+          barra.style.display = 'flex';
+        });
+      });
+    }
+
+    function filtrarTabela(inputId, tableId) {
+      const input = document.getElementById(inputId);
+      const tabela = document.getElementById(tableId);
+      if (!input || !tabela) return;
+      input.addEventListener('input', function () {
+        const termo = input.value.toLowerCase().trim();
+        const linhas = tabela.querySelectorAll('tr');
+        linhas.forEach(function (tr, indice) {
+          if (indice === 0) return;
+          const celulas = Array.from(tr.querySelectorAll('td'));
+          const bate = celulas.some(function (td) {
+            const txt = td.textContent.toLowerCase().trim();
+            if (!termo) return true;
+            return txt.includes(termo);
+          });
+          tr.style.display = bate ? '' : 'none';
+        });
+      });
+    }
+  </script>
+</head>
+<body>
+  <header>
+    <h1>Casa Sanchez · Remessa &amp; Retorno</h1>
+    <nav>
+      <a href="/" class="{{ 'active' if request.path == '/' }}">Dashboard</a>
+      <div class="nav-item">
+        <button type="button" class="nav-trigger {{ 'active' if request.path.startswith('/cadastros') }}">Cadastros</button>
+        <div class="submenu">
+          <a href="/cadastros/terceirizados">Prestadores de Serviço</a>
+          <a href="/cadastros/produtos">Produtos</a>
+          <a href="/cadastros/cores-estampas">Cores / Estampas</a>
+          <a href="/cadastros/servicos">Serviços</a>
+          <a href="/cadastros/materias-primas">Matérias-Primas</a>
+          <a href="/cadastros/usuarios">Usuários do Sistema</a>
+        </div>
+      </div>
+      <a href="/remessas" class="{{ 'active' if request.path == '/remessas' }}">Remessas</a>
+      <a href="/retornos" class="{{ 'active' if request.path == '/retornos' }}">Retornos</a>
+      <a href="/fechamento" class="{{ 'active' if request.path == '/fechamento' }}">Fechamento Mensal</a>
+      <a href="/backups" class="{{ 'active' if request.path == '/backups' }}">Backups</a>
+      <a href="/importar-cadastros" class="{{ 'active' if request.path == '/importar-cadastros' }}">Exportar/Importar em Massa</a>
+      <a href="/historico" class="{{ 'active' if request.path == '/historico' }}">Histórico</a>
+      <a href="/ajuda" class="{{ 'active' if request.path == '/ajuda' }}">Ajuda</a>
+      <a href="/aprendizado-sql" class="{{ 'active' if request.path == '/aprendizado-sql' }}">📚 Aprender SQL</a>
+    </nav>
+    {% if session.usuario_nome %}
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:#d9c6b3;">
+      <span>{{ session.usuario_nome }}</span>
+      <form method="post" action="/logout" style="display:inline;">
+        <button type="submit" class="btn-mini ver" style="background:transparent;color:#d9c6b3;border:1px solid #8a7158;">Sair</button>
+      </form>
+    </div>
+    {% endif %}
+  </header>
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          {% for categoria, msg in messages %}
+          showToast({{ msg|tojson }}, '{{ categoria }}');
+          {% endfor %}
+        });
+      </script>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+  <script>
+    document.querySelectorAll('.nav-item > .nav-trigger').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var item = btn.parentElement;
+        var wasOpen = item.classList.contains('open');
+        document.querySelectorAll('.nav-item.open').forEach(function (el) { el.classList.remove('open'); });
+        if (!wasOpen) item.classList.add('open');
+      });
+    });
+    document.addEventListener('click', function () {
+      document.querySelectorAll('.nav-item.open').forEach(function (el) { el.classList.remove('open'); });
+    });
+  </script>
+  <script>
+    // Injeta token CSRF em todos os formulários POST da página automaticamente
+    (function() {
+      var token = {{ csrf_token() | tojson }};
+      document.querySelectorAll('form[method="post"], form[method="POST"]').forEach(function(f) {
+        if (!f.querySelector('input[name="csrf_token"]')) {
+          var inp = document.createElement('input');
+          inp.type = 'hidden'; inp.name = 'csrf_token'; inp.value = token;
+          f.appendChild(inp);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

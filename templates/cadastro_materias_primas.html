@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Matérias-Primas</h2>
+  <p class="small" style="margin-top:-4px;margin-bottom:12px;">
+    Alterações em descrição ou unidade refletem automaticamente em todas as composições vinculadas.
+  </p>
+
+  <input type="text" id="buscaMP" placeholder="Buscar por código ou descrição..."
+         style="margin-bottom:10px;" oninput="filtrarMP()">
+
+  <table id="tabelaMP">
+    <thead>
+      <tr>
+        <th style="width:110px;">Código MP</th>
+        <th>Descrição</th>
+        <th style="width:100px;text-align:center;">Unidade</th>
+        <th style="width:80px;"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for mp in mps %}
+      <tr id="linha-{{ mp.id }}" data-busca="{{ mp.codigo|lower }} {{ mp.descricao|lower }}">
+        {# Modo visualização #}
+        <td class="modo-ver"><b>{{ mp.codigo }}</b></td>
+        <td class="modo-ver">{{ mp.descricao }}</td>
+        <td class="modo-ver" style="text-align:center;">{{ mp.unidade }}</td>
+        <td class="modo-ver" style="text-align:center;">
+          <button type="button" class="btn-mini ver" onclick="abrirEdicao({{ mp.id }})">Editar</button>
+        </td>
+
+        {# Modo edição (oculto por padrão) #}
+        <td class="modo-edit" style="display:none;"><b>{{ mp.codigo }}</b></td>
+        <td class="modo-edit" style="display:none;">
+          <form id="form-{{ mp.id }}" method="post"
+                action="/cadastros/materia-prima/{{ mp.id }}/editar"
+                style="display:flex;gap:6px;align-items:center;">
+            <input name="descricao" value="{{ mp.descricao }}"
+                   style="flex:1;font-size:13px;padding:4px 7px;" required>
+            <select name="unidade" style="width:72px;font-size:13px;padding:4px 5px;">
+              {% for u in ['UN','MT','KG','PC','CX','RL','GR','LT','PR','JG','PÇ'] %}
+              <option value="{{ u }}" {% if mp.unidade == u %}selected{% endif %}>{{ u }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </td>
+        <td class="modo-edit" style="display:none;text-align:center;">
+          <button type="submit" form="form-{{ mp.id }}" class="btn-mini" style="background:#5a3e2b;color:#fff;">Salvar</button>
+          <button type="button" class="btn-mini secondary" onclick="fecharEdicao({{ mp.id }})">✕</button>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="small">Nenhuma matéria-prima cadastrada.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="small" style="margin-top:8px;">{{ mps|length }} matéria(s)-prima(s) no cadastro.</p>
+</div>
+
+<script>
+function abrirEdicao(id) {
+  var tr = document.getElementById('linha-' + id);
+  tr.querySelectorAll('.modo-ver').forEach(function(el){ el.style.display = 'none'; });
+  tr.querySelectorAll('.modo-edit').forEach(function(el){ el.style.display = ''; });
+}
+function fecharEdicao(id) {
+  var tr = document.getElementById('linha-' + id);
+  tr.querySelectorAll('.modo-ver').forEach(function(el){ el.style.display = ''; });
+  tr.querySelectorAll('.modo-edit').forEach(function(el){ el.style.display = 'none'; });
+}
+function filtrarMP() {
+  var q = document.getElementById('buscaMP').value.toLowerCase();
+  document.querySelectorAll('#tabelaMP tbody tr[data-busca]').forEach(function(tr) {
+    tr.style.display = tr.dataset.busca.includes(q) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

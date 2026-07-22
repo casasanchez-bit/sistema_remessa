@@ -1,0 +1,146 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Remessa Nº {{ remessa.numero }} - Impressão</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; margin: 0; background: #f5f5f7; }
+  .toolbar { padding: 14px; text-align: center; }
+  .toolbar button { background: #AF4005; color: #fff; border: none; padding: 10px 18px; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .toolbar a { margin-left: 10px; font-size: 13px; color: #5C442C; text-decoration: none; }
+
+  .page { width: 210mm; margin: 0 auto; background: #fff; }
+  .via { width: 190mm; height: 138mm; margin: 8mm auto; padding: 6mm; border: 1px solid #999; box-sizing: border-box; overflow: hidden; }
+  .via + .via { border-top: 1px dashed #999; }
+  .cabecalho { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #5C442C; padding-bottom: 6px; margin-bottom: 8px; }
+  .cabecalho h1 { font-size: 15px; margin: 0; color: #5C442C; }
+  .cabecalho .numero { font-size: 13px; font-weight: 700; text-align: right; }
+  .info { display: flex; gap: 24px; font-size: 11.5px; margin-bottom: 8px; }
+  .info div b { display: block; font-size: 9.5px; text-transform: uppercase; color: #666; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+  th, td { border: 1px solid #ccc; padding: 4px 5px; text-align: left; vertical-align: middle; }
+  th { background: #F9E9DC; font-size: 9.5px; text-transform: uppercase; }
+  .cel-foto { display: flex; align-items: center; gap: 5px; }
+  .cel-foto img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; flex-shrink: 0; }
+  .cel-foto span { line-height: 1.3; }
+  .rodape { font-size: 9px; color: #888; margin-top: 8px; text-align: center; }
+
+  .page-mp { width: 190mm; margin: 8mm auto; padding: 6mm; background:#fff; border: 1px solid #ccc; }
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none; }
+    .page { width: auto; }
+    .via { border: 1px solid #999; page-break-inside: avoid; }
+    .page-mp { border: none; page-break-before: always; width: auto; margin: 0; padding: 0; }
+    @page { size: A4 portrait; margin: 8mm; }
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <button onclick="window.print()">Imprimir</button>
+    <a href="#" onclick="window.close(); return false;">Voltar</a>
+  </div>
+
+  <div class="page">
+    {% for via in [1, 2] %}
+    <div class="via">
+      <div class="cabecalho">
+        <h1>REMESSA DE PRODUÇÃO — Casa Sanchez</h1>
+        <div class="numero">Nº Remessa: {{ remessa.numero }}<br>Via {{ via }}/2</div>
+      </div>
+      <div class="info">
+        <div><b>Terceirizado</b>{{ remessa.terceirizado_codigo }} - {{ remessa.terceirizado_nome }}</div>
+        <div><b>Data de Envio</b>{{ remessa.data_envio|brdate }}</div>
+        {% if remessa.usuario_nome %}<div><b>Registrado por</b>{{ remessa.usuario_nome }}</div>{% endif %}
+      </div>
+      <table>
+        <tr>
+          <th>Prio.</th>
+          <th>Produto Completo</th>
+          <th>Cor/Estampa</th>
+          <th style="text-align:center;">Qtde</th>
+          <th>Serviço</th>
+          <th style="text-align:right;">Vlr. Unit.</th>
+          <th style="text-align:right;">Subtotal</th>
+        </tr>
+        {% for item in itens %}
+        {% set ns = item.servicos|length if item.servicos else 1 %}
+        {% for svc in item.servicos %}
+        <tr>
+          {% if loop.first %}
+          <td rowspan="{{ ns }}" style="text-align:center;vertical-align:middle;">{{ item.prioridade ~ "º" if item.prioridade else "—" }}</td>
+          <td rowspan="{{ ns }}" style="vertical-align:middle;"><b>{{ item.produto_completo }}</b><br><span style="font-size:9px;color:#666;">{{ item.produto_descricao }}</span></td>
+          <td rowspan="{{ ns }}" style="vertical-align:middle;">
+            <div class="cel-foto">
+              {% if item.cor_foto %}<img src="/static/fotos_estampas/{{ item.cor_foto }}" alt="">{% endif %}
+              <span>{{ item.cor_descricao }}</span>
+            </div>
+          </td>
+          <td rowspan="{{ ns }}" style="text-align:center;vertical-align:middle;font-weight:700;">{{ item.qtd_enviada }}</td>
+          {% endif %}
+          <td style="padding-left:{% if not loop.first %}14{% else %}5{% endif %}px;">{% if not loop.first %}↳ {% endif %}{{ svc.servico_descricao }}</td>
+          <td style="text-align:right;">R$ {{ svc.servico_valor|brl }}</td>
+          <td style="text-align:right;">R$ {{ svc.subtotal_servico|brl }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td style="text-align:center;">{{ item.prioridade ~ "º" if item.prioridade else "—" }}</td>
+          <td><b>{{ item.produto_completo }}</b></td>
+          <td>{{ item.cor_descricao }}</td>
+          <td style="text-align:center;font-weight:700;">{{ item.qtd_enviada }}</td>
+          <td colspan="3" style="color:#999;font-size:9px;">Sem serviços cadastrados</td>
+        </tr>
+        {% endfor %}
+        {% endfor %}
+      </table>
+      <div style="text-align:right;font-size:11.5px;font-weight:700;margin-top:6px;">
+        Valor total da remessa: R$ {{ itens|sum(attribute="subtotal")|brl }}
+      </div>
+      {% if remessa.observacao %}
+      <div style="font-size:10.5px;margin-top:6px;border-top:1px solid #ddd;padding-top:4px;color:#333;">
+        <b>Observação:</b> {{ remessa.observacao }}
+      </div>
+      {% endif %}
+      <div class="rodape">Assinatura do recebedor: ____________________________________________
+        <span style="float:right;">Sistema Casa Sanchez — Emitido em <span class="data-emissao"></span></span>
+      </div>
+    </div>
+    {% endfor %}
+  {% if mps %}
+  <div class="page-mp">
+    <div class="cabecalho" style="margin-bottom:10px;">
+      <h1>MATÉRIAS-PRIMAS — Remessa Nº {{ remessa.numero }}</h1>
+      <div class="numero" style="font-size:11px;">{{ remessa.terceirizado_codigo }} - {{ remessa.terceirizado_nome }}<br>{{ remessa.data_envio|brdate }}</div>
+    </div>
+    <table>
+      <tr>
+        <th style="width:80px;">Código MP</th>
+        <th>Descrição da Matéria-Prima</th>
+        <th style="width:120px;text-align:right;">Total Necessário</th>
+      </tr>
+      {% for mp in mps %}
+      <tr>
+        <td><b>{{ mp.codigo }}</b></td>
+        <td>{{ mp.descricao }}</td>
+        <td style="text-align:right;font-weight:700;font-variant-numeric:tabular-nums;">{{ "%.3f"|format(mp.total) }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <div style="font-size:9px;color:#888;margin-top:8px;">
+      Calculado com base na ficha técnica de cada produto × quantidade enviada. Produtos sem ficha técnica não aparecem nesta lista.
+    </div>
+  </div>
+  {% endif %}
+  </div>
+<script>
+  var hoje = new Date();
+  var d = String(hoje.getDate()).padStart(2,'0');
+  var m = String(hoje.getMonth()+1).padStart(2,'0');
+  var a = hoje.getFullYear();
+  document.querySelectorAll('.data-emissao').forEach(function(el){ el.textContent = d+'/'+m+'/'+a; });
+</script>
+</body>
+</html>
+

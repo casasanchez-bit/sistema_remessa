@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:4px;">
+    <h1 style="margin:0;font-size:1.2rem;">Cronometragem de Corte</h1>
+  </div>
+  <div style="font-size:13px;color:#6b5344;margin-bottom:14px;">
+    <b>{{ produto.codigo }}</b> — {{ produto.descricao }}
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <a href="{{ url_for('ver_produto', produto_id=produto.id) }}" class="btn-mini ver">← Voltar ao Produto</a>
+    <a href="{{ url_for('produto_plano_corte', produto_id=produto.id) }}" class="btn-mini ver">Plano de Corte</a>
+    <a href="{{ url_for('exportar_cronometragem_excel') }}" class="btn-mini secondary">⬇ Exportar Excel</a>
+    <form method="post" action="{{ url_for('importar_cronometragem_excel') }}"
+          enctype="multipart/form-data" style="display:flex;align-items:center;gap:6px;">
+      <label style="font-size:12px;color:#5C442C;cursor:pointer;display:flex;align-items:center;gap:4px;">
+        <input type="file" name="arquivo" accept=".xlsx" style="display:none;" onchange="this.form.submit()">
+        <span class="btn-mini secondary" onclick="this.previousElementSibling.click()">⬆ Importar Excel</span>
+      </label>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Registrar medições</h2>
+  <p class="small" style="margin-bottom:14px;">
+    Informe a <b>Hora Inicial</b> e <b>Hora Final</b> — o <b>Tempo Total</b> é calculado automaticamente.
+  </p>
+
+  <form method="post">
+    <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:820px;">
+      <thead>
+        <tr style="background:#f5ede4;">
+          <th style="padding:8px 10px;text-align:center;width:50px;">Nº</th>
+          <th style="padding:8px 10px;text-align:center;width:115px;">Data</th>
+          <th style="padding:8px 10px;text-align:center;width:100px;">Hora Inicial</th>
+          <th style="padding:8px 10px;text-align:center;width:100px;">Hora Final</th>
+          <th style="padding:8px 10px;text-align:center;width:100px;">Tempo Total</th>
+          <th style="padding:8px 10px;text-align:center;width:90px;">Qtde Cortada</th>
+          <th style="padding:8px 10px;text-align:center;width:80px;">Nº Pessoas</th>
+          <th style="padding:8px 10px;text-align:left;">Nomes dos Cortadores</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in medidas %}
+        <tr style="border-bottom:1px solid #f1e4d6;">
+          <td style="padding:8px 10px;text-align:center;font-weight:700;color:#8a6040;">{{ m.numero }}</td>
+          <td style="padding:6px 8px;text-align:center;">
+            <input type="date" name="data_{{ m.numero }}" value="{{ m.data_medicao }}" style="width:130px;">
+          </td>
+          <td style="padding:6px 8px;text-align:center;">
+            <input type="time" name="hora_inicio_{{ m.numero }}" value="{{ m.hora_inicio }}"
+                   style="width:88px;text-align:center;"
+                   oninput="calcularTempo({{ m.numero }})">
+          </td>
+          <td style="padding:6px 8px;text-align:center;">
+            <input type="time" name="hora_fim_{{ m.numero }}" value="{{ m.hora_fim }}"
+                   style="width:88px;text-align:center;"
+                   oninput="calcularTempo({{ m.numero }})">
+          </td>
+          <td style="padding:6px 8px;text-align:center;">
+            <input type="text" id="tempo_calc_{{ m.numero }}" value="{{ m.tempo_str }}"
+                   readonly placeholder="—"
+                   style="width:80px;text-align:center;font-family:monospace;font-size:14px;
+                          background:#f5ede4;border:1px solid #d9c6b3;border-radius:4px;
+                          color:#5C442C;font-weight:700;">
+          </td>
+          <td style="padding:6px 8px;text-align:center;">
+            <input type="number" name="qtd_{{ m.numero }}" value="{{ m.qtd_cortada }}"
+                   min="1" placeholder="—" style="width:75px;text-align:center;">
+          </td>
+          <td style="padding:6px 8px;text-align:center;">
+            <input type="number" name="pessoas_{{ m.numero }}" value="{{ m.num_pessoas }}"
+                   min="1" placeholder="—" style="width:65px;text-align:center;">
+          </td>
+          <td style="padding:6px 8px;">
+            <input type="text" name="nomes_{{ m.numero }}" value="{{ m.nomes_pessoas }}"
+                   placeholder="Ex: João, Maria" style="width:100%;">
+          </td>
+        </tr>
+        {% endfor %}
+
+        {% if media %}
+        <tr style="background:#f5ede4;font-weight:700;border-top:2px solid #d9c6b3;">
+          <td colspan="3" style="padding:8px 10px;text-align:center;color:#5C442C;">Média</td>
+          <td style="padding:8px 10px;text-align:center;">—</td>
+          <td style="padding:8px 10px;text-align:center;font-family:monospace;">{{ media.tempo_str }}</td>
+          <td style="padding:8px 10px;text-align:center;">{{ media.qtd_cortada or '—' }}</td>
+          <td style="padding:8px 10px;text-align:center;">{{ media.num_pessoas or '—' }}</td>
+          <td style="padding:8px 10px;"></td>
+        </tr>
+        {% if media.pcs_hora %}
+        <tr style="background:#f5ede4;">
+          <td colspan="8" style="padding:4px 10px 10px;font-size:12px;color:#5C442C;">
+            <b>Produtividade média:</b> {{ media.pcs_hora }} peças/hora
+            &nbsp;·&nbsp;
+            <b>Tempo médio por peça:</b>
+            {% set parts = media.tempo_str.split(':') %}
+            {% set min_total = parts[0]|int * 60 + parts[1]|int %}
+            {% if media.qtd_cortada and min_total %}
+              {{ "%.1f"|format(min_total * 60 / media.qtd_cortada) }} seg/peça
+            {% endif %}
+          </td>
+        </tr>
+        {% endif %}
+        {% endif %}
+      </tbody>
+    </table>
+    </div>
+
+    <div style="margin-top:14px;display:flex;gap:8px;">
+      <button class="btn" type="submit">Salvar Cronometragem</button>
+      <a href="{{ url_for('ver_produto', produto_id=produto.id) }}" class="btn secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+
+<script>
+function calcularTempo(n) {
+  var hi = document.querySelector('[name="hora_inicio_' + n + '"]').value;
+  var hf = document.querySelector('[name="hora_fim_' + n + '"]').value;
+  var campo = document.getElementById('tempo_calc_' + n);
+  if (!hi || !hf) { campo.value = ''; return; }
+  var partsI = hi.split(':'), partsF = hf.split(':');
+  var minI = parseInt(partsI[0]) * 60 + parseInt(partsI[1]);
+  var minF = parseInt(partsF[0]) * 60 + parseInt(partsF[1]);
+  var diff = minF - minI;
+  if (diff < 0) diff += 24 * 60; // atravessou meia-noite
+  var h = Math.floor(diff / 60), m = diff % 60;
+  campo.value = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+}
+// Recalcular ao carregar caso já haja valores
+[1,2,3].forEach(function(n) { calcularTempo(n); });
+</script>
+{% endblock %}

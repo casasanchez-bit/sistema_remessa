@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="margin-bottom:16px;padding:12px 16px;">
+  <form method="get" action="/historico" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+    <div>
+      <label>Tabela</label>
+      <select name="filtro_tabela" style="width:auto;">
+        <option value="">Todas</option>
+        {% for t in tabelas_disponiveis %}
+        <option value="{{ t }}" {% if filtro_tabela == t %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Usuário</label>
+      <input type="text" name="filtro_usuario" value="{{ filtro_usuario }}" placeholder="Buscar usuário..." style="width:140px;">
+    </div>
+    <div>
+      <label>De</label>
+      <input type="date" name="filtro_data_inicio" value="{{ filtro_data_inicio }}">
+    </div>
+    <div>
+      <label>Até</label>
+      <input type="date" name="filtro_data_fim" value="{{ filtro_data_fim }}" max="{{ hoje }}">
+    </div>
+    <button class="btn" type="submit">Filtrar</button>
+    {% if filtro_tabela or filtro_usuario or filtro_data_inicio or filtro_data_fim %}
+    <a class="btn secondary" href="/historico">Limpar</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card">
+  <h2>Histórico de Alterações {% if registros %}({{ registros|length }} registro{{ 's' if registros|length != 1 }}){% endif %}</h2>
+  {% if registros %}
+  <table>
+    <tr>
+      <th style="width:130px;">Data/Hora</th>
+      <th style="width:90px;">Tabela</th>
+      <th style="width:70px;">ID</th>
+      <th>Descrição</th>
+      <th style="width:110px;">Usuário</th>
+    </tr>
+    {% for r in registros %}
+    <tr>
+      <td style="font-variant-numeric:tabular-nums;white-space:nowrap;">{{ r.data_hora }}</td>
+      <td><span style="background:#f5ede4;border:1px solid #d9c6b3;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;">{{ r.tabela }}</span></td>
+      <td style="color:#aaa;font-size:11.5px;">{{ r.registro_id if r.registro_id else '—' }}</td>
+      <td>{{ r.descricao }}</td>
+      <td style="font-size:12px;color:#666;">{{ r.usuario_nome if r.usuario_nome else '—' }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="small">Nenhum registro encontrado. Use os filtros acima para buscar.</p>
+  {% endif %}
+</div>
+{% endblock %}

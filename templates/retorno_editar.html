@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Retorno Nº {{ retorno.numero }}</h2>
+  <div class="grid" style="margin-bottom:14px;">
+    <div>
+      <label>Prestador de Serviço</label>
+      <p style="margin:4px 0;font-weight:600;">{{ retorno.terceirizado_nome if retorno.terceirizado_nome else "-" }}</p>
+    </div>
+    <div>
+      <label>Data do Retorno</label>
+      <p style="margin:4px 0;font-weight:600;">{{ retorno.data_retorno|brdate }}</p>
+    </div>
+  </div>
+  {% if retorno.observacao %}
+  <div style="margin-bottom:10px;padding:8px 10px;background:#fffaf7;border:1px solid #e7d7c4;border-radius:6px;font-size:13px;">
+    <b>Observação:</b> {{ retorno.observacao }}
+  </div>
+  {% endif %}
+  <a href="/retornos" class="btn secondary">Voltar</a>
+  <form method="post" action="/retornos/{{ retorno.id }}/excluir" style="display:inline;margin-left:8px;"
+        onsubmit="return confirm('Cancelar o retorno Nº {{ retorno.numero }}? As remessas vinculadas voltarão a ficar pendentes. Esta ação não pode ser desfeita.');">
+    <button class="btn-mini excluir" type="submit">CANCELAR RETORNO</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Itens deste retorno</h2>
+  <p class="small">Os itens não podem ser alterados aqui — para corrigir quantidades, exclua o retorno e lance novamente.</p>
+  <table>
+    <tr><th>Nº Remessa</th><th>Produto</th><th>Cor/Estampa</th><th>Serviço</th><th>Qtde Retornada</th><th>Finalizado</th></tr>
+    {% for item in itens %}
+    <tr>
+      <td>{{ item.remessa_numero }}</td>
+      <td><b>{{ item.produto_codigo }}</b> - {{ item.produto_descricao }}</td>
+      <td>{{ item.cor_descricao }}</td>
+      <td>{{ item.servico_descricao }}</td>
+      <td>{{ item.qtd_retornada }}</td>
+      <td>{{ "SIM" if item.finalizado else "NÃO" }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

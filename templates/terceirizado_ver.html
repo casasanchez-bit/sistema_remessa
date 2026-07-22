@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Terceirizado: {{ terceirizado.nome }}</h2>
+  <p class="small">Código: {{ terceirizado.codigo }} — Telefone: {{ terceirizado.telefone or "-" }} —
+    {% if terceirizado.registrado %}<span class="badge b-concluida">Registrado</span>{% else %}<span class="badge b-pendente">Sem Registro</span>{% endif %}
+  </p>
+  <div class="actions" style="margin-top:10px;">
+    <a href="/cadastros/terceirizados" class="btn secondary">Voltar</a>
+    <a class="btn-mini editar" href="/terceirizados/{{ terceirizado.id }}/editar">EDITAR</a>
+    <form method="post" action="/terceirizados/{{ terceirizado.id }}/excluir" onsubmit="return confirm('Excluir este terceirizado?');">
+      <button class="btn-mini excluir" type="submit">EXCLUIR</button>
+    </form>
+  </div>
+</div>
+<div class="card">
+  <h2>Remessas deste terceirizado</h2>
+  <table>
+    <tr><th>Nº</th><th>Produto</th><th>Cor/Estampa</th><th>Enviado</th><th>Retornado</th><th>Pendente</th><th>Status</th><th>Data</th></tr>
+    {% for r in remessas %}
+    <tr>
+      <td>{{ r.numero }}</td>
+      <td>{{ r.produto_descricao }}</td>
+      <td>{{ r.cor_descricao }}</td>
+      <td>{{ r.qtd_enviada }}</td>
+      <td>{{ r.qtd_retornada }}</td>
+      <td>{{ r.pendente }}</td>
+      <td>
+        {% if r.qtd_retornada == 0 %}<span class="badge b-pendente">Pendente</span>
+        {% elif r.pendente > 0 %}<span class="badge b-parcial">Parcial</span>
+        {% else %}<span class="badge b-concluida">Concluída</span>{% endif %}
+      </td>
+      <td>{{ r.data_envio|brdate }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="small">Nenhuma remessa registrada.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

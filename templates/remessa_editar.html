@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Remessa Nº {{ remessa.numero }}</h2>
+  <div class="grid" style="margin-bottom:14px;">
+    <div>
+      <label>Terceirizado</label>
+      <p style="margin:4px 0;font-weight:600;">{{ remessa.terceirizado_nome if remessa.terceirizado_nome else "-" }}</p>
+    </div>
+    <div>
+      <label>Data de envio</label>
+      <p style="margin:4px 0;font-weight:600;">{{ remessa.data_envio|brdate }}</p>
+    </div>
+  </div>
+  {% if remessa.observacao %}
+  <div style="margin-bottom:10px;padding:8px 10px;background:#fffaf7;border:1px solid #e7d7c4;border-radius:6px;font-size:13px;">
+    <b>Observação:</b> {{ remessa.observacao }}
+  </div>
+  {% endif %}
+  <a href="/remessas" class="btn secondary">Voltar</a>
+  <a class="btn-mini ver" href="{{ url_for('remessa_materias_primas', remessa_id=remessa.id) }}" style="margin-left:8px;">MP NECESSÁRIAS</a>
+  <form method="post" action="/remessas/{{ remessa.id }}/excluir" style="display:inline;margin-left:8px;"
+        onsubmit="return confirm('Cancelar a remessa Nº {{ remessa.numero }}? Esta ação não pode ser desfeita.');">
+    <button class="btn-mini excluir" type="submit">CANCELAR REMESSA</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Itens desta remessa</h2>
+  <style>
+    .svc-tag { display:inline-flex; align-items:center; gap:3px; background:#f5ede4; border:1px solid #d9c6b3; border-radius:4px; padding:2px 5px; font-size:11px; margin:2px 2px 2px 0; }
+    .svc-tag button { background:none; border:none; cursor:pointer; color:#c0392b; font-size:10px; padding:0 1px; line-height:1; }
+    .add-svc-form { display:flex; gap:4px; align-items:center; margin-top:4px; flex-wrap:wrap; }
+    .add-svc-form select { font-size:11px; padding:2px 4px; border:1px solid #d9c6b3; border-radius:4px; max-width:180px; }
+    .add-svc-form button { font-size:10px; padding:2px 6px; }
+  </style>
+  {% for item in itens %}
+  <div style="border:1px solid #e7d7c4;border-radius:8px;margin-bottom:10px;overflow:hidden;">
+    {# Cabeçalho do item #}
+    <div style="background:#f5ede4;padding:7px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid #e7d7c4;">
+      <span style="font-size:12px;font-weight:700;color:#5a3e2b;">
+        {% if item.prioridade %}<span style="background:#c4501a;color:#fff;border-radius:3px;padding:1px 5px;font-size:10px;">{{ item.prioridade }}º</span> {% endif %}
+        <b>{{ item.produto_completo }}</b> — {{ item.cor_descricao }}
+      </span>
+      <span style="margin-left:auto;font-size:12px;color:#666;">
+        Env: <b>{{ item.qtd_enviada }}</b> | Ret: <b>{{ item.qtd_retornada }}</b> | Pend: <b>{{ item.pendente }}</b>
+      </span>
+      <a class="btn-mini editar" href="/itens-remessa/{{ item.id }}/editar" style="font-size:10px;padding:2px 7px;">EDITAR</a>
+      <form method="post" action="/itens-remessa/{{ item.id }}/excluir" style="display:inline;"
+            onsubmit="return confirm('Excluir este item da remessa?');">
+        <button class="btn-mini excluir" type="submit" style="font-size:10px;padding:2px 7px;">EXCLUIR</button>
+      </form>
+    </div>
+    {# Serviços do item #}
+    <div style="padding:8px 12px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:4px;">Serviços</div>
+      <div>
+        {% for svc in item.servicos %}
+        <span class="svc-tag">
+          {{ svc.servico_descricao }} — R$ {{ svc.servico_valor|brl }}
+          {% if item.servicos|length > 1 %}
+          <form method="post" action="/item-servico/{{ svc.id }}/excluir" style="display:inline;"
+                onsubmit="return confirm('Remover serviço \'{{ svc.servico_descricao }}\'?');">
+            <button type="submit" title="Remover serviço">✕</button>
+          </form>
+          {% endif %}
+        </span>
+        {% else %}
+        <span style="font-size:12px;color:#aaa;">Nenhum serviço — adicione abaixo.</span>
+        {% endfor %}
+      </div>
+      {# Mini-form para adicionar serviço ao item #}
+      <form method="post" action="/itens-remessa/{{ item.id }}/servicos/adicionar" class="add-svc-form">
+        <select name="servico_id" required>
+          <option value="">+ Selecionar serviço...</option>
+          {% for s in servicos if s.produto_id == item.produto_id %}
+          <option value="{{ s.id }}">{{ s.descricao }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn-mini ver" type="submit">Adicionar Serviço</button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <p class="small">Nenhum item nesta remessa.</p>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>Adicionar item</h2>
+  <form method="post" action="/remessas/{{ remessa.id }}/adicionar-item">
+    <div class="grid" style="margin-bottom:10px;">
+      <div>
+        <label>Produto</label>
+        <select name="produto_id" id="addProdutoSelect" data-placeholder="Buscar por nome ou código..." data-search="contains" required>
+          <option value=""></option>
+          {% for p in produtos %}
+          <option value="{{ p.id }}">{{ p.codigo }} - {{ p.descricao }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Cor / Estampa</label>
+        <select name="cor_estampa_id" id="addCorSelect" data-placeholder="Buscar cor ou estampa..." data-search="contains" required>
+          <option value="">Selecione o produto primeiro</option>
+        </select>
+      </div>
+      <div>
+        <label>Serviço(s) <span style="font-size:10px;color:#888;">(segure Ctrl para selecionar mais de um)</span></label>
+        <select name="servico_id" id="addServicoSelect" multiple size="3" required
+                style="border:1px solid #d9c6b3;border-radius:5px;padding:3px;font-size:13px;width:100%;">
+          <option value="">Selecione o produto primeiro</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid" style="margin-bottom:10px;">
+      <div>
+        <label>Quantidade</label>
+        <input type="number" name="qtd_enviada" min="1" required>
+      </div>
+      <div>
+        <label>Prioridade</label>
+        <input type="number" name="prioridade" min="1" placeholder="Ex: 1">
+      </div>
+      <div style="display:flex;align-items:flex-end;">
+        <button class="btn" type="submit">Adicionar Item</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  const todasCoresEd = [
+    {% for c in cores_estampas %}
+    {id: {{ c.id }}, produtoId: {{ c.produto_id }}, label: "{{ c.descricao }}"},
+    {% endfor %}
+  ];
+  const todosServicosEd = [
+    {% for s in servicos %}
+    {id: {{ s.id }}, produtoId: {{ s.produto_id }},
+     descricao: "{{ s.descricao }}",
+     valorCom: "{{ s.valor_com_registro|brl }}",
+     valorSem: "{{ s.valor_sem_registro|brl }}"},
+    {% endfor %}
+  ];
+  const terceirizadoRegistrado = {{ remessa.terceirizado_registrado }};
+
+  const addProduto = document.getElementById('addProdutoSelect');
+  const addCor = document.getElementById('addCorSelect');
+  const addServico = document.getElementById('addServicoSelect');
+
+  function atualizarDependentesEd() {
+    const produtoId = parseInt(addProduto.value);
+    const cores = todasCoresEd.filter(c => c.produtoId === produtoId)
+      .filter((c, i, arr) => arr.findIndex(x => x.label === c.label) === i);
+    addCor.innerHTML = cores.length
+      ? cores.map(c => `<option value="${c.id}">${c.label}</option>`).join('')
+      : '<option value="">Nenhuma cor cadastrada</option>';
+    const servicos = todosServicosEd.filter(s => s.produtoId === produtoId);
+    addServico.innerHTML = servicos.length
+      ? servicos.map(s => {
+          const v = terceirizadoRegistrado ? s.valorCom : s.valorSem;
+          return `<option value="${s.id}">${s.descricao} (R$ ${v})</option>`;
+        }).join('')
+      : '<option value="">Nenhum serviço cadastrado</option>';
+    addCor.dispatchEvent(new Event('comboRefresh'));
+    addServico.dispatchEvent(new Event('comboRefresh'));
+  }
+
+  addProduto.addEventListener('change', atualizarDependentesEd);
+  searchableSelect(addProduto);
+  searchableSelect(addCor);
+</script>
+{% endblock %}

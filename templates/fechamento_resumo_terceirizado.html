@@ -1,0 +1,109 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Resumo por Terceirizado {{ mes }} - Impressão</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; margin: 0; background: #f5f5f7; }
+  .toolbar { padding: 14px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
+  .toolbar button { background: #AF4005; color: #fff; border: none; padding: 10px 18px; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .toolbar button:disabled { background: #d9c6b3; cursor: not-allowed; }
+  .toolbar button.nav { background: #fff; color: #5C442C; border: 1px solid #d9c6b3; padding: 8px 14px; }
+  .toolbar a { font-size: 13px; color: #5C442C; text-decoration: none; }
+  .toolbar .pagina-info { font-size: 13px; color: #5C442C; font-weight: 700; min-width: 140px; }
+
+  .folha { width: 190mm; margin: 8mm auto; padding: 8mm; background: #fff; border: 1px solid #999; }
+  .folha + .folha { page-break-before: always; }
+  .cabecalho { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #5C442C; padding-bottom: 8px; margin-bottom: 10px; }
+  .cabecalho h1 { font-size: 16px; margin: 0; color: #5C442C; }
+  .cabecalho .info { font-size: 12px; text-align: right; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th, td { border: 1px solid #ccc; padding: 5px 6px; text-align: left; }
+  th { background: #F9E9DC; font-size: 9.5px; text-transform: uppercase; }
+  tfoot td { font-weight: 700; font-size: 13px; border: none; padding-top: 10px; }
+  .rodape { font-size: 9px; color: #888; margin-top: 16px; text-align: center; }
+  .vazio { text-align: center; padding: 40px; color: #999; }
+
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none; }
+    .folha { border: none; width: auto; margin: 0; display: block !important; }
+    .folha + .folha { page-break-before: always; }
+    @page { size: A4 portrait; margin: 12mm; }
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    {% if resumos %}
+    <button type="button" class="nav" id="btnAnterior">‹ Anterior</button>
+    <span class="pagina-info" id="paginaInfo"></span>
+    <button type="button" class="nav" id="btnProximo">Próximo ›</button>
+    {% endif %}
+    <button onclick="window.print()">Imprimir Todos</button>
+    <a href="/fechamento">Voltar</a>
+  </div>
+
+  {% if resumos %}
+  {% for r in resumos %}
+  <div class="folha" data-pagina="{{ loop.index }}">
+    <div class="cabecalho">
+      <h1>FECHAMENTO MENSAL — {{ r.terceirizado }}</h1>
+      <div class="info">Mês de referência: {{ mes|brdate }}</div>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Código</th><th>Produto</th><th>Cor/Estampa</th><th>Serviço</th><th>Qtde Retornada</th><th>Preço Unit.</th><th>Total a Pagar</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for l in r.linhas %}
+        <tr>
+          <td>{{ l.produto_codigo }}</td>
+          <td>{{ l.produto }}</td>
+          <td>{{ l.cor }}</td>
+          <td>{{ l.servico }}</td>
+          <td>{{ l.qtd }}</td>
+          <td>R$ {{ l.preco|brl }}</td>
+          <td>R$ {{ l.total|brl }}</td>
+          <td>{% if l.pago %}PAGO ({{ l.data_pagamento|brdate }}){% else %}PENDENTE{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr><td colspan="7" style="text-align:right;">Total a pagar:</td><td>R$ {{ r.total|brl }}</td></tr>
+      </tfoot>
+    </table>
+    <div class="rodape">Documento gerado pelo sistema — Casa Sanchez · Controle de Remessa e Retorno</div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="folha">
+    <div class="vazio">Nenhum retorno encontrado neste período.</div>
+  </div>
+  {% endif %}
+
+  <script>
+    const folhas = Array.from(document.querySelectorAll('.folha'));
+    const btnAnterior = document.getElementById('btnAnterior');
+    const btnProximo = document.getElementById('btnProximo');
+    const paginaInfo = document.getElementById('paginaInfo');
+    let atual = 0;
+
+    function mostrar(indice) {
+      atual = indice;
+      folhas.forEach((f, i) => { f.style.display = i === atual ? 'block' : 'none'; });
+      if (paginaInfo) paginaInfo.textContent = `Terceirizado ${atual + 1} de ${folhas.length}`;
+      if (btnAnterior) btnAnterior.disabled = atual === 0;
+      if (btnProximo) btnProximo.disabled = atual === folhas.length - 1;
+    }
+
+    if (folhas.length > 0 && btnAnterior && btnProximo) {
+      btnAnterior.addEventListener('click', () => { if (atual > 0) mostrar(atual - 1); });
+      btnProximo.addEventListener('click', () => { if (atual < folhas.length - 1) mostrar(atual + 1); });
+      mostrar(0);
+    }
+  </script>
+</body>
+</html>
+

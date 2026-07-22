@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Produtos</h2>
+
+  <form method="post" action="/cadastros/produto" class="grid" style="margin-bottom:14px;">
+    <input name="codigo" placeholder="Código do produto" required>
+    <input name="descricao" placeholder="Descrição do produto" required>
+    <button class="btn" type="submit">Adicionar produto</button>
+  </form>
+  <p class="small" style="margin-top:-8px;margin-bottom:12px;">O código deve ser digitado (é o mesmo código já usado no ERP).</p>
+
+  {# Barra de ações #}
+  <div id="barraAcoes" style="display:none;position:sticky;top:0;z-index:100;background:#fff;border:1px solid #d4a96a;border-radius:8px;padding:10px 14px;margin-bottom:10px;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);">
+    <span id="barraInfo" style="flex:1;font-size:13px;font-weight:600;color:#5a3e2b;"></span>
+    <a id="btnVer" href="#" class="btn secondary" style="font-size:13px;padding:6px 14px;">Visualizar/Editar</a>
+    <button type="button" class="btn secondary" style="font-size:13px;padding:6px 12px;" onclick="desselecionar()">✕</button>
+  </div>
+
+  <input type="text" id="buscaProdutos" placeholder="Buscar por nome ou código..." style="margin-bottom:10px;">
+  <table id="tabelaProdutos">
+    <tr><th>Código</th><th>Descrição do Produto</th></tr>
+    {% for p in produtos %}
+    <tr class="linha-selecionavel" style="cursor:pointer;transition:background .15s;"
+        data-id="{{ p.id }}"
+        data-label="{{ p.codigo }} — {{ p.descricao }}"
+        data-view="/produtos/{{ p.id }}"
+        data-delete=""
+        data-confirm="">
+      <td>{{ p.codigo }}</td>
+      <td>{{ p.descricao }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="2" class="small">Nenhum produto cadastrado.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+<script>
+  filtrarTabela('buscaProdutos', 'tabelaProdutos');
+  ativarSelecaoLinha('barraAcoes', 'barraInfo', 'btnVer', null, null);
+</script>
+{% endblock %}

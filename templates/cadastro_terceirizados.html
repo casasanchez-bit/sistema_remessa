@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Terceirizados (Prestadores de Serviço)</h2>
+
+  <form method="post" action="/cadastros/terceirizado" class="grid" style="margin-bottom:14px;">
+    <input name="nome" placeholder="Nome do terceirizado" required>
+    <input name="telefone" placeholder="Telefone (celular)">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <label style="margin:0;font-weight:500;">Registrado?</label>
+      <label style="display:flex;gap:4px;align-items:center;font-weight:400;">
+        <input type="radio" name="registrado" value="1" checked> Sim
+      </label>
+      <label style="display:flex;gap:4px;align-items:center;font-weight:400;">
+        <input type="radio" name="registrado" value="0"> Não
+      </label>
+    </div>
+    <button class="btn" type="submit">Adicionar</button>
+  </form>
+
+  {# Barra de ações #}
+  <div id="barraAcoes" style="display:none;position:sticky;top:0;z-index:100;background:#fff;border:1px solid #d4a96a;border-radius:8px;padding:10px 14px;margin-bottom:10px;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);">
+    <span id="barraInfo" style="flex:1;font-size:13px;font-weight:600;color:#5a3e2b;"></span>
+    <a id="btnVer" href="#" class="btn secondary" style="font-size:13px;padding:6px 14px;">Visualizar/Editar</a>
+    <button id="btnExcluir" type="button" class="btn-mini excluir" style="font-size:13px;padding:6px 14px;">Excluir</button>
+    <button type="button" class="btn secondary" style="font-size:13px;padding:6px 12px;" onclick="desselecionar()">✕</button>
+  </div>
+  <form id="formExcluir" method="post" style="display:none;"></form>
+
+  <input type="text" id="buscaTerceirizados" placeholder="Buscar pelo nome..." style="margin-bottom:10px;">
+  <table id="tabelaTerceirizados">
+    <tr><th>Código</th><th>Nome</th><th>Telefone</th><th>Registro</th></tr>
+    {% for t in terceirizados %}
+    <tr class="linha-selecionavel" style="cursor:pointer;transition:background .15s;"
+        data-id="{{ t.id }}"
+        data-label="{{ t.codigo }} — {{ t.nome }}"
+        data-view="/terceirizados/{{ t.id }}"
+        data-delete="/terceirizados/{{ t.id }}/excluir"
+        data-confirm="Excluir o terceirizado {{ t.nome }}? Esta ação não pode ser desfeita.">
+      <td>{{ t.codigo }}</td>
+      <td>{{ t.nome }}</td>
+      <td>{{ t.telefone or "-" }}</td>
+      <td>{% if t.registrado %}<span class="badge b-concluida">Registrado</span>{% else %}<span class="badge b-pendente">Sem Registro</span>{% endif %}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="small">Nenhum terceirizado cadastrado.</td></tr>
+    {% endfor %}
+  </table>
+  <p class="small">O código é gerado automaticamente pelo sistema.</p>
+</div>
+
+<script>
+  filtrarTabela('buscaTerceirizados', 'tabelaTerceirizados');
+  ativarSelecaoLinha('barraAcoes', 'barraInfo', 'btnVer', 'btnExcluir', 'formExcluir');
+</script>
+{% endblock %}

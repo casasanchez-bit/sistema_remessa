@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Importação em Massa de Cadastros</h2>
+  <p class="small">Faça o download da planilha modelo, preencha os dados e envie aqui para importar tudo de uma vez.</p>
+
+  <div style="margin:16px 0;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+    <a href="/planilha-modelo/download" class="btn">
+      Baixar planilha modelo (.xlsx)
+    </a>
+    <span class="small" style="color:#888;">Versão gerada automaticamente com seus cadastros atuais</span>
+  </div>
+
+  <hr style="border:none;border-top:1px solid #e0d4c8;margin:20px 0;">
+
+  <h3 style="margin-bottom:8px;">Enviar planilha preenchida</h3>
+  <form method="post" enctype="multipart/form-data">
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+      <div>
+        <label>Arquivo .xlsx</label>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:4px;">
+          <label class="btn secondary" style="cursor:pointer;margin:0;">
+            Selecionar arquivo
+            <input type="file" name="planilha" accept=".xlsx" required id="inputPlanilha" style="display:none;">
+          </label>
+          <span id="nomeArquivo" style="font-size:13px;color:#888;">Nenhum arquivo selecionado</span>
+        </div>
+      </div>
+      <button class="btn" type="submit">Importar Cadastros</button>
+    </div>
+  </form>
+  <script>
+    document.getElementById('inputPlanilha').addEventListener('change', function() {
+      document.getElementById('nomeArquivo').textContent = this.files[0] ? this.files[0].name : 'Nenhum arquivo selecionado';
+    });
+  </script>
+
+  {% if resultados %}
+  <div style="margin-top:24px;">
+    <h3>Resultado da importação</h3>
+    {% for tipo, msg in resultados %}
+      {% if tipo == "erro" %}
+        <div style="background:#FFE0E0;border-left:4px solid #c0392b;padding:8px 12px;margin:4px 0;border-radius:4px;font-size:13px;">⚠️ {{ msg }}</div>
+      {% else %}
+        <div style="background:#E8F5E9;border-left:4px solid #27ae60;padding:8px 12px;margin:4px 0;border-radius:4px;font-size:13px;">✔ {{ msg }}</div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3>Instruções rápidas</h3>
+  <ol style="font-size:13px;line-height:2;">
+    <li>Baixe a planilha modelo acima (já vem com seus dados atuais em verde).</li>
+    <li>Abra no Excel ou LibreOffice.</li>
+    <li>Comece pela aba <b>2-Produtos</b> — depois <b>3-Cores_Estampas</b> e <b>4-Servicos</b> (precisam do código do produto), por último <b>1-Prestadores</b>.</li>
+    <li>Preencha a partir da linha 5 (não mexa no cabeçalho azul da linha 4).</li>
+    <li>Salve e envie o arquivo aqui. O sistema vai ignorar automaticamente cadastros já existentes.</li>
+    <li>Leia a aba <b>LEIA-ME</b> da planilha para mais detalhes.</li>
+  </ol>
+  <p class="small" style="color:#888;">⚠️ Cores/Estampas e Serviços têm que referenciar um Código de Produto já cadastrado (seja nesta planilha ou no sistema).</p>
+</div>
+{% endblock %}

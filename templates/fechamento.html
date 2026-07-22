@@ -1,0 +1,99 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Fechamento mensal de produção</h2>
+  <form method="get" action="/fechamento" style="display:flex;gap:8px;align-items:end;margin-bottom:14px;flex-wrap:wrap;">
+    <div>
+      <label>Mês de referência</label>
+      <input type="month" name="mes" value="{{ mes }}">
+    </div>
+    <div>
+      <label>Terceirizado</label>
+      <select name="terceirizado_id" id="terceirizadoFiltroSelect" data-placeholder="Todos (buscar pelo nome)...">
+        <option value="">Todos</option>
+        {% for t in terceirizados %}
+        <option value="{{ t.id }}" {{ "selected" if terceirizado_id == t.id|string }}>{{ t.codigo }} - {{ t.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn" type="submit">Filtrar</button>
+    <a class="btn secondary" id="imprimirLink" href="#" target="_blank">Imprimir</a>
+    <a class="btn secondary" id="resumoLink" href="#" target="_blank">Resumo por Terceirizado</a>
+    <a class="btn secondary" id="excelLink" href="#">⬇ Exportar Excel</a>
+  </form>
+  <p class="small">Calculado a partir das baixas de retorno registradas no mês selecionado — base para pagamento ao terceirizado.</p>
+
+  {% if not buscou %}
+  <p class="small">Use os filtros acima para buscar o fechamento (clique em "Filtrar" para calcular).</p>
+  {% else %}
+  {% if terceirizado_id %}
+  <div style="margin-bottom:14px;display:flex;flex-direction:column;gap:6px;">
+    {% for lote in lotes_pagamento %}
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span class="badge b-pago" style="font-size:12px;padding:4px 10px;">
+        Lote {{ loop.index }} — pago em {{ lote.data_pagamento|brdate }} — R$ {{ lote.total|brl }}
+      </span>
+      <form method="post" action="/fechamento/desfazer-pagamento" style="display:inline;"
+            onsubmit="return confirm('Desfazer o Lote {{ loop.index }} ({{ lote.data_pagamento|brdate }})? Os retornos deste lote voltarão a poder ser editados.');">
+        <input type="hidden" name="pagamento_id" value="{{ lote.id }}">
+        <input type="hidden" name="terceirizado_id" value="{{ terceirizado_id }}">
+        <input type="hidden" name="mes" value="{{ mes }}">
+        <button class="btn-mini excluir" type="submit">Desfazer</button>
+      </form>
+    </div>
+    {% endfor %}
+    {% if tem_pendentes %}
+    <div>
+      <form method="post" action="/fechamento/pagar" style="display:inline;"
+            onsubmit="return confirm('Confirmar novo lote de pagamento para os retornos pendentes? Após confirmar, eles não poderão mais ser alterados.');">
+        <input type="hidden" name="terceirizado_id" value="{{ terceirizado_id }}">
+        <input type="hidden" name="mes" value="{{ mes }}">
+        <button class="btn" type="submit">Marcar pagamento como realizado</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <table>
+    <tr><th>Terceirizado</th><th>Código</th><th>Produto</th><th>Cor/Estampa</th><th>Serviço</th><th>Qtde retornada</th><th>Preço unit.</th><th>Total a pagar</th><th>Status</th></tr>
+    {% for l in linhas %}
+    <tr>
+      <td>{{ l.terceirizado }}</td>
+      <td><b>{{ l.produto_codigo }}</b></td>
+      <td>{{ l.produto }}</td>
+      <td>{{ l.cor }}</td>
+      <td>{{ l.servico }}</td>
+      <td>{{ l.qtd }}</td>
+      <td>R$ {{ l.preco|brl }}</td>
+      <td>R$ {{ l.total|brl }}</td>
+      <td>
+        {% if l.pago %}
+          <span class="badge b-pago">PAGO</span>
+          <span style="font-size:11px;color:#888;display:block;">{{ l.data_pagamento|brdate }}</span>
+        {% else %}
+          <span class="badge b-pendente">PENDENTE</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="9" class="small">Nenhum retorno encontrado neste mês.</td></tr>
+    {% endfor %}
+  </table>
+  <div style="text-align:right;margin-top:12px;font-size:13px;">
+    <div>Total já pago: R$ {{ total_pago|brl }}</div>
+    <div>Total pendente: R$ {{ total_pendente|brl }}</div>
+    <div style="font-size:16px;margin-top:4px;"><b>Total geral: R$ {{ total_geral|brl }}</b></div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  const params = new URLSearchParams({ mes: "{{ mes }}", terceirizado_id: "{{ terceirizado_id }}" });
+  document.getElementById('imprimirLink').href = "/fechamento/imprimir?" + params.toString();
+  document.getElementById('resumoLink').href = "/fechamento/resumo-por-terceirizado?" + params.toString();
+  document.getElementById('excelLink').href = "/fechamento/exportar-excel?" + params.toString();
+  searchableSelect(document.getElementById('terceirizadoFiltroSelect'));
+</script>
+{% endblock %}
+

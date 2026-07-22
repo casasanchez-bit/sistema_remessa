@@ -1,0 +1,18 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Serviço: {{ servico.descricao }}</h2>
+  <p class="small">Código: {{ servico.codigo }}</p>
+  <p class="small">Produto (atribuição): {{ servico.produto_descricao }}</p>
+  <p class="small">Valor com Registro: R$ {{ servico.valor_com_registro|brl }}</p>
+  <p class="small">Valor sem Registro: R$ {{ servico.valor_sem_registro|brl }}</p>
+  <div class="actions" style="margin-top:10px;">
+    <a href="/cadastros/servicos" class="btn secondary">Voltar</a>
+    <a class="btn-mini editar" href="/servicos/{{ servico.id }}/editar">EDITAR</a>
+    <form method="post" action="/servicos/{{ servico.id }}/excluir" onsubmit="return confirm('Excluir este serviço?');">
+      <button class="btn-mini excluir" type="submit">EXCLUIR</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+

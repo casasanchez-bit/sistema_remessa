@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Como usar o sistema — passo a passo</h2>
+  <p class="small">Guia rápido para o dia a dia. Siga a ordem abaixo na primeira vez que for usar.</p>
+</div>
+
+<div class="card">
+  <h2>1. Cadastros (fazer uma vez para cada item novo)</h2>
+  <p><b>Prestador de Serviço (terceirizado):</b> menu <i>Cadastros → Prestadores de Serviço</i>. Informe o nome e, se quiser, o telefone. O código é gerado automaticamente.</p>
+  <p><b>Produto:</b> menu <i>Cadastros → Produtos</i>. Informe o código do produto (o mesmo já usado na empresa) e a descrição.</p>
+  <p><b>Cor/Estampa:</b> menu <i>Cadastros → Cores/Estampas</i>. Informe a descrição da cor ou estampa. O código é gerado automaticamente.</p>
+  <p><b>Serviço:</b> menu <i>Cadastros → Serviços</i>. Escolha o Produto, informe a descrição do serviço e o <b>preço</b> (não pode ser zero). Cadastre o serviço <u>depois</u> de já ter cadastrado o Produto correspondente.</p>
+</div>
+
+<div class="card">
+  <h2>2. Lançar uma Remessa (enviar produção para o terceirizado)</h2>
+  <ol>
+    <li>Acesse o menu <b>Remessas</b>.</li>
+    <li>Escolha o Terceirizado e a Data de envio.</li>
+    <li>Em cada item, escolha o Produto, a Cor/Estampa, o Serviço e a Quantidade enviada.</li>
+    <li>Clique em <b>+ Adicionar item</b> se for enviar mais de um produto/cor na mesma remessa.</li>
+    <li>Clique em <b>Registrar remessa</b>. O sistema gera um número sequencial automático.</li>
+    <li>Use o botão <b>IMPRIMIR</b> para gerar o documento em papel (2 vias) para acompanhar a entrega.</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h2>3. Lançar um Retorno (quando a produção volta)</h2>
+  <ol>
+    <li>Acesse o menu <b>Retornos</b>.</li>
+    <li>Escolha o Prestador de Serviço — só aparecem na lista os que têm remessas pendentes.</li>
+    <li>Escolha a Data do Retorno.</li>
+    <li>Para cada item entregue, escolha a remessa de referência (pode digitar para buscar por nome ou código do produto) e a quantidade retornada.</li>
+    <li>O sistema não deixa lançar uma quantidade maior do que o saldo pendente daquele item.</li>
+    <li>Clique em <b>Registrar retorno</b>. Quando a quantidade retornada completa o total enviado, o item fica marcado como <span class="badge b-concluida">Concluída</span>; senão, fica <span class="badge b-parcial">Parcial</span>.</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h2>4. Dashboard — saldo pendente</h2>
+  <p>Mostra, por terceirizado, quanto foi enviado, quanto já voltou e quanto ainda está pendente. Use para saber quem ainda precisa devolver produção.</p>
+</div>
+
+<div class="card">
+  <h2>5. Fechamento Mensal — pagamento</h2>
+  <ol>
+    <li>Acesse o menu <b>Fechamento Mensal</b>.</li>
+    <li>Escolha o mês de referência e, se quiser, filtre por um terceirizado específico.</li>
+    <li>O sistema calcula o valor a pagar com base nas quantidades retornadas no período × preço do serviço.</li>
+    <li>Use <b>Imprimir</b> para o relatório do período selecionado, ou <b>Resumo por Terceirizado</b> para gerar uma página separada para cada um (útil para entregar individualmente).</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h2>6. Backup — proteger os dados</h2>
+  <p>Acesse o menu <b>Backups</b> e clique em <b>Fazer Backup Agora</b> de tempos em tempos (por exemplo, ao final de cada mês, ou antes de excluir algo importante). Os backups ficam guardados ali mesmo e podem ser baixados quando precisar.</p>
+</div>
+{% endblock %}

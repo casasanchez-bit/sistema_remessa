@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Composição — {{ produto.codigo }} {{ produto.descricao }}{% endblock %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:4px;">
+    <h1 style="margin:0;font-size:1.2rem;">Ficha Técnica de Matéria-Prima</h1>
+  </div>
+  <div style="font-size:13px;color:#6b5344;margin-bottom:12px;">
+    <b>{{ produto.codigo }}</b> — {{ produto.descricao }}
+  </div>
+  <a href="{{ url_for('ver_produto', produto_id=produto.id) }}"
+     class="btn-mini ver" style="display:inline-block;">← Voltar ao Produto</a>
+</div>
+
+{# ── Composição atual ──────────────────────────────────────────────────── #}
+<div class="card">
+  <h3 style="margin:0 0 12px;font-size:14px;color:#5a3e2b;">Composição Atual</h3>
+
+  {% if itens %}
+  <table id="tabelaComp">
+    <thead>
+      <tr>
+        <th style="width:110px;">Código MP</th>
+        <th>Descrição da Matéria-Prima</th>
+        <th style="width:80px;text-align:center;">Unidade</th>
+        <th style="width:110px;text-align:right;">Quantidade</th>
+        <th style="width:110px;"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in itens %}
+      <tr id="comp-{{ item.mp_id }}"
+          data-mp-id="{{ item.mp_id }}"
+          data-qtd="{{ item.quantidade }}">
+
+        {# Modo visualização #}
+        <td class="v"><b>{{ item.codigo }}</b></td>
+        <td class="v">{{ item.descricao }}</td>
+        <td class="v" style="text-align:center;">{{ item.unidade }}</td>
+        <td class="v" style="text-align:right;font-variant-numeric:tabular-nums;">
+          {{ item.quantidade|qty }}
+        </td>
+        <td class="v" style="text-align:center;">
+          <button type="button" class="btn-mini ver" onclick="abrirEdit({{ item.mp_id }})">Editar</button>
+          <form method="post" action="/produtos/{{ produto.id }}/composicao"
+                style="display:inline;"
+                onsubmit="return confirm('Remover {{ item.descricao }} desta composição?')">
+            <input type="hidden" name="acao" value="remover">
+            <input type="hidden" name="mp_id" value="{{ item.mp_id }}">
+            <button type="submit" class="btn-mini excluir">Excluir</button>
+          </form>
+        </td>
+
+        {# Modo edição #}
+        <td class="e" style="display:none;"><b>{{ item.codigo }}</b></td>
+        <td class="e" style="display:none;">{{ item.descricao }}</td>
+        <td class="e" style="display:none;text-align:center;">{{ item.unidade }}</td>
+        <td class="e" style="display:none;">
+          <form id="form-edit-{{ item.mp_id }}" method="post"
+                action="/produtos/{{ produto.id }}/composicao"
+                style="display:flex;justify-content:flex-end;">
+            <input type="hidden" name="acao" value="editar">
+            <input type="hidden" name="mp_id" value="{{ item.mp_id }}">
+            <input name="quantidade" type="text"
+                   value="{{ item.quantidade|qty }}"
+                   style="width:90px;text-align:right;font-size:13px;padding:4px 6px;" required>
+          </form>
+        </td>
+        <td class="e" style="display:none;text-align:center;">
+          <button type="submit" form="form-edit-{{ item.mp_id }}"
+                  class="btn-mini" style="background:#5a3e2b;color:#fff;">Salvar</button>
+          <button type="button" class="btn-mini secondary" onclick="fecharEdit({{ item.mp_id }})">✕</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="small" style="margin-top:8px;">
+    {{ itens|length }} matéria(s)-prima(s) na composição.
+  </p>
+  {% else %}
+  <p style="color:#888;font-size:13px;">Nenhuma composição cadastrada para este produto.</p>
+  {% endif %}
+</div>
+
+{# ── Adicionar matéria-prima ───────────────────────────────────────────── #}
+<div class="card">
+  <h3 style="margin:0 0 12px;font-size:14px;color:#5a3e2b;">Adicionar Matéria-Prima</h3>
+  <form method="post" action="/produtos/{{ produto.id }}/composicao"
+        style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
+    <input type="hidden" name="acao" value="adicionar">
+
+    <div style="flex:1;min-width:260px;">
+      <label class="small" style="display:block;margin-bottom:3px;">Matéria-Prima</label>
+      <div style="position:relative;">
+        <input type="text" id="buscaMP" placeholder="Digite código ou nome..."
+               autocomplete="off" style="width:100%;"
+               oninput="filtrarMPs(this.value)">
+        <div id="listaMP" style="
+          display:none;position:absolute;top:100%;left:0;right:0;
+          background:#fff;border:1px solid #d4a96a;border-radius:6px;
+          max-height:200px;overflow-y:auto;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.15);
+        "></div>
+      </div>
+      <input type="hidden" id="mp_id_sel" name="mp_id">
+      <div id="mpSelecionada" style="font-size:11px;color:#5a3e2b;margin-top:3px;min-height:16px;"></div>
+    </div>
+
+    <div style="width:110px;">
+      <label class="small" style="display:block;margin-bottom:3px;">Quantidade</label>
+      <input type="text" name="quantidade" id="qtdAdd" placeholder="0.000"
+             style="width:100%;text-align:right;" required>
+    </div>
+
+    <div>
+      <button type="submit" class="btn" id="btnAdicionar" disabled>+ Adicionar</button>
+    </div>
+  </form>
+</div>
+
+<script>
+var todasMPs = [
+  {% for mp in todas_mps %}
+  { id: {{ mp.id }}, codigo: "{{ mp.codigo }}", descricao: {{ mp.descricao|tojson }}, unidade: "{{ mp.unidade }}" }{% if not loop.last %},{% endif %}
+  {% endfor %}
+];
+
+function filtrarMPs(q) {
+  var lista = document.getElementById('listaMP');
+  lista.innerHTML = '';
+  if (!q || q.length < 1) { lista.style.display = 'none'; return; }
+  q = q.toLowerCase();
+  var matches = todasMPs.filter(function(mp) {
+    return mp.codigo.toLowerCase().includes(q) || mp.descricao.toLowerCase().includes(q);
+  }).slice(0, 30);
+  if (!matches.length) { lista.style.display = 'none'; return; }
+  matches.forEach(function(mp) {
+    var d = document.createElement('div');
+    d.style.cssText = 'padding:7px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0e8de;';
+    d.innerHTML = '<b>' + mp.codigo + '</b> — ' + mp.descricao + ' <span style="color:#999;font-size:11px;">(' + mp.unidade + ')</span>';
+    d.onmousedown = function(e) {
+      e.preventDefault();
+      selecionarMP(mp);
+    };
+    d.onmouseover = function() { d.style.background = '#fdf6ef'; };
+    d.onmouseout  = function() { d.style.background = ''; };
+    lista.appendChild(d);
+  });
+  lista.style.display = 'block';
+}
+
+function selecionarMP(mp) {
+  document.getElementById('buscaMP').value = mp.codigo + ' — ' + mp.descricao;
+  document.getElementById('mp_id_sel').value = mp.id;
+  document.getElementById('mpSelecionada').textContent = 'Unidade: ' + mp.unidade;
+  document.getElementById('listaMP').style.display = 'none';
+  document.getElementById('btnAdicionar').disabled = false;
+  document.getElementById('qtdAdd').focus();
+}
+
+document.getElementById('buscaMP').addEventListener('blur', function() {
+  setTimeout(function() {
+    document.getElementById('listaMP').style.display = 'none';
+  }, 200);
+});
+
+function abrirEdit(id) {
+  var tr = document.getElementById('comp-' + id);
+  tr.querySelectorAll('.v').forEach(function(el){ el.style.display = 'none'; });
+  tr.querySelectorAll('.e').forEach(function(el){ el.style.display = ''; });
+}
+function fecharEdit(id) {
+  var tr = document.getElementById('comp-' + id);
+  tr.querySelectorAll('.v').forEach(function(el){ el.style.display = ''; });
+  tr.querySelectorAll('.e').forEach(function(el){ el.style.display = 'none'; });
+}
+</script>
+{% endblock %}

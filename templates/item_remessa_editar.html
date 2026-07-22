@@ -1,0 +1,60 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Editar item da remessa</h2>
+  <form method="post">
+    <div class="grid">
+      <div>
+        <label>Produto</label>
+        <select name="produto_id" id="produtoSelect" data-placeholder="Buscar por nome ou código..." data-search="contains" required>
+          {% for p in produtos %}
+          <option value="{{ p.id }}" {{ "selected" if p.id == item.produto_id }}>{{ p.codigo }} - {{ p.descricao }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Cor / Estampa</label>
+        <select name="cor_estampa_id" id="corSelect" required></select>
+      </div>
+      <div>
+        <label>Quantidade enviada</label>
+        <input type="number" name="qtd_enviada" min="1" value="{{ item.qtd_enviada }}" required>
+      </div>
+      <div>
+        <label>Prioridade de produção</label>
+        <select name="prioridade">
+          <option value="">Sem prioridade</option>
+          {% for n in range(1, total_itens_remessa + 1) %}
+          <option value="{{ n }}" {{ "selected" if item.prioridade == n }}>{{ n }}º</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <button class="btn" type="submit">Salvar</button>
+    <a href="/remessas" class="btn secondary">Cancelar</a>
+  </form>
+</div>
+
+<script>
+  const todasCores = [
+    {% for c in cores_estampas %}
+    {id: {{ c.id }}, produtoId: {{ c.produto_id }}, label: "{{ c.descricao }}"},
+    {% endfor %}
+  ];
+  const corAtualId = {{ item.cor_estampa_id }};
+  const produtoSelect = document.getElementById('produtoSelect');
+  const corSelect = document.getElementById('corSelect');
+
+  function atualizarDependentes() {
+    const produtoId = parseInt(produtoSelect.value);
+    const coresDisponiveis = todasCores.filter(c => c.produtoId === produtoId);
+    corSelect.innerHTML = coresDisponiveis.map(c => `<option value="${c.id}" ${c.id === corAtualId ? "selected" : ""}>${c.label}</option>`).join('');
+  }
+
+  produtoSelect.addEventListener('change', atualizarDependentes);
+  atualizarDependentes();
+  searchableSelect(produtoSelect);
+</script>
+{% endblock %}
+
+

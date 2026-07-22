@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Retorno Nº {{ retorno.numero }}</h2>
+  <p class="small">Prestador de Serviço: {{ retorno.terceirizado_nome }} — Data: {{ retorno.data_retorno|brdate }}</p>
+  <table>
+    <tr><th>Nº Remessa</th><th>Produto</th><th>Cor/Estampa</th><th>Serviço</th><th>Qtde Retornada</th><th>Finalizado</th></tr>
+    {% for item in itens %}
+    <tr>
+      <td>{{ item.remessa_numero }}</td>
+      <td><b>{{ item.produto_codigo }}</b> - {{ item.produto_descricao }}</td>
+      <td>{{ item.cor_descricao }}</td>
+      <td>{{ item.servico_descricao }}</td>
+      <td>{{ item.qtd_retornada }}</td>
+      <td>{{ "SIM" if item.finalizado else "NÃO" }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <div class="actions" style="margin-top:10px;">
+    <a href="/retornos" class="btn secondary">Voltar</a>
+    <a class="btn-mini ver" href="/retornos/{{ retorno.id }}/imprimir" target="_blank">IMPRIMIR</a>
+    <a class="btn-mini editar" href="/retornos/{{ retorno.id }}/editar">EDITAR</a>
+    <form method="post" action="/retornos/{{ retorno.id }}/excluir" onsubmit="return confirm('Cancelar este retorno? As remessas vinculadas voltarão a ficar pendentes. Esta ação não pode ser desfeita.');">
+      <button class="btn-mini excluir" type="submit">CANCELAR</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

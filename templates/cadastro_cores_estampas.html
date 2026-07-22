@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+{% block content %}
+
+{# ── CATÁLOGO DE CORES / ESTAMPAS ─────────────────────────────────────── #}
+<div class="card" style="margin-bottom:18px;">
+  <h2>Catálogo de Cores / Estampas</h2>
+  <p class="small">Cadastre aqui os nomes de cores e estampas disponíveis. Nomes são únicos — sem repetição.</p>
+
+  <form method="post" action="/catalogo-cores/adicionar" class="grid" style="margin-bottom:12px;">
+    <input name="nova_cor" placeholder="Nome da cor ou estampa (ex: AZUL ROYAL, FLORAL VERÃO)" required style="text-transform:uppercase;">
+    <button class="btn" type="submit" style="white-space:nowrap;">Adicionar ao Catálogo</button>
+  </form>
+
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+    <input type="text" id="buscaCatalogo" placeholder="Pesquisar no catálogo..."
+           style="flex:1;" oninput="onDigitarCatalogo()">
+    <button class="btn secondary" id="btnDetalhaCatalogo" onclick="toggleCatalogo()">Detalhar</button>
+  </div>
+
+  <div id="wrapCatalogo" style="display:none;">
+    {% if catalogo_cores %}
+    <table id="tabelaCatalogo">
+      <tr><th>Nome da Cor / Estampa</th><th style="width:200px;">Ações</th></tr>
+      {% for c in catalogo_cores %}
+      <tr id="row-cat-{{ c.id }}">
+        <td>
+          <span id="txt-{{ c.id }}">{{ c.descricao }}</span>
+          <form id="form-edit-{{ c.id }}" method="post" action="/catalogo-cores/{{ c.id }}/editar" style="display:none;">
+            <input type="text" name="descricao" value="{{ c.descricao }}" style="width:100%;font-size:13px;padding:3px 6px;">
+          </form>
+        </td>
+        <td class="actions">
+          <button class="btn-mini editar" type="button" onclick="iniciarEdicaoCatalogo({{ c.id }})">EDITAR</button>
+          <button class="btn-mini" id="btn-salvar-{{ c.id }}" type="button" style="display:none;background:#4d6b3a;color:#fff;" onclick="document.getElementById('form-edit-{{ c.id }}').submit()">SALVAR</button>
+          <button class="btn-mini secondary" id="btn-cancel-{{ c.id }}" type="button" style="display:none;" onclick="cancelarEdicaoCatalogo({{ c.id }})">✕</button>
+          <form method="post" action="/catalogo-cores/{{ c.id }}/excluir" style="display:inline;"
+                onsubmit="return confirm('Excluir {{ c.descricao }} do catálogo?')">
+            <button class="btn-mini excluir" type="submit">EXCLUIR</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    <script>
+    function iniciarEdicaoCatalogo(id) {
+      document.getElementById('txt-' + id).style.display = 'none';
+      document.getElementById('form-edit-' + id).style.display = 'block';
+      document.getElementById('btn-salvar-' + id).style.display = 'inline-block';
+      document.getElementById('btn-cancel-' + id).style.display = 'inline-block';
+    }
+    function cancelarEdicaoCatalogo(id) {
+      document.getElementById('txt-' + id).style.display = '';
+      document.getElementById('form-edit-' + id).style.display = 'none';
+      document.getElementById('btn-salvar-' + id).style.display = 'none';
+      document.getElementById('btn-cancel-' + id).style.display = 'none';
+    }
+    </script>
+    {% else %}
+    <p class="small" style="color:#999;">Nenhuma cor/estampa cadastrada no catálogo ainda.</p>
+    {% endif %}
+  </div>
+  <p class="small" id="dicaCatalogo" style="color:#999;">
+    {{ catalogo_cores|length }} cor(es)/estampa(s) cadastrada(s). Clique em "Detalhar" para visualizar ou pesquisar.
+  </p>
+</div>
+
+{# ── ATRIBUIÇÃO DE COR A PRODUTO ──────────────────────────────────────── #}
+<div class="card">
+  <h2>Atribuição de Cor / Estampa a Produto</h2>
+
+  {% if catalogo_cores %}
+  <form method="post" action="/cadastros/cor-estampa" class="grid" style="margin-bottom:14px;">
+    <div>
+      <label>Produto</label>
+      <select name="produto_id" id="produtoCorSelect" data-placeholder="Buscar por nome ou código..." data-search="contains" required>
+        <option value=""></option>
+        {% for p in produtos %}
+        <option value="{{ p.id }}">{{ p.codigo }} - {{ p.descricao }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Cor / Estampa</label>
+      <select name="catalogo_cor_id" id="corCatalogoSelect" data-placeholder="Buscar cor ou estampa..." data-search="contains" required>
+        <option value=""></option>
+        {% for c in catalogo_cores %}
+        <option value="{{ c.id }}">{{ c.descricao }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="display:flex;align-items:flex-end;">
+      <button class="btn" type="submit">Atribuir</button>
+    </div>
+  </form>
+  {% else %}
+  <p class="small" style="color:#c0392b;">
+    Cadastre pelo menos uma cor/estampa no catálogo acima antes de atribuir a um produto.
+  </p>
+  {% endif %}
+
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+    <input type="text" id="buscaAtrib" placeholder="Pesquisar por produto, código ou cor/estampa..."
+           style="flex:1;" disabled>
+    <button class="btn secondary" id="btnDetalhaAtrib" onclick="toggleAtrib()">Detalhar</button>
+    <a href="/cadastros/cores-estampas" class="btn secondary" id="btnVoltarAtrib" style="display:none;">Voltar</a>
+  </div>
+
+  {# Barra de ações — atribuições #}
+  <div id="barraAcoesAtrib" style="display:none;position:sticky;top:0;z-index:100;background:#fff;border:1px solid #d4a96a;border-radius:8px;padding:10px 14px;margin-bottom:10px;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);">
+    <span id="barraInfoAtrib" style="flex:1;font-size:13px;font-weight:600;color:#5a3e2b;"></span>
+    <a id="btnVerAtrib" href="#" class="btn secondary" style="font-size:13px;padding:6px 14px;">Visualizar/Editar</a>
+    <button id="btnExcluirAtrib" type="button" class="btn-mini excluir" style="font-size:13px;padding:6px 14px;">Excluir</button>
+    <button type="button" class="btn secondary" style="font-size:13px;padding:6px 12px;" onclick="desselecionarAtrib()">✕</button>
+  </div>
+  <form id="formExcluirAtrib" method="post" style="display:none;"></form>
+
+  <div id="wrapAtrib" style="display:none;">
+    {% if cores_estampas %}
+    <table id="tabelaCoresEstampas">
+      <tr><th style="width:70px;">Foto</th><th>Código</th><th>Produto</th><th>Cor/Estampa</th><th style="width:130px;">Ações Foto</th></tr>
+      {% for c in cores_estampas %}
+      <tr class="linha-selecionavel-atrib" style="cursor:pointer;transition:background .15s;"
+          data-id="{{ c.id }}"
+          data-label="{{ c.codigo }} — {{ c.descricao }}"
+          data-view="/cores-estampas/{{ c.id }}"
+          data-delete="/cores-estampas/{{ c.id }}/excluir"
+          data-confirm="Excluir a atribuição {{ c.descricao }} do produto {{ c.produto_descricao }}? Esta ação não pode ser desfeita.">
+        <td onclick="event.stopPropagation()">
+          {% if c.foto %}
+          <img src="/static/fotos_estampas/{{ c.foto }}"
+               alt="{{ c.descricao }}"
+               style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #d9c6b3;cursor:zoom-in;"
+               onclick="abrirFoto('/static/fotos_estampas/{{ c.foto }}', '{{ c.codigo }} — {{ c.descricao }}')">
+          {% else %}
+          <div style="width:54px;height:54px;border:1.5px dashed #c5ae97;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#c5ae97;font-size:20px;" title="Sem foto">📷</div>
+          {% endif %}
+        </td>
+        <td>{{ c.codigo }}</td>
+        <td>{{ c.produto_descricao }}</td>
+        <td>{{ c.descricao }}</td>
+        <td onclick="event.stopPropagation()" style="white-space:nowrap;">
+          <button class="btn-mini editar" type="button"
+                  onclick="abrirUploadFoto({{ c.id }}, '{{ c.codigo }}')">
+            {% if c.foto %}Trocar{% else %}Foto{% endif %}
+          </button>
+          {% if c.foto %}
+          <form method="post" action="/cores-estampas/{{ c.id }}/foto/remover" style="display:inline;"
+                onsubmit="return confirm('Remover a foto de {{ c.codigo }}?')">
+            <button class="btn-mini excluir" type="submit">Remover</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+
+    {# Form oculto de upload — reaproveitado por todas as linhas #}
+    <form id="formUploadFoto" method="post" enctype="multipart/form-data" style="display:none;">
+      <input type="file" id="inputFotoArquivo" name="foto" accept=".jpg,.jpeg,.png,.webp" onchange="document.getElementById('formUploadFoto').submit()">
+    </form>
+
+    {# Modal de visualização ampliada #}
+    <div id="modalFotoOverlay" onclick="fecharFoto()"
+         style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:12px;padding:16px;max-width:400px;width:90%;text-align:center;" onclick="event.stopPropagation()">
+        <button onclick="fecharFoto()" style="float:right;background:none;border:none;font-size:20px;cursor:pointer;color:#888;">✕</button>
+        <img id="modalFotoImg" src="" alt="" style="width:100%;border-radius:8px;display:block;margin-top:8px;">
+        <p id="modalFotoLabel" style="margin-top:10px;font-size:13px;color:#5a3e2b;font-weight:600;"></p>
+      </div>
+    </div>
+
+    {% else %}
+    <p class="small" style="color:#999;">Nenhuma atribuição cadastrada ainda.</p>
+    {% endif %}
+  </div>
+  <p class="small" id="dicaAtrib" style="color:#999;">
+    {{ cores_estampas|length }} atribuição(ões) cadastrada(s). Clique em "Detalhar" para visualizar ou pesquisar.
+  </p>
+</div>
+
+<script>
+  searchableSelect(document.getElementById('produtoCorSelect'));
+  searchableSelect(document.getElementById('corCatalogoSelect'));
+
+  function abrirUploadFoto(id, codigo) {
+    var form = document.getElementById('formUploadFoto');
+    form.action = '/cores-estampas/' + id + '/foto';
+    document.getElementById('inputFotoArquivo').click();
+  }
+
+  function abrirFoto(src, label) {
+    document.getElementById('modalFotoImg').src = src;
+    document.getElementById('modalFotoLabel').textContent = label;
+    var overlay = document.getElementById('modalFotoOverlay');
+    overlay.style.display = 'flex';
+  }
+
+  function fecharFoto() {
+    document.getElementById('modalFotoOverlay').style.display = 'none';
+  }
+
+  // Inicializa o filtro do catálogo uma vez ao carregar
+  filtrarTabela('buscaCatalogo', 'tabelaCatalogo');
+
+  function onDigitarCatalogo() {
+    var wrap  = document.getElementById('wrapCatalogo');
+    var dica  = document.getElementById('dicaCatalogo');
+    var btn   = document.getElementById('btnDetalhaCatalogo');
+    var termo = document.getElementById('buscaCatalogo').value.trim();
+    if (termo) {
+      wrap.style.display = '';
+      if (dica) dica.style.display = 'none';
+      btn.textContent = 'Ocultar';
+      catalogoVisivel = true;
+    } else if (!catalogoVisivel) {
+      wrap.style.display = 'none';
+      if (dica) dica.style.display = '';
+      btn.textContent = 'Detalhar';
+    }
+  }
+
+  var catalogoVisivel = false;
+  function toggleCatalogo() {
+    catalogoVisivel = !catalogoVisivel;
+    var wrap  = document.getElementById('wrapCatalogo');
+    var input = document.getElementById('buscaCatalogo');
+    var dica  = document.getElementById('dicaCatalogo');
+    var btn   = document.getElementById('btnDetalhaCatalogo');
+    wrap.style.display = catalogoVisivel ? '' : 'none';
+    if (dica) dica.style.display = catalogoVisivel ? 'none' : '';
+    btn.textContent = catalogoVisivel ? 'Ocultar' : 'Detalhar';
+    if (catalogoVisivel) input.focus();
+    // Se ocultar e não há termo de busca, limpa o campo
+    if (!catalogoVisivel) input.value = '';
+  }
+
+  var atribVisivel = false;
+  function toggleAtrib() {
+    atribVisivel = !atribVisivel;
+    var wrap = document.getElementById('wrapAtrib');
+    var input = document.getElementById('buscaAtrib');
+    var dica = document.getElementById('dicaAtrib');
+    var btn = document.getElementById('btnDetalhaAtrib');
+    var voltar = document.getElementById('btnVoltarAtrib');
+    wrap.style.display = atribVisivel ? '' : 'none';
+    input.disabled = !atribVisivel;
+    if (dica) dica.style.display = atribVisivel ? 'none' : '';
+    btn.textContent = atribVisivel ? 'Ocultar' : 'Detalhar';
+    voltar.style.display = atribVisivel ? '' : 'none';
+    if (atribVisivel) {
+      filtrarTabela('buscaAtrib', 'tabelaCoresEstampas');
+      input.focus();
+      ativarSelecaoAtrib();
+    }
+  }
+
+  // Seleção na tabela de atribuições (ativada quando a tabela é exibida)
+  var linhaSelecionadaAtrib = null;
+  function desselecionarAtrib() {
+    if (linhaSelecionadaAtrib) {
+      linhaSelecionadaAtrib.style.background = '';
+      linhaSelecionadaAtrib.style.outline = '';
+      linhaSelecionadaAtrib = null;
+    }
+    document.getElementById('barraAcoesAtrib').style.display = 'none';
+  }
+  function ativarSelecaoAtrib() {
+    document.querySelectorAll('.linha-selecionavel-atrib').forEach(function(tr) {
+      if (tr._selecaoAtivada) return;
+      tr._selecaoAtivada = true;
+      tr.addEventListener('click', function(e) {
+        if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON' || e.target.closest('form')) return;
+        if (linhaSelecionadaAtrib === tr) { desselecionarAtrib(); return; }
+        desselecionarAtrib();
+        linhaSelecionadaAtrib = tr;
+        tr.style.background = '#fdf6f0';
+        tr.style.outline = '2px solid #a0522d';
+        document.getElementById('barraInfoAtrib').textContent = tr.dataset.label + ' selecionado(a)';
+        document.getElementById('btnVerAtrib').href = tr.dataset.view;
+        document.getElementById('btnExcluirAtrib').onclick = function() {
+          if (confirm(tr.dataset.confirm)) {
+            var form = document.getElementById('formExcluirAtrib');
+            form.action = tr.dataset.delete;
+            form.submit();
+          }
+        };
+        document.getElementById('barraAcoesAtrib').style.display = 'flex';
+      });
+    });
+  }
+</script>
+{% endblock %}

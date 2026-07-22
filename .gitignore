@@ -1,0 +1,25 @@
+# Bancos de dados — NUNCA versionar (dados reais de clientes/produção,
+# e um git pull no servidor não pode sobrescrever o banco em produção)
+*.db
+*.db-journal
+
+# Segredos
+.env
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Backups locais
+backups/
+
+# Logs
+*.log
+
+# Planilhas e arquivos de dados/relatórios gerados (não são código)
+*.xlsx
+*.csv
+*.pptx
+*.pdf
+Composição dos Produtos/

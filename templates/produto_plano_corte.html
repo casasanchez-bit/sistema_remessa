@@ -1,0 +1,1080 @@
+{% extends "base.html" %}
+{% block title %}Plano de Corte — {{ produto.codigo }} {{ produto.descricao }}{% endblock %}
+{% block content %}
+
+{# ── Barra de ações ──────────────────────────────────────────────────────────── #}
+<div class="card no-print">
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:4px;">
+    <h1 style="margin:0;font-size:1.2rem;">Plano de Corte</h1>
+  </div>
+  <div style="font-size:13px;color:#6b5344;margin-bottom:16px;">
+    <b>{{ produto.codigo }}</b> — {{ produto.descricao }}
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="{{ url_for('ver_produto', produto_id=produto.id) }}" class="btn-mini ver">← Voltar ao Produto</a>
+    {% if plano %}<button onclick="imprimirCompleto()" class="btn-mini ver">IMPRIMIR COMPLETO</button>{% endif %}
+  </div>
+</div>
+
+{# ── Formulário ──────────────────────────────────────────────────────────────── #}
+<div class="card no-print">
+  <h2 style="font-size:1rem;margin-bottom:16px;">Cadastrar / Editar Plano de Corte</h2>
+  <form method="post" enctype="multipart/form-data">
+
+    <p class="form-secao">Identificação</p>
+    <div class="grid" style="margin-bottom:12px;">
+      <div>
+        <label>Tecido Utilizado</label>
+        <select name="tipo_tecido" id="selectTipoTecido" data-placeholder="Buscar matéria-prima..." data-search="contains">
+          <option value=""></option>
+          {% for mp in materias_primas %}
+          <option value="{{ mp.codigo }} - {{ mp.descricao }}"
+            {% if plano and plano.tipo_tecido == mp.codigo ~ ' - ' ~ mp.descricao %}selected{% endif %}>
+            {{ mp.codigo }} - {{ mp.descricao }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Marca</label>
+        <input type="text" name="marca" value="{{ plano.marca if plano and plano.marca else '' }}" placeholder="Ex: Texidel">
+      </div>
+      <div>
+        <label>Coleção</label>
+        <input type="text" name="colecao" value="{{ plano.colecao if plano and plano.colecao else '' }}" placeholder="Ex: Inverno 2025">
+      </div>
+    </div>
+    <div class="grid" style="margin-bottom:12px;">
+      <div>
+        <label>Fornecedor Tecido 1</label>
+        <input type="text" name="fornecedor1" value="{{ plano.fornecedor1 if plano and plano.fornecedor1 else '' }}">
+      </div>
+      <div>
+        <label>Fornecedor Tecido 2</label>
+        <input type="text" name="fornecedor2" value="{{ plano.fornecedor2 if plano and plano.fornecedor2 else '' }}">
+      </div>
+      <div>
+        <label>Fornecedor Tecido 3</label>
+        <input type="text" name="fornecedor3" value="{{ plano.fornecedor3 if plano and plano.fornecedor3 else '' }}">
+      </div>
+    </div>
+    <div class="grid" style="margin-bottom:20px;">
+      <div>
+        <label>Tamanho Final do Produto (cm)</label>
+        <input type="text" name="tamanho_final" value="{{ plano.tamanho_final if plano and plano.tamanho_final else '' }}" placeholder="Ex: 42 x 42">
+      </div>
+      <div>
+        <label>Tipo de Zíper</label>
+        <select name="tipo_ziper" id="selectTipoZiper" onchange="atualizarFormZiper()">
+          <option value="">— Sem zíper —</option>
+          <option value="Invisível Colorido" {% if plano and plano.tipo_ziper == 'Invisível Colorido' %}selected{% endif %}>Invisível Colorido</option>
+          <option value="Zíper Branco N5" {% if plano and plano.tipo_ziper == 'Zíper Branco N5' %}selected{% endif %}>Zíper Branco N5</option>
+          <option value="Semi-Invisível Colorido" {% if plano and plano.tipo_ziper == 'Semi-Invisível Colorido' %}selected{% endif %}>Semi-Invisível Colorido</option>
+        </select>
+      </div>
+      <div>
+        <label>Foto do Produto</label>
+        {% if plano and plano.foto_produto %}
+        <div style="margin-bottom:4px;">
+          <img src="{{ url_for('static', filename='fotos_plano_corte/' ~ plano.foto_produto) }}"
+               style="max-height:60px;border-radius:4px;border:1px solid #d9c6b3;">
+        </div>
+        {% endif %}
+        <input type="file" name="foto_produto" accept="image/*" style="width:auto;">
+      </div>
+    </div>
+
+    <p class="form-secao">Parâmetros do Corte</p>
+    <div class="grid" style="margin-bottom:12px;">
+      <div>
+        <label>Largura do Tecido (cm)</label>
+        <input type="number" name="largura_tecido" step="0.1" min="0"
+               value="{{ plano.largura_tecido|smart_num if plano and plano.largura_tecido else '' }}"
+               placeholder="Ex: 140">
+      </div>
+      <div>
+        <label>Comprimento do Enfesto (cm)</label>
+        <input type="number" name="comprimento_enfesto" step="0.1" min="0"
+               value="{{ plano.comprimento_enfesto|smart_num if plano and plano.comprimento_enfesto else '' }}"
+               placeholder="Ex: 460">
+      </div>
+      <div>
+        <label>Puxadas Mínimas no Enfesto</label>
+        <input type="number" name="puxadas_min" min="1"
+               value="{{ plano.puxadas_min if plano and plano.puxadas_min else '' }}"
+               placeholder="Ex: 20">
+      </div>
+      <div>
+        <label>Puxadas Máximas no Enfesto</label>
+        <input type="number" name="puxadas_max" min="1"
+               value="{{ plano.puxadas_max if plano and plano.puxadas_max else '' }}"
+               placeholder="Ex: 30">
+      </div>
+    </div>
+    <div class="grid" style="margin-bottom:12px;">
+      <div>
+        <label>Formato do Produto</label>
+        <select name="formato_produto" id="formato_produto" onchange="toggleFormato()">
+          <option value="retangular" {% if not plano or not plano.formato_produto or plano.formato_produto == 'retangular' %}selected{% endif %}>Retangular ou Quadrado</option>
+          <option value="redondo" {% if plano and plano.formato_produto == 'redondo' %}selected{% endif %}>Redondo</option>
+        </select>
+      </div>
+    </div>
+    <div id="campos_retangular" style="margin-bottom:12px;">
+      <div class="grid" style="margin-bottom:10px;">
+        <div>
+          <label>Frente e Fundo com medidas diferentes?</label>
+          <select name="tem_frente_fundo" id="tem_frente_fundo" onchange="toggleFrenteFundo()">
+            <option value="0" {% if not plano or not plano.tem_frente_fundo %}selected{% endif %}>NÃO — Medida única de corte</option>
+            <option value="1" {% if plano and plano.tem_frente_fundo %}selected{% endif %}>SIM — Frente e Fundo com tamanhos diferentes</option>
+          </select>
+        </div>
+        <div>
+          <label>Tecido VAI DOBRAR para costurar?</label>
+          <select name="tecido_dobrado">
+            <option value="0" {% if not plano or not plano.tecido_dobrado %}selected{% endif %}>NÃO</option>
+            <option value="1" {% if plano and plano.tecido_dobrado %}selected{% endif %}>SIM</option>
+          </select>
+        </div>
+      </div>
+      {# Modo medida única #}
+      <div id="campos_um_tamanho" class="grid" style="margin-bottom:4px;">
+        <div>
+          <label>Largura do Corte (cm)</label>
+          <input type="number" name="largura_corte_cm" step="0.1" min="0"
+                 value="{{ plano.largura_corte_cm|smart_num if plano and plano.largura_corte_cm else '' }}"
+                 placeholder="Ex: 46">
+        </div>
+        <div>
+          <label>Comprimento do Corte (cm)</label>
+          <input type="number" name="comprimento_corte_cm" step="0.1" min="0"
+                 value="{{ plano.comprimento_corte_cm|smart_num if plano and plano.comprimento_corte_cm else '' }}"
+                 placeholder="Ex: 92">
+        </div>
+      </div>
+      {# Modo frente + fundo #}
+      <div id="campos_frente_fundo" style="display:none;">
+        <div class="grid" style="margin-bottom:6px;">
+          <div>
+            <label style="color:#2a6a1a;font-weight:700;">▶ FRENTE — Largura (cm)</label>
+            <input type="number" name="largura_frente_cm" step="0.1" min="0"
+                   value="{{ plano.largura_frente_cm|smart_num if plano and plano.largura_frente_cm else '' }}"
+                   placeholder="Ex: 46">
+          </div>
+          <div>
+            <label style="color:#2a6a1a;font-weight:700;">▶ FRENTE — Comprimento (cm)</label>
+            <input type="number" name="comprimento_frente_cm" step="0.1" min="0"
+                   value="{{ plano.comprimento_frente_cm|smart_num if plano and plano.comprimento_frente_cm else '' }}"
+                   placeholder="Ex: 63">
+          </div>
+        </div>
+        <div class="grid" style="margin-bottom:6px;">
+          <div>
+            <label style="color:#1a3d7a;font-weight:700;">▶ FUNDO MAIOR — Largura (cm)</label>
+            <input type="number" name="largura_fundo_cm" step="0.1" min="0"
+                   value="{{ plano.largura_fundo_cm|smart_num if plano and plano.largura_fundo_cm else '' }}"
+                   placeholder="Ex: 46">
+          </div>
+          <div>
+            <label style="color:#1a3d7a;font-weight:700;">▶ FUNDO MAIOR — Comprimento (cm)</label>
+            <input type="number" name="comprimento_fundo_cm" step="0.1" min="0"
+                   value="{{ plano.comprimento_fundo_cm|smart_num if plano and plano.comprimento_fundo_cm else '' }}"
+                   placeholder="Ex: 45">
+          </div>
+        </div>
+        <div class="grid" style="margin-bottom:4px;">
+          <div>
+            <label style="color:#8B5A00;font-weight:700;">▶ FUNDO MENOR — Largura (cm)</label>
+            <input type="number" name="largura_fundo_menor_cm" step="0.1" min="0"
+                   value="{{ plano.largura_fundo_menor_cm|smart_num if plano and plano.largura_fundo_menor_cm else '' }}"
+                   placeholder="Ex: 46">
+          </div>
+          <div>
+            <label style="color:#8B5A00;font-weight:700;">▶ FUNDO MENOR — Comprimento (cm)</label>
+            <input type="number" name="comprimento_fundo_menor_cm" step="0.1" min="0"
+                   value="{{ plano.comprimento_fundo_menor_cm|smart_num if plano and plano.comprimento_fundo_menor_cm else '' }}"
+                   placeholder="Ex: 20">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="campos_redondo" class="grid" style="margin-bottom:12px;display:none;">
+      <div>
+        <label>Diâmetro do Corte (cm)</label>
+        <input type="number" name="diametro_cm" step="0.1" min="0"
+               value="{{ plano.diametro_cm|smart_num if plano and plano.diametro_cm else '' }}"
+               placeholder="Ex: 44">
+      </div>
+    </div>
+    <div style="margin-bottom:20px;">
+      <label>Observações para o Cortador</label>
+      <textarea name="observacoes" rows="2" style="width:100%;box-sizing:border-box;"
+                placeholder="Instruções adicionais de corte, sentido do fio, etc.">{{ plano.observacoes if plano and plano.observacoes else '' }}</textarea>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <button class="btn" type="submit">Salvar Plano de Corte</button>
+      <a href="{{ url_for('ver_produto', produto_id=produto.id) }}" class="btn" style="background:#888;color:#fff;text-decoration:none;">Cancelar Alterações</a>
+    </div>
+  </form>
+</div>
+
+{# ── Preview na tela: layout lado a lado (não imprime) ───────────────────────── #}
+{% if plano %}
+<div class="plano-a4 no-print">
+  <div class="col-diagrama">
+    <div class="diagrama-label">DIAGRAMA DE ENCAIXE DE CORTE</div>
+    <div class="diagrama-wrap">
+      <canvas id="cvDiagrama"></canvas>
+    </div>
+  </div>
+  <div class="col-info">
+    <div class="bloco" style="display:flex;gap:8px;">
+      <div style="flex:1;min-width:0;">
+        <div class="bloco-linha"><span><b>Produto:</b> {{ produto.descricao }}</span><span style="white-space:nowrap;"><b>Marca:</b> {{ plano.marca or '—' }}</span></div>
+        <div class="bloco-linha"><span><b>Ref/Cód:</b> {{ produto.codigo }}</span><span style="white-space:nowrap;"><b>Coleção:</b> {{ plano.colecao or '—' }}</span></div>
+        <div class="bloco-linha"><span><b>Tecido:</b> {{ plano.tipo_tecido or '—' }}</span><span style="white-space:nowrap;"><b>Tamanho final:</b> {{ plano.tamanho_final or '—' }} cm</span></div>
+        <div class="bloco-linha-3">
+          <span><b>Fornecedor Tecido 1:</b> {{ plano.fornecedor1 or '—' }}</span>
+          <span><b>Fornecedor Tecido 2:</b> {{ plano.fornecedor2 or '—' }}</span>
+          <span><b>Fornecedor Tecido 3:</b> {{ plano.fornecedor3 or '—' }}</span>
+        </div>
+      </div>
+      {% if plano.foto_produto %}
+      <div style="flex-shrink:0;"><img src="{{ url_for('static', filename='fotos_plano_corte/' ~ plano.foto_produto) }}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid #d9c6b3;"></div>
+      {% endif %}
+    </div>
+    <div class="bloco">
+      <div class="bloco-titulo">Instruções para o diagrama de encaixe de corte</div>
+      <ul class="params-lista">
+        <li><b>Largura do tecido:</b> <span>{{ ('%.1f'|format(plano.largura_tecido)) ~ ' cm' if plano.largura_tecido else '—' }}</span></li>
+        <li><b>Comprimento do enfesto total:</b> <span>{{ ('%.1f'|format(plano.comprimento_enfesto)) ~ ' cm' if plano.comprimento_enfesto else '—' }}</span></li>
+        {% if plano.tem_frente_fundo %}
+        <li><b>Medida FRENTE (L × C):</b> <span>{% if plano.largura_frente_cm and plano.comprimento_frente_cm %}{{ '%.1f'|format(plano.largura_frente_cm) }} × {{ '%.1f'|format(plano.comprimento_frente_cm) }} cm{% else %}—{% endif %}</span></li>
+        <li><b>Medida FUNDO MAIOR (L × C):</b> <span>{% if plano.largura_fundo_cm and plano.comprimento_fundo_cm %}{{ '%.1f'|format(plano.largura_fundo_cm) }} × {{ '%.1f'|format(plano.comprimento_fundo_cm) }} cm{% else %}—{% endif %}</span></li>
+        <li><b>Medida FUNDO MENOR (L × C):</b> <span>{% if plano.largura_fundo_menor_cm and plano.comprimento_fundo_menor_cm %}{{ '%.1f'|format(plano.largura_fundo_menor_cm) }} × {{ '%.1f'|format(plano.comprimento_fundo_menor_cm) }} cm{% else %}—{% endif %}</span></li>
+        {% else %}
+        <li><b>Medida do corte (L × C):</b> <span>{% if plano.largura_corte_cm and plano.comprimento_corte_cm %}{{ '%.1f'|format(plano.largura_corte_cm) }} × {{ '%.1f'|format(plano.comprimento_corte_cm) }} cm{% else %}—{% endif %}</span></li>
+        {% endif %}
+        <li><b>Tecido dobrado:</b> <span>{{ 'SIM' if plano.tecido_dobrado else 'NÃO' }}</span></li>
+        <li><b>Tipo de zíper:</b> <span>{{ plano.tipo_ziper or '—' }}</span></li>
+        <li><b>Nº mín. de puxadas no enfesto:</b> <span>{{ plano.puxadas_min or '—' }}</span></li>
+        <li><b>Nº máx. de puxadas no enfesto:</b> <span>{{ plano.puxadas_max or '—' }}</span></li>
+        <li><b>Divisor do enfesto na largura:</b> <span id="pCols">—</span></li>
+        <li><b>Divisor do enfesto no comprimento:</b> <span id="pRows">—</span></li>
+        <li><b>Rendimento de peças no enfesto:</b> <span id="pTotal">—</span></li>
+        <li><b>Área de aproveitamento do tecido:</b> <span id="pAprov">—</span></li>
+      </ul>
+      {% if plano.observacoes %}<div style="margin-top:4px;font-size:8px;border-top:1px solid #e7d7c4;padding-top:3px;"><b>Obs:</b> {{ plano.observacoes }}</div>{% endif %}
+    </div>
+    <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:3mm;overflow:hidden;">
+      <div class="bloco" style="flex-shrink:0;">
+        <div class="bloco-titulo">Composição das Matérias-Primas</div>
+        {% if composicao %}
+        <table class="mp-table">
+          <tr><th>Cód.</th><th>Descrição</th><th>Qtd</th></tr>
+          {% for mp in composicao %}<tr><td>{{ mp.codigo }}</td><td>{{ mp.descricao }}</td><td>{{ mp.quantidade|qty }}</td></tr>{% endfor %}
+        </table>
+        {% else %}<p style="font-size:8px;color:#aaa;margin:4px 0;">Nenhuma composição cadastrada para este produto.</p>{% endif %}
+      </div>
+      {% set tem_cron_prev = cron_medidas and cron_medidas|selectattr('tempo_str')|list %}
+      {% if tem_cron_prev %}
+      <div class="bloco" style="flex-shrink:0;">
+        <div class="bloco-titulo">Cronometragem de Corte</div>
+        <table class="mp-table" style="min-width:0;">
+          <tr>
+            <th style="text-align:center;width:16px;">Nº</th>
+            <th style="text-align:center;width:52px;">Data</th>
+            <th style="text-align:center;width:42px;">HH:MM</th>
+            <th style="text-align:center;width:32px;">Qtde</th>
+            <th style="text-align:left;">Cortadores</th>
+          </tr>
+          {% for m in cron_medidas %}{% if m.tempo_str or m.qtd_cortada %}
+          <tr>
+            <td style="text-align:center;font-weight:700;">{{ m.numero }}</td>
+            <td style="text-align:center;">{{ m.data_medicao|brdate if m.data_medicao else '—' }}</td>
+            <td style="text-align:center;font-family:monospace;">{{ m.tempo_str or '—' }}</td>
+            <td style="text-align:center;">{{ m.qtd_cortada or '—' }}</td>
+            <td>{{ m.nomes_pessoas or '—' }}</td>
+          </tr>
+          {% endif %}{% endfor %}
+          {% if cron_media %}
+          <tr style="background:#f5ede4;font-weight:700;">
+            <td colspan="2" style="text-align:center;">Média</td>
+            <td style="text-align:center;font-family:monospace;">{{ cron_media.tempo_str }}</td>
+            <td style="text-align:center;">{{ cron_media.qtd_cortada or '—' }}</td>
+            <td style="font-size:7px;color:#5C442C;">
+              {% if cron_media.pcs_hora %}{{ cron_media.pcs_hora }} pç/h{% endif %}
+            </td>
+          </tr>
+          {% endif %}
+        </table>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── PÁGINA 1 DE IMPRESSÃO: Especificações completas ─────────────────────────── #}
+{% if plano %}
+<div class="print-pg1">
+
+  {# Cabeçalho do produto #}
+  <div class="p1-bloco p1-header">
+    <div style="flex:1;min-width:0;">
+      <div class="p1-linha"><span><b>Produto:</b> {{ produto.descricao }}</span><span class="p1-dir"><b>Marca:</b> {{ plano.marca or '—' }}</span></div>
+      <div class="p1-linha"><span><b>Ref/Cód:</b> {{ produto.codigo }}</span><span class="p1-dir"><b>Coleção:</b> {{ plano.colecao or '—' }}</span></div>
+      <div class="p1-linha"><span><b>Tecido:</b> {{ plano.tipo_tecido or '—' }}</span><span class="p1-dir"><b>Tamanho final:</b> {{ plano.tamanho_final or '—' }} cm</span></div>
+      <div class="p1-linha3">
+        <span><b>Fornecedor Tecido 1:</b> {{ plano.fornecedor1 or '—' }}</span>
+        <span><b>Fornecedor Tecido 2:</b> {{ plano.fornecedor2 or '—' }}</span>
+        <span><b>Fornecedor Tecido 3:</b> {{ plano.fornecedor3 or '—' }}</span>
+      </div>
+    </div>
+    {% if plano.foto_produto %}
+    <div style="flex-shrink:0;margin-left:10px;">
+      <img src="{{ url_for('static', filename='fotos_plano_corte/' ~ plano.foto_produto) }}"
+           style="width:80px;height:80px;object-fit:cover;border-radius:4px;border:1px solid #d9c6b3;">
+    </div>
+    {% endif %}
+  </div>
+
+  {# Parâmetros do encaixe #}
+  <div class="p1-bloco">
+    <div class="p1-titulo">Instruções para o Diagrama de Encaixe de Corte</div>
+    <table class="p1-params">
+      <tr><td><b>Largura do tecido:</b></td><td>{{ ('%.1f'|format(plano.largura_tecido)) ~ ' cm' if plano.largura_tecido else '—' }}</td>
+          <td><b>Tecido dobrado:</b></td><td>{{ 'SIM' if plano.tecido_dobrado else 'NÃO' }}</td></tr>
+      <tr><td><b>Comprimento do enfesto total:</b></td><td>{{ ('%.1f'|format(plano.comprimento_enfesto)) ~ ' cm' if plano.comprimento_enfesto else '—' }}</td>
+          <td><b>Tipo de zíper:</b></td><td>{{ plano.tipo_ziper or '—' }}</td></tr>
+      {% if plano.tem_frente_fundo %}
+      <tr><td><b>Medida FRENTE (L × C):</b></td>
+          <td>{% if plano.largura_frente_cm and plano.comprimento_frente_cm %}{{ '%.1f'|format(plano.largura_frente_cm) }} × {{ '%.1f'|format(plano.comprimento_frente_cm) }} cm{% else %}—{% endif %}</td>
+          <td><b>Nº mín. de puxadas:</b></td><td>{{ plano.puxadas_min or '—' }}</td></tr>
+      <tr><td><b>Medida FUNDO MAIOR (L × C):</b></td>
+          <td>{% if plano.largura_fundo_cm and plano.comprimento_fundo_cm %}{{ '%.1f'|format(plano.largura_fundo_cm) }} × {{ '%.1f'|format(plano.comprimento_fundo_cm) }} cm{% else %}—{% endif %}</td>
+          <td><b>Nº máx. de puxadas:</b></td><td>{{ plano.puxadas_max or '—' }}</td></tr>
+      <tr><td><b>Medida FUNDO MENOR (L × C):</b></td>
+          <td>{% if plano.largura_fundo_menor_cm and plano.comprimento_fundo_menor_cm %}{{ '%.1f'|format(plano.largura_fundo_menor_cm) }} × {{ '%.1f'|format(plano.comprimento_fundo_menor_cm) }} cm{% else %}—{% endif %}</td>
+          <td></td><td></td></tr>
+      {% else %}
+      <tr><td><b>Medida do corte (L × C):</b></td>
+          <td>{% if plano.largura_corte_cm and plano.comprimento_corte_cm %}{{ '%.1f'|format(plano.largura_corte_cm) }} × {{ '%.1f'|format(plano.comprimento_corte_cm) }} cm{% else %}—{% endif %}</td>
+          <td><b>Nº mín. de puxadas:</b></td><td>{{ plano.puxadas_min or '—' }}</td></tr>
+      {% endif %}
+      <tr><td><b>Divisor na largura:</b></td><td id="p1Cols">—</td>
+          {% if not plano.tem_frente_fundo %}<td><b>Nº máx. de puxadas:</b></td><td>{{ plano.puxadas_max or '—' }}</td>{% else %}<td></td><td></td>{% endif %}</tr>
+      <tr><td><b>Divisor no comprimento:</b></td><td id="p1Rows">—</td>
+          <td><b>Rendimento de peças:</b></td><td id="p1Total">—</td></tr>
+      <tr><td><b>Área de aproveitamento:</b></td><td id="p1Aprov">—</td><td></td><td></td></tr>
+    </table>
+    {% if plano.observacoes %}
+    <div style="margin-top:6px;padding-top:5px;border-top:1px solid #e7d7c4;font-size:9px;">
+      <b>Observações para o Cortador:</b> {{ plano.observacoes }}
+    </div>
+    {% endif %}
+  </div>
+
+  {# Composição de matérias-primas #}
+  <div class="p1-bloco p1-bloco-mps">
+    <div class="p1-titulo">Composição das Matérias-Primas</div>
+    {% if composicao %}
+    <table class="p1-mp-table">
+      <thead><tr><th>Cód.</th><th>Descrição</th><th>Qtd</th></tr></thead>
+      <tbody>
+        {% for mp in composicao %}
+        <tr><td>{{ mp.codigo }}</td><td>{{ mp.descricao }}</td><td>{{ mp.quantidade|qty }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:#aaa;margin:6px 0;font-size:9px;">Nenhuma composição cadastrada para este produto.</p>
+    {% endif %}
+  </div>
+
+  {# Cronometragem de Corte #}
+  {% set tem_cron = cron_medidas and cron_medidas|selectattr('tempo_str')|list %}
+  {% if tem_cron %}
+  <div class="p1-bloco">
+    <div class="p1-titulo">Cronometragem de Corte</div>
+    <table class="p1-mp-table">
+      <thead>
+        <tr>
+          <th style="text-align:center;width:30px;">Nº</th>
+          <th style="text-align:center;width:70px;">Data</th>
+          <th style="text-align:center;width:60px;">Tempo (HH:MM)</th>
+          <th style="text-align:center;width:55px;">Qtde Cortada</th>
+          <th style="text-align:center;width:45px;">Pessoas</th>
+          <th style="text-align:left;">Nomes dos Cortadores</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in cron_medidas %}
+        {% if m.tempo_str or m.qtd_cortada or m.num_pessoas %}
+        <tr>
+          <td style="text-align:center;font-weight:700;">{{ m.numero }}</td>
+          <td style="text-align:center;">{{ m.data_medicao|brdate if m.data_medicao else '—' }}</td>
+          <td style="text-align:center;font-family:monospace;">{{ m.tempo_str or '—' }}</td>
+          <td style="text-align:center;">{{ m.qtd_cortada or '—' }}</td>
+          <td style="text-align:center;">{{ m.num_pessoas or '—' }}</td>
+          <td>{{ m.nomes_pessoas or '—' }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        {% if cron_media %}
+        <tr style="background:#f5ede4;font-weight:700;">
+          <td colspan="2" style="text-align:center;">Média</td>
+          <td style="text-align:center;font-family:monospace;">{{ cron_media.tempo_str }}</td>
+          <td style="text-align:center;">{{ cron_media.qtd_cortada or '—' }}</td>
+          <td style="text-align:center;">{{ cron_media.num_pessoas or '—' }}</td>
+          <td></td>
+        </tr>
+        {% if cron_media.pcs_hora %}
+        <tr>
+          <td colspan="6" style="font-size:9px;color:#5C442C;padding-top:4px;">
+            <b>Produtividade média:</b> {{ cron_media.pcs_hora }} peças/hora
+            {% set parts = cron_media.tempo_str.split(':') %}
+            {% set min_total = parts[0]|int * 60 + parts[1]|int %}
+            {% if cron_media.qtd_cortada and min_total %}
+            &nbsp;·&nbsp; <b>Tempo por peça:</b> {{ "%.1f"|format(min_total * 60 / cron_media.qtd_cortada) }} seg/peça
+            {% endif %}
+          </td>
+        </tr>
+        {% endif %}
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+</div>
+{% endif %}
+
+{# ── PÁGINA 2 DE IMPRESSÃO: Diagrama full A4 ─────────────────────────────────── #}
+{% if plano %}
+<div class="print-pg2">
+  <canvas id="cvDiagramaPrint"></canvas>
+</div>
+{% endif %}
+
+<style>
+.form-secao {
+  font-size:11px;color:#888;margin-bottom:10px;margin-top:4px;
+  text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #e7d7c4;padding-bottom:4px;
+}
+
+/* ── Preview na tela ────────────────────────────────────────────────── */
+.plano-a4 {
+  width: 210mm; height: 297mm;
+  background: #fff; margin: 20px auto;
+  display: flex; flex-direction: row;
+  border: 1px solid #bbb;
+  font-family: Arial, Helvetica, sans-serif; font-size: 9px; color: #1a1a1a;
+  box-sizing: border-box; padding: 7mm 8mm; gap: 5mm; overflow: hidden;
+}
+.col-diagrama { width: 72mm; flex-shrink: 0; display: flex; flex-direction: row; gap: 0; }
+.diagrama-label {
+  writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);
+  font-size: 7.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+  color: #5C442C; border-left: 2px solid #5C442C; padding-left: 3px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.diagrama-wrap { flex: 1; margin-left: 4px; display: flex; align-items: stretch; }
+#cvDiagrama { width: 100%; height: 100%; display: block; }
+.col-info { flex: 1; display: flex; flex-direction: column; gap: 3mm; min-width: 0; }
+.bloco { border: 1px solid #d9c6b3; border-radius: 3px; padding: 4px 6px; flex-shrink: 0; }
+.bloco-mps { flex: 1; overflow: hidden; }
+.bloco-titulo { font-size: 7.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #5C442C; border-bottom: 1px solid #e7d7c4; margin-bottom: 4px; padding-bottom: 2px; }
+.bloco-linha { display: flex; justify-content: space-between; gap: 6px; margin-bottom: 3px; font-size: 8.5px; flex-wrap: wrap; }
+.bloco-linha-3 { display: flex; gap: 4px; font-size: 8px; margin-top: 2px; }
+.bloco-linha-3 span { flex: 1; min-width: 0; }
+.params-lista { margin: 0; padding: 0; list-style: none; }
+.params-lista li { font-size: 8.5px; margin-bottom: 2px; display: flex; justify-content: space-between; gap: 4px; border-bottom: 1px dotted #f0e4d6; padding-bottom: 1px; }
+.params-lista li b { color: #5C442C; flex-shrink: 0; }
+.mp-table { width: 100%; border-collapse: collapse; font-size: 8px; }
+.mp-table th, .mp-table td { border: 1px solid #e0d0c0; padding: 2px 4px; }
+.mp-table th { background: #faf0e6; font-weight: 700; text-transform: uppercase; font-size: 7px; }
+.mp-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Páginas de impressão (ocultas na tela) ─────────────────────────── */
+.print-pg1, .print-pg2 { display: none; }
+
+/* ── Página 1: estilos reutilizados apenas em impressão ─────────────── */
+.p1-bloco {
+  border: 1px solid #d9c6b3; border-radius: 3px;
+  padding: 6px 8px; margin-bottom: 5mm;
+  font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #1a1a1a;
+}
+.p1-header { display: flex; gap: 10px; }
+.p1-titulo {
+  font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  color: #5C442C; border-bottom: 1px solid #e7d7c4; margin-bottom: 6px; padding-bottom: 3px;
+}
+.p1-linha { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 10px; }
+.p1-dir { white-space: nowrap; }
+.p1-linha3 { display: flex; gap: 8px; font-size: 9px; margin-top: 3px; }
+.p1-linha3 span { flex: 1; min-width: 0; }
+.p1-params { width: 100%; border-collapse: collapse; font-size: 10px; }
+.p1-params td { padding: 3px 6px; border-bottom: 1px dotted #f0e4d6; vertical-align: top; }
+.p1-params td:first-child, .p1-params td:nth-child(3) { color: #5C442C; font-weight: 600; white-space: nowrap; width: 30%; }
+.p1-params td:nth-child(2), .p1-params td:nth-child(4) { width: 20%; }
+.p1-bloco-mps { flex: 1; }
+.p1-mp-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+.p1-mp-table th { background: #faf0e6; font-weight: 700; text-transform: uppercase; font-size: 8.5px; border: 1px solid #e0d0c0; padding: 3px 6px; text-align: left; }
+.p1-mp-table td { border: 1px solid #e0d0c0; padding: 3px 6px; }
+.p1-mp-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.p1-mp-table tr:nth-child(even) td { background: #fdf8f4; }
+
+/* ── Página 2 ────────────────────────────────────────────────────────── */
+#cvDiagramaPrint { width: 100%; height: 100%; display: block; }
+
+/* ── Impressão ──────────────────────────────────────────────────────── */
+@media print {
+  @page { size: A4 portrait; margin: 0; }
+
+  .no-print { display: none !important; }
+  .plano-a4  { display: none !important; }
+
+  /* Página 1: especificações */
+  .print-pg1 {
+    display: flex !important;
+    flex-direction: column;
+    width: 210mm; height: 297mm;
+    padding: 10mm 12mm;
+    box-sizing: border-box;
+    background: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  /* Página 2: diagrama */
+  .print-pg2 {
+    display: block !important;
+    width: 210mm; height: 297mm;
+    padding: 5mm;
+    box-sizing: border-box;
+    background: #fff;
+  }
+  .print-pg2 #cvDiagramaPrint {
+    width: 200mm !important;
+    height: 287mm !important;
+  }
+}
+</style>
+
+<script>
+/* ── Dados do plano ───────────────────────────────────────────────────────────── */
+var _lt      = {{ plano.largura_tecido or 0 if plano else 0 }};
+var _ce      = {{ plano.comprimento_enfesto or 0 if plano else 0 }};
+var _lc      = {{ plano.largura_corte_cm or 0 if plano else 0 }};
+var _cc      = {{ plano.comprimento_corte_cm or 0 if plano else 0 }};
+var _dob     = {{ (1 if plano.tecido_dobrado else 0) if plano else 0 }};
+var _fmt     = "{{ plano.formato_produto if plano and plano.formato_produto else 'retangular' }}";
+var _diam    = {{ plano.diametro_cm or 0 if plano else 0 }};
+var _ff      = {{ (1 if plano.tem_frente_fundo else 0) if plano else 0 }};
+var _lc_frt  = {{ plano.largura_frente_cm or 0 if plano else 0 }};
+var _cc_frt  = {{ plano.comprimento_frente_cm or 0 if plano else 0 }};
+var _lc_fnd  = {{ plano.largura_fundo_cm or 0 if plano else 0 }};
+var _cc_fnd  = {{ plano.comprimento_fundo_cm or 0 if plano else 0 }};
+var _lc_fnd_mn = {{ plano.largura_fundo_menor_cm or 0 if plano else 0 }};
+var _cc_fnd_mn = {{ plano.comprimento_fundo_menor_cm or 0 if plano else 0 }};
+var _tipoZiper = "{{ plano.tipo_ziper or '' if plano else '' }}";
+
+/* ── Imagens de zíper (pré-carregadas) ─────────────────────────────────────── */
+var _imgZiperBranco    = new Image();
+var _imgZiperInvisivel = new Image();
+_imgZiperBranco.src    = "{{ url_for('static', filename='ziper/ziper_branco_n5.jpg') }}";
+_imgZiperInvisivel.src = "{{ url_for('static', filename='ziper/invisivel_colorido.jpg') }}";
+_imgZiperBranco.onload = _imgZiperInvisivel.onload = function() { atualizarPreview(); };
+
+function _getZiperImg(tipo) {
+  if (tipo === 'Zíper Branco N5')
+    return (_imgZiperBranco.complete && _imgZiperBranco.naturalWidth) ? _imgZiperBranco : null;
+  if (tipo === 'Invisível Colorido' || tipo === 'Semi-Invisível Colorido')
+    return (_imgZiperInvisivel.complete && _imgZiperInvisivel.naturalWidth) ? _imgZiperInvisivel : null;
+  return null;
+}
+
+function atualizarFormZiper() {
+  var sel = document.getElementById('selectTipoZiper');
+  var prv = document.getElementById('prevZiperForm');
+  var img = document.getElementById('imgPrevZiperForm');
+  var lbl = document.getElementById('lblPrevZiperForm');
+  if (!sel || !prv || !img) return;
+  var tipo = sel.value;
+  var src = '';
+  if (tipo === 'Zíper Branco N5')
+    src = "{{ url_for('static', filename='ziper/ziper_branco_n5.jpg') }}";
+  else if (tipo === 'Invisível Colorido' || tipo === 'Semi-Invisível Colorido')
+    src = "{{ url_for('static', filename='ziper/invisivel_colorido.jpg') }}";
+  if (src) {
+    img.src = src;
+    if (lbl) lbl.textContent = tipo;
+    prv.style.display = 'block';
+  } else {
+    prv.style.display = 'none';
+  }
+  _tipoZiper = tipo;
+  atualizarPreview();
+}
+
+/* ── Função central de desenho do diagrama ──────────────────────────────────── */
+function desenharDiagrama(cv, W, H, lt, ce, lcIn, ccIn, dob, fmt, diametro, ff, lc_frt, cc_frt, lc_fnd, cc_fnd, lc_fnd_mn, cc_fnd_mn, tipoZiper, ziperImg) {
+  var isFrFnd  = ff && fmt !== 'redondo';
+  var isRedondo = (fmt === 'redondo');
+  var lc = lcIn, cc = ccIn;
+  if (isRedondo) { lc = diametro; cc = diametro; }
+
+  if (isFrFnd) {
+    if (!lt || !ce || !lc_frt || !cc_frt || !lc_fnd || !cc_fnd) return null;
+  } else {
+    if (!lt || !ce || !lc || !cc) return null;
+  }
+
+  var ROLL_H = 36;
+  var FOLD_H = dob ? 44 : 0;
+  var PAD    = 14;
+  var COTA_H = 18;
+  var ZIPER_H = (tipoZiper && ziperImg) ? 76 : 0;
+
+  var areaW = W - PAD * 2;
+  var areaH = H - PAD - ROLL_H - 6 - COTA_H - FOLD_H - ZIPER_H - PAD;
+  var esc   = Math.min(areaW / lt, areaH / ce);
+  var fw    = lt * esc;
+  var fh    = ce * esc;
+  var ox    = PAD + (areaW - fw) / 2;
+  var oy    = PAD + ROLL_H + 6;
+
+  var dpr = window.devicePixelRatio || 1;
+  cv.width  = W * dpr; cv.height = H * dpr;
+  cv.style.width  = W + 'px'; cv.style.height = H + 'px';
+  var ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+
+  // ── Rolo de tecido ──────────────────────────────────────────────────
+  var rx = ox, ry = PAD, rw = fw, rh = ROLL_H;
+  var er = rh * 0.38;
+  ctx.fillStyle = '#E8DDD0';
+  ctx.beginPath();
+  ctx.moveTo(rx+er, ry); ctx.lineTo(rx+rw-er, ry);
+  ctx.ellipse(rx+rw-er, ry+rh/2, er*0.55, rh/2, 0, -Math.PI/2, Math.PI/2);
+  ctx.lineTo(rx+er, ry+rh);
+  ctx.ellipse(rx+er, ry+rh/2, er*0.55, rh/2, 0, Math.PI/2, -Math.PI/2);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#8B6347'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = '#D5C5B0';
+  ctx.beginPath(); ctx.ellipse(rx+er, ry+rh/2, er*0.55, rh/2, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#C4A882';
+  ctx.beginPath(); ctx.ellipse(rx+er, ry+rh/2, er*0.22, rh*0.2, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#C4A882'; ctx.lineWidth = 0.5;
+  for (var i=1;i<4;i++){var lxr=rx+er+(rw-er*2)*(i/4);ctx.beginPath();ctx.moveTo(lxr,ry+2);ctx.lineTo(lxr,ry+rh-2);ctx.stroke();}
+  ctx.fillStyle='#5C442C'; ctx.font='bold 8px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('ROLO DE TECIDO — '+lt+' cm largura', rx+rw/2+er/2, ry+rh/2);
+  ctx.strokeStyle='#8B6347'; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.moveTo(ox+fw/2, ry+rh); ctx.lineTo(ox+fw/2, oy-2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox+fw/2-4,oy-6); ctx.lineTo(ox+fw/2,oy-1); ctx.lineTo(ox+fw/2+4,oy-6); ctx.stroke();
+
+  // ── Grade do enfesto ────────────────────────────────────────────────
+  ctx.strokeStyle='#3a2a1a'; ctx.lineWidth=1.5; ctx.strokeRect(ox, oy, fw, fh);
+
+  var mT = 2*esc, mL = 1*esc, ESQ_COLOR = '#006994';
+  var gx = ox+mL, gy = oy+mT;
+  var cores = ['#F0EBE5','#EDE4DB'];
+
+  var result;
+
+  if (isFrFnd) {
+    // ── Modo Frente + Fundo Maior + Fundo Menor ──────────────────────
+    var cols_frt = Math.floor(lt / lc_frt);
+    var cols_fm  = Math.floor(lt / lc_fnd);
+    if (!cols_frt || !cols_fm) return null;
+
+    var hasMenor = lc_fnd_mn > 0 && cc_fnd_mn > 0;
+    var cols_fn  = hasMenor ? Math.floor(lt / lc_fnd_mn) : 0;
+    if (hasMenor && !cols_fn) return null;
+
+    var best_units = 0, best_rf = 1, best_rm = 1, best_rn = 0;
+
+    if (hasMenor) {
+      // Loop duplo: maximiza min(cols_frt*rf, cols_fm*rm, cols_fn*rn)
+      for (var rf = 1; rf * cc_frt <= ce; rf++) {
+        var rem1 = ce - rf * cc_frt;
+        for (var rm = 1; rm * cc_fnd <= rem1; rm++) {
+          var rn = Math.floor((rem1 - rm * cc_fnd) / cc_fnd_mn);
+          if (rn < 1) continue;
+          var units = Math.min(cols_frt * rf, cols_fm * rm, cols_fn * rn);
+          if (units > best_units) { best_units = units; best_rf = rf; best_rm = rm; best_rn = rn; }
+        }
+      }
+    } else {
+      // Loop simples: só FRENTE + FUNDO MAIOR
+      for (var rf = 1; rf * cc_frt <= ce; rf++) {
+        var rm_max = Math.floor((ce - rf * cc_frt) / cc_fnd);
+        if (rm_max < 1) continue;
+        var units = Math.min(cols_frt * rf, cols_fm * rm_max);
+        if (units > best_units) { best_units = units; best_rf = rf; best_rm = rm_max; best_rn = 0; }
+      }
+    }
+
+    var pw_frt = lc_frt * esc, ph_frt = cc_frt * esc;
+    var pw_fm  = lc_fnd * esc, ph_fm  = cc_fnd * esc;
+    var pw_fn  = hasMenor ? lc_fnd_mn * esc : 0;
+    var ph_fn  = hasMenor ? cc_fnd_mn * esc : 0;
+    var cores_fm  = ['#E5EBF0','#DBE4ED'];
+    var cores_fn  = ['#FFF3DC','#FAE8C0'];
+    var sep_y = gy + best_rf * ph_frt;
+
+    // helper: faixa âmbar de sobra lateral para cada seção
+    function _lateralWaste(sX, startY, secH, sobraLarg) {
+      var sW = (ox+fw) - sX;
+      if (sW <= 2) return;
+      ctx.save(); ctx.beginPath(); ctx.rect(sX,startY,sW,secH); ctx.clip();
+      ctx.fillStyle='rgba(255,200,0,0.18)'; ctx.fillRect(sX,startY,sW,secH);
+      ctx.strokeStyle='#B8860B'; ctx.lineWidth=0.7;
+      for(var si=-secH;si<sW;si+=8){ctx.beginPath();ctx.moveTo(sX+si,startY);ctx.lineTo(sX+si+secH,startY+secH);ctx.stroke();}
+      ctx.restore();
+      ctx.strokeStyle='#B8860B'; ctx.lineWidth=1; ctx.setLineDash([3,2]);
+      ctx.beginPath(); ctx.moveTo(sX,startY); ctx.lineTo(sX,startY+secH); ctx.stroke(); ctx.setLineDash([]);
+      if (sW > 10) {
+        var slblL='⚠ '+sobraLarg.toFixed(1)+' cm';
+        ctx.save(); ctx.translate(sX+sW/2,startY+secH/2); ctx.rotate(-Math.PI/2);
+        ctx.font='bold 7.5px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        var slWL=ctx.measureText(slblL).width;
+        ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillRect(-slWL/2-4,-7,slWL+8,14);
+        ctx.fillStyle='#8B6000'; ctx.fillText(slblL,0,0); ctx.restore();
+      }
+    }
+    // helper: rótulo de seção com fundo branco de largura automática
+    function _sectionLabel(txt, color, lx, ly) {
+      ctx.font='bold 8px Arial'; ctx.textAlign='left'; ctx.textBaseline='top';
+      var tw=ctx.measureText(txt).width;
+      ctx.fillStyle='rgba(255,255,255,0.88)'; ctx.fillRect(lx,ly,tw+6,12);
+      ctx.fillStyle=color; ctx.fillText(txt,lx+2,ly+1);
+    }
+
+    // ── Peças FRENTE (verde) ──
+    for (var r=0;r<best_rf;r++) {
+      for (var c=0;c<cols_frt;c++) {
+        var px=gx+c*pw_frt, py=gy+r*ph_frt;
+        ctx.fillStyle=cores[(r+c)%2]; ctx.fillRect(px+1,py+1,pw_frt-2,ph_frt-2);
+        ctx.strokeStyle='#4B8A36'; ctx.lineWidth=0.8; ctx.strokeRect(px+1,py+1,pw_frt-2,ph_frt-2);
+        if (pw_frt>24&&ph_frt>14){
+          var fsF=Math.min(9,pw_frt/5); ctx.fillStyle='#2a5a14';
+          ctx.font='bold '+fsF+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='top';
+          ctx.fillText(lc_frt+' cm',px+pw_frt/2,py+4);
+          ctx.save(); ctx.translate(px+10,py+ph_frt/2); ctx.rotate(-Math.PI/2);
+          ctx.font='bold '+fsF+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.fillText(cc_frt+' cm',0,0); ctx.restore();
+        }
+      }
+    }
+    // Lateral waste FRENTE
+    _lateralWaste(gx+cols_frt*pw_frt, gy, best_rf*ph_frt, lt-cols_frt*lc_frt);
+    // Rótulo FRENTE (acima da sobra lateral, no topo da seção)
+    _sectionLabel('▶ FRENTE ('+best_rf+' fil. × '+cols_frt+' col. = '+(best_rf*cols_frt)+' pç)','#2a6a1a',gx,gy+2);
+
+    // ── Separador FRENTE / FUNDO MAIOR ──
+    ctx.setLineDash([4,3]); ctx.strokeStyle='#1a3d7a'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(ox,sep_y); ctx.lineTo(ox+fw,sep_y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.font='bold 8px Arial'; ctx.textAlign='center';
+    var sepLblFM='▼ FUNDO MAIOR', slWFM=ctx.measureText(sepLblFM).width+10;
+    ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.fillRect(ox+fw/2-slWFM/2,sep_y-7,slWFM,14);
+    ctx.fillStyle='#1a3d7a'; ctx.textBaseline='middle'; ctx.fillText(sepLblFM,ox+fw/2,sep_y);
+
+    // ── Peças FUNDO MAIOR (azul) ──
+    var gy_fm = sep_y;
+    for (var r2=0;r2<best_rm;r2++) {
+      for (var c2=0;c2<cols_fm;c2++) {
+        var px2=gx+c2*pw_fm, py2=gy_fm+r2*ph_fm;
+        ctx.fillStyle=cores_fm[(r2+c2)%2]; ctx.fillRect(px2+1,py2+1,pw_fm-2,ph_fm-2);
+        ctx.strokeStyle='#2D5A8B'; ctx.lineWidth=0.8; ctx.strokeRect(px2+1,py2+1,pw_fm-2,ph_fm-2);
+        if (pw_fm>24&&ph_fm>14){
+          var fsFM=Math.min(9,pw_fm/5); ctx.fillStyle='#1a3d5a';
+          ctx.font='bold '+fsFM+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='top';
+          ctx.fillText(lc_fnd+' cm',px2+pw_fm/2,py2+4);
+          ctx.save(); ctx.translate(px2+10,py2+ph_fm/2); ctx.rotate(-Math.PI/2);
+          ctx.font='bold '+fsFM+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.fillText(cc_fnd+' cm',0,0); ctx.restore();
+        }
+      }
+    }
+    // Lateral waste FUNDO MAIOR
+    _lateralWaste(gx+cols_fm*pw_fm, gy_fm, best_rm*ph_fm, lt-cols_fm*lc_fnd);
+    // Rótulo FUNDO MAIOR — abaixo do separador e da medida do corte
+    _sectionLabel('▶ FUNDO MAIOR ('+best_rm+' fil. × '+cols_fm+' col. = '+(best_rm*cols_fm)+' pç)','#1a3d7a',gx,gy_fm+20);
+
+    var last_endY = gy_fm + best_rm * ph_fm;
+
+    if (hasMenor && best_rn > 0) {
+      // ── Separador FUNDO MAIOR / FUNDO MENOR ──
+      var sep_y2 = last_endY;
+      ctx.setLineDash([4,3]); ctx.strokeStyle='#8B5A00'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(ox,sep_y2); ctx.lineTo(ox+fw,sep_y2); ctx.stroke(); ctx.setLineDash([]);
+      ctx.font='bold 8px Arial'; ctx.textAlign='center';
+      var sepLblFN='▼ FUNDO MENOR', slWFN=ctx.measureText(sepLblFN).width+10;
+      ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.fillRect(ox+fw/2-slWFN/2,sep_y2-7,slWFN,14);
+      ctx.fillStyle='#8B5A00'; ctx.textBaseline='middle'; ctx.fillText(sepLblFN,ox+fw/2,sep_y2);
+
+      // ── Peças FUNDO MENOR (âmbar) ──
+      var gy_fn = sep_y2;
+      for (var r3=0;r3<best_rn;r3++) {
+        for (var c3=0;c3<cols_fn;c3++) {
+          var px3=gx+c3*pw_fn, py3=gy_fn+r3*ph_fn;
+          ctx.fillStyle=cores_fn[(r3+c3)%2]; ctx.fillRect(px3+1,py3+1,pw_fn-2,ph_fn-2);
+          ctx.strokeStyle='#A0640A'; ctx.lineWidth=0.8; ctx.strokeRect(px3+1,py3+1,pw_fn-2,ph_fn-2);
+          if (pw_fn>24&&ph_fn>14){
+            var fsFN=Math.min(9,pw_fn/5); ctx.fillStyle='#5A3A00';
+            ctx.font='bold '+fsFN+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='top';
+            ctx.fillText(lc_fnd_mn+' cm',px3+pw_fn/2,py3+4);
+            ctx.save(); ctx.translate(px3+10,py3+ph_fn/2); ctx.rotate(-Math.PI/2);
+            ctx.font='bold '+fsFN+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText(cc_fnd_mn+' cm',0,0); ctx.restore();
+          }
+        }
+      }
+      // Lateral waste FUNDO MENOR
+      _lateralWaste(gx+cols_fn*pw_fn, gy_fn, best_rn*ph_fn, lt-cols_fn*lc_fnd_mn);
+      // Rótulo FUNDO MENOR — abaixo do separador e da medida do corte
+      _sectionLabel('▶ FUNDO MENOR ('+best_rn+' fil. × '+cols_fn+' col. = '+(best_rn*cols_fn)+' pç)','#8B5A00',gx,gy_fn+20);
+
+      last_endY = gy_fn + best_rn * ph_fn;
+    }
+
+    // Sobra após última seção
+    var sobraH_ff  = (oy + fh) - last_endY;
+    var sobraCm_ff = ce - best_rf * cc_frt - best_rm * cc_fnd - (hasMenor ? best_rn * cc_fnd_mn : 0);
+    if (sobraH_ff > 2) {
+      ctx.save(); ctx.beginPath(); ctx.rect(ox,last_endY,fw,sobraH_ff); ctx.clip();
+      ctx.fillStyle='rgba(255,200,0,0.18)'; ctx.fillRect(ox,last_endY,fw,sobraH_ff);
+      ctx.strokeStyle='#B8860B'; ctx.lineWidth=0.7;
+      for(var si=-sobraH_ff;si<fw;si+=8){ctx.beginPath();ctx.moveTo(ox+si,last_endY);ctx.lineTo(ox+si+sobraH_ff,last_endY+sobraH_ff);ctx.stroke();}
+      ctx.restore();
+      ctx.strokeStyle='#B8860B'; ctx.lineWidth=1; ctx.setLineDash([3,2]);
+      ctx.beginPath(); ctx.moveTo(ox,last_endY); ctx.lineTo(ox+fw,last_endY); ctx.stroke(); ctx.setLineDash([]);
+      if (sobraH_ff > 10) {
+        var slblFF='⚠ Sobra '+sobraCm_ff.toFixed(1)+' cm';
+        ctx.font='bold 7.5px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        var slWFF=ctx.measureText(slblFF).width;
+        ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillRect(ox+fw/2-slWFF/2-4,last_endY+sobraH_ff/2-7,slWFF+8,14);
+        ctx.fillStyle='#8B6000'; ctx.fillText(slblFF,ox+fw/2,last_endY+sobraH_ff/2);
+      }
+    }
+
+    var areaUsada = (cols_frt*lc_frt*best_rf*cc_frt) + (cols_fm*lc_fnd*best_rm*cc_fnd)
+                  + (hasMenor ? cols_fn*lc_fnd_mn*best_rn*cc_fnd_mn : 0);
+    var aprov_ff = areaUsada / (lt * ce) * 100;
+    var colsStr = hasMenor ? cols_frt+'/'+cols_fm+'/'+cols_fn : cols_frt+'/'+cols_fm;
+    var rowsStr = hasMenor ? best_rf+'/'+best_rm+'/'+best_rn   : best_rf+'/'+best_rm;
+    result = { cols: colsStr, rows: rowsStr, total: best_units, aprov: aprov_ff };
+
+  } else {
+    // ── Modo Normal (retangular ou redondo) ─────────────────────────
+    var cols  = Math.floor(lt / lc);
+    var rows  = Math.floor(ce / cc);
+    var total = cols * rows;
+    var aprov = isRedondo
+      ? (total * Math.PI * (diametro/2) * (diametro/2)) / (lt * ce) * 100
+      : (cols * lc * rows * cc) / (lt * ce) * 100;
+
+    var pw = lc*esc, ph = cc*esc;
+
+    for (var r=0;r<rows;r++) {
+      for (var c=0;c<cols;c++) {
+        var px=gx+c*pw, py=gy+r*ph;
+        ctx.fillStyle=cores[(r+c)%2];
+        if (isRedondo) {
+          var rad=pw/2-1, cx2=px+pw/2, cy2=py+ph/2;
+          ctx.beginPath(); ctx.arc(cx2,cy2,rad,0,Math.PI*2); ctx.fill();
+          ctx.strokeStyle='#8B6347'; ctx.lineWidth=0.8; ctx.stroke();
+          if (pw>24){var fsR=Math.min(9,pw/5);ctx.fillStyle='#5C3D1E';ctx.font='bold '+fsR+'px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('⌀ '+diametro+' cm',cx2,cy2);}
+        } else {
+          ctx.fillRect(px+1,py+1,pw-2,ph-2);
+          ctx.strokeStyle='#8B6347'; ctx.lineWidth=0.8; ctx.strokeRect(px+1,py+1,pw-2,ph-2);
+          if (pw>24&&ph>14){
+            var fs=Math.min(9,pw/5); ctx.fillStyle='#5C3D1E';
+            ctx.font='bold '+fs+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='top';
+            ctx.fillText(lc+' cm',px+pw/2,py+4);
+            ctx.save(); ctx.translate(px+10,py+ph/2); ctx.rotate(-Math.PI/2);
+            ctx.font='bold '+fs+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText(cc+' cm',0,0); ctx.restore();
+          }
+        }
+      }
+    }
+
+    // Linhas de dobra
+    if (dob && !isRedondo) {
+      ctx.setLineDash([3,3]); ctx.strokeStyle='#AF4005'; ctx.lineWidth=1;
+      for (var rd=0;rd<rows;rd++){var lineY=gy+rd*ph+ph/2;ctx.beginPath();ctx.moveTo(gx,lineY);ctx.lineTo(gx+cols*pw,lineY);ctx.stroke();}
+      ctx.setLineDash([]); ctx.fillStyle='#AF4005'; ctx.font='bold 7px Arial'; ctx.textAlign='left'; ctx.textBaseline='top';
+      ctx.fillText('DOBRA',gx+pw*0.18,gy+ph/2+12);
+    }
+
+    // Sobra inferior
+    var sobraY=gy+rows*ph, sobraH=(oy+fh)-sobraY, sobraCompCm=ce-rows*cc, faltaCompCm=cc-sobraCompCm;
+    if (sobraH>2) {
+      ctx.save(); ctx.beginPath(); ctx.rect(ox,sobraY,fw,sobraH); ctx.clip();
+      ctx.fillStyle='rgba(255,200,0,0.18)'; ctx.fillRect(ox,sobraY,fw,sobraH);
+      ctx.strokeStyle='#B8860B'; ctx.lineWidth=0.7;
+      for(var si=-sobraH;si<fw;si+=8){ctx.beginPath();ctx.moveTo(ox+si,sobraY);ctx.lineTo(ox+si+sobraH,sobraY+sobraH);ctx.stroke();}
+      ctx.restore();
+      ctx.strokeStyle='#B8860B'; ctx.lineWidth=1; ctx.setLineDash([3,2]);
+      ctx.beginPath(); ctx.moveTo(ox,sobraY); ctx.lineTo(ox+fw,sobraY); ctx.stroke(); ctx.setLineDash([]);
+      if (sobraH>10){
+        var slbl='⚠ Sobra '+sobraCompCm.toFixed(1)+' cm — faltam '+faltaCompCm.toFixed(1)+' cm p/ + 1 fileira';
+        ctx.font='bold 7.5px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        var slW=ctx.measureText(slbl).width, slX=ox+fw/2, slY=sobraY+sobraH/2;
+        ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillRect(slX-slW/2-4,slY-7,slW+8,14);
+        ctx.fillStyle='#8B6000'; ctx.fillText(slbl,slX,slY);
+      }
+    }
+
+    // Sobra lateral direita
+    var sobraX=gx+cols*pw, sobraW2=(ox+fw)-sobraX, sobraLargCm=lt-cols*lc;
+    if (sobraW2>2) {
+      ctx.save(); ctx.beginPath(); ctx.rect(sobraX,gy,sobraW2,rows*ph); ctx.clip();
+      ctx.fillStyle='rgba(255,200,0,0.18)'; ctx.fillRect(sobraX,gy,sobraW2,rows*ph);
+      ctx.strokeStyle='#B8860B'; ctx.lineWidth=0.7;
+      for(var si2=-(rows*ph);si2<sobraW2;si2+=8){ctx.beginPath();ctx.moveTo(sobraX+si2,gy);ctx.lineTo(sobraX+si2+rows*ph,gy+rows*ph);ctx.stroke();}
+      ctx.restore();
+      ctx.strokeStyle='#B8860B'; ctx.lineWidth=1; ctx.setLineDash([3,2]);
+      ctx.beginPath(); ctx.moveTo(sobraX,gy); ctx.lineTo(sobraX,gy+rows*ph); ctx.stroke(); ctx.setLineDash([]);
+      if (sobraW2>10){
+        var slbl2='⚠ Sobra '+sobraLargCm.toFixed(1)+' cm na largura';
+        ctx.save(); ctx.translate(sobraX+sobraW2/2,gy+rows*ph/2); ctx.rotate(-Math.PI/2);
+        ctx.font='bold 7.5px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        var slWL=ctx.measureText(slbl2).width;
+        ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillRect(-slWL/2-4,-7,slWL+8,14);
+        ctx.fillStyle='#8B6000'; ctx.fillText(slbl2,0,0); ctx.restore();
+      }
+    }
+
+    result = { cols: cols, rows: rows, total: total, aprov: aprov };
+  }
+
+  // ── Margens de esquadro (comum) ──────────────────────────────────────
+  ctx.setLineDash([4,3]); ctx.strokeStyle=ESQ_COLOR; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(ox,oy+mT); ctx.lineTo(ox+fw,oy+mT); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox+mL,oy); ctx.lineTo(ox+mL,oy+fh); ctx.stroke();
+  ctx.setLineDash([]);
+  var lbl2='2 cm (esquadro)';
+  ctx.font='bold 8px Arial'; ctx.textAlign='left'; ctx.textBaseline='bottom';
+  var tw2=ctx.measureText(lbl2).width;
+  ctx.fillStyle='#fff'; ctx.fillRect(ox+4,oy+mT-11,tw2+4,10);
+  ctx.fillStyle=ESQ_COLOR; ctx.fillText(lbl2,ox+6,oy+mT-2);
+  ctx.save(); ctx.translate(ox+mL+2,oy+fh/2); ctx.rotate(-Math.PI/2);
+  ctx.font='bold 8px Arial'; ctx.textAlign='center'; ctx.textBaseline='bottom';
+  var tw1=ctx.measureText('1 cm (esquadro)').width;
+  ctx.fillStyle='#fff'; ctx.fillRect(-tw1/2-2,-11,tw1+4,10);
+  ctx.fillStyle=ESQ_COLOR; ctx.fillText('1 cm (esquadro)',0,-2); ctx.restore();
+
+  // ── Imagem do zíper (comum) ─────────────────────────────────────────
+  if (ZIPER_H > 0 && tipoZiper && ziperImg) {
+    var zy = oy + fh + COTA_H + FOLD_H + 2;
+    // Linha separadora
+    ctx.strokeStyle = '#d9c6b3'; ctx.lineWidth = 0.8; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(ox, zy); ctx.lineTo(ox + fw, zy); ctx.stroke();
+    ctx.setLineDash([]);
+    // Label
+    ctx.font = 'bold 7.5px Arial'; ctx.fillStyle = '#5C442C';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('TIPO DE ZÍPER: ' + tipoZiper.toUpperCase(), ox + fw / 2, zy + 3);
+    // Imagem mantendo proporção
+    var availH = ZIPER_H - 16;
+    var availW = fw * 0.65;
+    var iAR = ziperImg.naturalWidth / ziperImg.naturalHeight;
+    var drawW = Math.min(availW, availH * iAR);
+    var drawH = drawW / iAR;
+    ctx.drawImage(ziperImg, ox + (fw - drawW) / 2, zy + 13, drawW, drawH);
+  }
+
+  // ── Cotas (comum) ────────────────────────────────────────────────────
+  var cotaY=oy+fh+4;
+  ctx.strokeStyle='#888'; ctx.lineWidth=0.7; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(ox,cotaY); ctx.lineTo(ox+fw,cotaY); ctx.stroke();
+  ctx.fillStyle='#666'; ctx.font='7px Arial'; ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText(lt+' cm',ox+fw/2,cotaY+2);
+  var cotaX=ox-5;
+  ctx.beginPath(); ctx.moveTo(cotaX,oy); ctx.lineTo(cotaX,oy+fh); ctx.stroke();
+  ctx.save(); ctx.translate(cotaX-4,oy+fh/2); ctx.rotate(-Math.PI/2);
+  ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillText(ce+' cm',0,0); ctx.restore();
+
+  // ── Ilustração de dobra (comum) ──────────────────────────────────────
+  if (dob) {
+    var lcDob = isFrFnd ? lc_frt : lc;
+    var fy=oy+fh+COTA_H+4, fIlW=Math.min(fw*0.7,120), fIlH=FOLD_H-10;
+    var fIlX=ox+(fw-fIlW)/2, midX=fIlX+fIlW/2, arrowY=fy+fIlH*0.72;
+    ctx.fillStyle='#F0EBE5'; ctx.fillRect(fIlX,fy,fIlW,fIlH);
+    ctx.strokeStyle='#8B6347'; ctx.lineWidth=0.8; ctx.strokeRect(fIlX,fy,fIlW,fIlH);
+    ctx.setLineDash([3,3]); ctx.strokeStyle='#AF4005'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(midX,fy); ctx.lineTo(midX,fy+fIlH); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#5C3D1E'; ctx.font='7px Arial'; ctx.textBaseline='middle'; ctx.textAlign='center';
+    ctx.fillText(lcDob+' cm',fIlX+fIlW*0.25,fy+fIlH*0.3);
+    ctx.fillText(lcDob+' cm',fIlX+fIlW*0.75,fy+fIlH*0.3);
+    ctx.strokeStyle='#AF4005'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(fIlX+8,arrowY); ctx.lineTo(midX-4,arrowY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(midX-8,arrowY-3); ctx.lineTo(midX-4,arrowY); ctx.lineTo(midX-8,arrowY+3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(fIlX+fIlW-8,arrowY); ctx.lineTo(midX+4,arrowY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(midX+8,arrowY-3); ctx.lineTo(midX+4,arrowY); ctx.lineTo(midX+8,arrowY+3); ctx.stroke();
+    ctx.fillStyle='#AF4005'; ctx.font='bold 7px Arial'; ctx.textAlign='center'; ctx.textBaseline='bottom';
+    ctx.fillText('DOBRA AO MEIO PARA COSTURAR',fIlX+fIlW/2,fy-1);
+  }
+
+  return result;
+}
+
+/* ── Canvas do preview na tela ──────────────────────────────────────────────── */
+function atualizarPreview() {
+  var wrap = document.querySelector('.diagrama-wrap');
+  var cv   = document.getElementById('cvDiagrama');
+  if (!wrap || !cv) return;
+  var W = wrap.offsetWidth || 230, H = wrap.offsetHeight || 560;
+  var res = desenharDiagrama(cv, W, H, _lt, _ce, _lc, _cc, _dob, _fmt, _diam, _ff, _lc_frt, _cc_frt, _lc_fnd, _cc_fnd, _lc_fnd_mn, _cc_fnd_mn, _tipoZiper, _getZiperImg(_tipoZiper));
+  if (res) {
+    var colTxt  = _ff ? res.cols+' col.(F/FM/Fn)' : res.cols+' coluna(s)';
+    var rowTxt  = _ff ? res.rows+' fil.(F/FM/Fn)' : res.rows+' fileira(s)';
+    var totTxt  = _ff ? res.total+' produtos' : res.total+' peças';
+    document.getElementById('pCols').textContent  = colTxt;
+    document.getElementById('pRows').textContent  = rowTxt;
+    document.getElementById('pTotal').textContent = totTxt;
+    document.getElementById('pAprov').textContent = res.aprov.toFixed(1) + ' %';
+    var p1c=document.getElementById('p1Cols'); if(p1c) p1c.textContent=colTxt;
+    var p1r=document.getElementById('p1Rows'); if(p1r) p1r.textContent=rowTxt;
+    var p1t=document.getElementById('p1Total'); if(p1t) p1t.textContent=totTxt;
+    var p1a=document.getElementById('p1Aprov'); if(p1a) p1a.textContent=res.aprov.toFixed(1)+' %';
+  }
+}
+atualizarPreview();
+
+/* ── Impressão completa (2 páginas) ────────────────────────────────────────── */
+function imprimirCompleto() {
+  var cv2 = document.getElementById('cvDiagramaPrint');
+  if (cv2) {
+    var W2 = 756, H2 = 1084;
+    desenharDiagrama(cv2, W2, H2, _lt, _ce, _lc, _cc, _dob, _fmt, _diam, _ff, _lc_frt, _cc_frt, _lc_fnd, _cc_fnd, _lc_fnd_mn, _cc_fnd_mn, _tipoZiper, _getZiperImg(_tipoZiper));
+  }
+  window.print();
+}
+
+/* ── Formulário ─────────────────────────────────────────────────────────────── */
+searchableSelect(document.getElementById('selectTipoTecido'));
+
+function toggleFrenteFundo() {
+  var ff = document.getElementById('tem_frente_fundo').value === '1';
+  document.getElementById('campos_um_tamanho').style.display  = ff ? 'none' : '';
+  document.getElementById('campos_frente_fundo').style.display = ff ? '' : 'none';
+}
+
+function toggleFormato() {
+  var fmt = document.getElementById('formato_produto').value;
+  document.getElementById('campos_retangular').style.display = fmt === 'redondo' ? 'none' : '';
+  document.getElementById('campos_redondo').style.display = fmt === 'redondo' ? '' : 'none';
+  if (fmt !== 'redondo') toggleFrenteFundo();
+}
+toggleFormato();
+atualizarFormZiper();
+</script>
+{% endblock %}

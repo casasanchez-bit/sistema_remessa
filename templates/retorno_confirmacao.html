@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="text-align:center;padding:30px;">
+  <div style="font-size:40px;margin-bottom:8px;">✅</div>
+  <h2 style="margin-bottom:6px;">Retorno Nº {{ retorno.numero }} registrado com sucesso!</h2>
+  <p class="small">Terceirizado: {{ retorno.terceirizado_nome }} — Data do retorno: {{ retorno.data_retorno|brdate }}</p>
+  <div style="margin-top:24px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+    <a class="btn" href="/retornos/{{ retorno.id }}/imprimir" target="_blank">Imprimir retorno</a>
+    <a class="btn secondary" href="/retornos">Ir para o histórico de retornos</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,339 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Nova remessa enviada (Nº {{ proximo_numero }})</h2>
+  <form method="post" action="/remessas/nova">
+    <div class="grid">
+      <div>
+        <label>Terceirizado</label>
+        <select name="terceirizado_id" id="terceirizadoSelect" data-placeholder="Buscar pelo nome..." data-search="contains" required>
+          <option value=""></option>
+          {% for t in terceirizados %}<option value="{{ t.id }}">{{ t.codigo }} - {{ t.nome }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Data de envio</label>
+        <input type="date" name="data_envio" value="{{ hoje }}" required>
+      </div>
+    </div>
+
+    <label style="margin-top:10px;">Itens da remessa (pode adicionar vários produtos/cores na mesma remessa)</label>
+    <div id="itens"></div>
+    <button type="button" class="btn secondary" id="addItem" style="margin-top:6px;">+ Adicionar item</button>
+    <div style="margin-top:10px;">
+      <label>Observação (opcional)</label>
+      <textarea name="observacao" rows="2" placeholder="Instruções especiais, referências, etc." style="width:100%;font-size:13px;padding:7px 9px;border:1px solid #d9c6b3;border-radius:6px;resize:vertical;"></textarea>
+    </div>
+    <div style="margin-top:10px;">
+      <button class="btn" type="submit">Registrar remessa</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Remessas</h2>
+  <form method="get" action="/remessas" style="display:flex;gap:8px;align-items:end;margin-bottom:14px;flex-wrap:wrap;">
+    <div>
+      <label>Terceirizado</label>
+      <select name="filtro_terceirizado_id" id="filtroTerceirizadoSelect" data-placeholder="Todos (buscar pelo nome)..." data-search="contains">
+        <option value="">Todos</option>
+        {% for t in terceirizados %}
+        <option value="{{ t.id }}" {{ "selected" if filtro_terceirizado_id == t.id|string }}>{{ t.codigo }} - {{ t.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>De</label>
+      <input type="date" name="filtro_data_inicio" value="{{ filtro_data_inicio }}">
+    </div>
+    <div>
+      <label>Até</label>
+      <input type="date" name="filtro_data_fim" value="{{ filtro_data_fim }}">
+    </div>
+    <button class="btn" type="submit">Filtrar</button>
+    {% if filtro_terceirizado_id or filtro_data_inicio or filtro_data_fim %}
+    <a class="btn secondary" href="/remessas">Limpar filtro</a>
+    {% endif %}
+    <a id="excelRemessasLink" class="btn secondary" href="/remessas/exportar-excel" style="margin-left:auto;">⬇ Exportar Excel</a>
+  </form>
+  {% if not buscou %}
+  <p class="small">Use os filtros acima para buscar remessas (clique em "Filtrar" mesmo sem preencher nada para ver todas).</p>
+  {% else %}
+  {# Barra de ações — aparece ao selecionar uma remessa #}
+  <div id="barraAcoes" style="display:none;position:sticky;top:0;z-index:100;background:#fff;border:1px solid #d4a96a;border-radius:8px;padding:10px 14px;margin-bottom:10px;display:none;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);">
+    <span id="barraInfo" style="flex:1;font-size:13px;font-weight:600;color:#5a3e2b;"></span>
+    <a id="btnVisualizar" href="#" class="btn secondary" style="font-size:13px;padding:6px 14px;">Visualizar/Editar</a>
+    <a id="btnImprimir" href="#" target="_blank" class="btn secondary" style="font-size:13px;padding:6px 14px;">Imprimir</a>
+    <button id="btnCancelar" type="button" class="btn-mini excluir" style="font-size:13px;padding:6px 14px;">Cancelar Remessa</button>
+    <button type="button" class="btn secondary" style="font-size:13px;padding:6px 12px;" onclick="desselecionarRemessa()">✕</button>
+  </div>
+  <form id="formCancelar" method="post" style="display:none;"></form>
+
+  {% for r in remessas %}
+  <div class="remessa-card" data-id="{{ r.id }}" data-numero="{{ r.numero }}"
+       data-view="/remessas/{{ r.id }}/editar"
+       data-print="/remessas/{{ r.id }}/imprimir"
+       data-cancel="/remessas/{{ r.id }}/excluir"
+       data-confirm="Cancelar a remessa Nº {{ r.numero }}? Esta ação não pode ser desfeita."
+       style="border:1px solid #eee;border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer;transition:border-color .15s,background .15s;">
+    <div class="small" style="display:flex;justify-content:space-between;align-items:center;">
+      <span><b>Remessa Nº {{ r.numero }}</b> — {{ r.terceirizado_nome }} — {{ r.data_envio|brdate }} —
+        {% if r.pago %}<span class="badge b-pago">PAGO</span>{% else %}<span class="badge b-pendente">NÃO PAGO</span>{% endif %}
+        {% if r.dias_pendente >= 30 %}<span class="badge b-parcial" title="Há {{ r.dias_pendente }} dias com itens pendentes">⚠ {{ r.dias_pendente }} dias</span>{% endif %}
+      </span>
+    </div>
+    <table>
+      <tr><th>Prioridade</th><th>Produto</th><th>Cor/Estampa</th><th>Serviço</th><th>Enviado</th><th>Retornado</th><th>Pendente</th><th>Status</th></tr>
+      {% for item in r.itens %}
+      <tr>
+        <td>{{ item.prioridade ~ "º" if item.prioridade else "—" }}</td>
+        <td><b>{{ item.produto_codigo }}</b> - {{ item.produto_descricao }}</td>
+        <td>{{ item.cor_descricao }}</td>
+        <td>{{ item.servico_descricao }}</td>
+        <td>{{ item.qtd_enviada }}</td>
+        <td>{{ item.qtd_retornada }}</td>
+        <td>{{ item.pendente }}</td>
+        <td>
+          {% if item.qtd_retornada == 0 %}<span class="badge b-pendente">Pendente</span>
+          {% elif item.pendente > 0 %}<span class="badge b-parcial">Parcial</span>
+          {% else %}<span class="badge b-concluida">Concluída</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% else %}
+  <p class="small">Nenhuma remessa encontrada para os filtros informados.</p>
+  {% endfor %}
+  {% endif %}
+</div>
+
+<script>
+  const todosServicos = [
+    {% for s in servicos %}
+    {id: {{ s.id }}, produtoId: {{ s.produto_id }},
+     descricao: "{{ s.descricao }}",
+     valorCom: "{{ s.valor_com_registro|brl }}",
+     valorSem: "{{ s.valor_sem_registro|brl }}"},
+    {% endfor %}
+  ];
+  const registradoMap = {
+    {% for t in terceirizados %}{{ t.id }}: {{ t.registrado }},{% endfor %}
+  };
+  function labelServico(s, registrado) {
+    const v = registrado ? s.valorCom : s.valorSem;
+    return s.descricao + ' (R$ ' + v + ')';
+  }
+  function getTerceirizadoRegistrado() {
+    const sel = document.getElementById('terceirizadoSelect');
+    const id = parseInt(sel ? sel.value : 0);
+    return registradoMap[id] !== undefined ? registradoMap[id] : 1;
+  }
+  function atualizarLabelsServicos() {
+    const registrado = getTerceirizadoRegistrado();
+    document.querySelectorAll('.servicoSelect').forEach(function(select) {
+      const selectedId = parseInt(select.value);
+      select.querySelectorAll('option').forEach(function(opt) {
+        const s = todosServicos.find(x => x.id === parseInt(opt.value));
+        if (s) opt.textContent = labelServico(s, registrado);
+      });
+      if (selectedId) select.value = selectedId;
+    });
+  }
+  const todasCores = [
+    {% for c in cores_estampas %}
+    {id: {{ c.id }}, produtoId: {{ c.produto_id }}, label: "{{ c.descricao }}"},
+    {% endfor %}
+  ];
+  const produtosOptions = `{% for p in produtos %}<option value="{{ p.id }}">{{ p.codigo }} - {{ p.descricao }}</option>{% endfor %}`;
+
+  function atualizarOpcoesPrioridade() {
+    const linhas = document.querySelectorAll('#itens .item-row');
+    const total = linhas.length;
+    linhas.forEach(function (linha, indice) {
+      const select = linha.querySelector('.prioridadeSelect');
+      if (!select) return;
+      const atual = select.value;
+      let opcoes = '<option value="">Sem prioridade</option>';
+      for (let n = 1; n <= total; n++) {
+        opcoes += `<option value="${n}">${n}º</option>`;
+      }
+      select.innerHTML = opcoes;
+      select.value = atual && parseInt(atual) <= total ? atual : String(indice + 1);
+    });
+  }
+
+  function addItemRow() {
+    const div = document.createElement('div');
+    div.className = 'item-row';
+    div.style.gridTemplateColumns = '1.3fr 1.3fr 1.3fr 0.8fr 1fr auto';
+    div.innerHTML = `
+      <div>
+        <label>Produto</label>
+        <select name="produto_id" class="produtoSelect" data-placeholder="Buscar por nome ou código..." data-search="contains">
+          <option value=""></option>
+          ${produtosOptions}
+        </select>
+      </div>
+      <div>
+        <label>Cor / Estampa</label>
+        <select name="cor_estampa_id" class="corSelect" data-placeholder="Buscar cor ou estampa..." data-search="contains"></select>
+      </div>
+      <div>
+        <label>Serviço a ser prestado</label>
+        <select name="servico_id" class="servicoSelect" data-placeholder="Buscar serviço..." data-search="contains"></select>
+      </div>
+      <div>
+        <label>Quantidade</label>
+        <input type="number" name="qtd_enviada" min="1">
+      </div>
+      <div>
+        <label title="Ordem em que este item deve ser produzido pelo terceirizado">Prioridade de produção</label>
+        <select name="prioridade" class="prioridadeSelect"><option value="">Sem prioridade</option></select>
+      </div>
+      <button type="button" class="btn secondary" onclick="this.parentElement.remove(); atualizarOpcoesPrioridade();">Remover</button>
+    `;
+    const produtoSelect = div.querySelector('.produtoSelect');
+    const corSelect = div.querySelector('.corSelect');
+    const servicoSelect = div.querySelector('.servicoSelect');
+    function atualizarDependentes() {
+      const produtoId = parseInt(produtoSelect.value);
+      const coresDisponiveis = todasCores.filter(c => c.produtoId === produtoId)
+        .filter((c, i, arr) => arr.findIndex(x => x.label === c.label) === i);
+      corSelect.innerHTML = coresDisponiveis.length
+        ? coresDisponiveis.map(c => `<option value="${c.id}">${c.label}</option>`).join('')
+        : '<option value="">Nenhuma cor cadastrada</option>';
+      const registrado = getTerceirizadoRegistrado();
+      const servicosDisponiveis = todosServicos.filter(s => s.produtoId === produtoId);
+      if (produtoId && servicosDisponiveis.length === 0) {
+        servicoSelect.innerHTML = '<option value="">Nenhum serviço cadastrado</option>';
+        document.getElementById('modalSemServico').style.display = 'flex';
+      } else {
+        servicoSelect.innerHTML = servicosDisponiveis.length
+          ? servicosDisponiveis.map(s => `<option value="${s.id}">${labelServico(s, registrado)}</option>`).join('')
+          : '<option value=""></option>';
+      }
+      corSelect.dispatchEvent(new Event('comboRefresh'));
+      servicoSelect.dispatchEvent(new Event('comboRefresh'));
+    }
+    produtoSelect.addEventListener('change', atualizarDependentes);
+    atualizarDependentes();
+    document.getElementById('itens').appendChild(div);
+    searchableSelect(produtoSelect);
+    searchableSelect(corSelect);
+    searchableSelect(servicoSelect);
+    atualizarOpcoesPrioridade();
+  }
+
+  // Sincroniza link Excel com filtros ativos
+  function atualizarLinkExcel() {
+    var terc = document.querySelector('[name="filtro_terceirizado_id"]');
+    var ini  = document.querySelector('[name="filtro_data_inicio"]');
+    var fim  = document.querySelector('[name="filtro_data_fim"]');
+    var p = new URLSearchParams();
+    if (terc && terc.value) p.set('filtro_terceirizado_id', terc.value);
+    if (ini  && ini.value)  p.set('filtro_data_inicio', ini.value);
+    if (fim  && fim.value)  p.set('filtro_data_fim', fim.value);
+    var link = document.getElementById('excelRemessasLink');
+    if (link) link.href = '/remessas/exportar-excel' + (p.toString() ? '?' + p.toString() : '');
+  }
+  atualizarLinkExcel();
+  document.querySelectorAll('[name="filtro_terceirizado_id"],[name="filtro_data_inicio"],[name="filtro_data_fim"]')
+    .forEach(function(el){ el.addEventListener('change', atualizarLinkExcel); el.addEventListener('input', atualizarLinkExcel); });
+
+  searchableSelect(document.getElementById('terceirizadoSelect'));
+  searchableSelect(document.getElementById('filtroTerceirizadoSelect'));
+  document.getElementById('terceirizadoSelect').addEventListener('change', atualizarLabelsServicos);
+  document.getElementById('addItem').addEventListener('click', addItemRow);
+  addItemRow();
+
+  // ── Validação antes de gravar remessa ─────────────────────────────────────
+  document.querySelector('form[action="/remessas/nova"]').addEventListener('submit', function(e) {
+    var linhas = document.querySelectorAll('#itens .item-row');
+    var linhasValidas = 0;
+    var semServico = false;
+    var semCor = false;
+    var semProduto = false;
+
+    linhas.forEach(function(linha) {
+      var prod = linha.querySelector('select[name="produto_id"]');
+      var cor  = linha.querySelector('select[name="cor_estampa_id"]');
+      var serv = linha.querySelector('select[name="servico_id"]');
+      var qtd  = linha.querySelector('input[name="qtd_enviada"]');
+      if (!prod || !prod.value) return; // linha sem produto, ignora
+      linhasValidas++;
+      if (!cor  || !cor.value  || cor.options[cor.selectedIndex]?.text === 'Nenhuma cor cadastrada')  semCor = true;
+      if (!serv || !serv.value || serv.options[serv.selectedIndex]?.text === 'Nenhum serviço cadastrado') semServico = true;
+    });
+
+    if (linhasValidas === 0) {
+      e.preventDefault();
+      showToast('Adicione ao menos um item com produto e quantidade antes de registrar.', 'erro');
+      return;
+    }
+
+    if (semServico) {
+      e.preventDefault();
+      document.getElementById('modalSemServico').style.display = 'flex';
+    }
+  });
+
+
+  // ── Seleção de remessa ────────────────────────────────────────────────────
+  var remessaSelecionada = null;
+
+  function desselecionarRemessa() {
+    if (remessaSelecionada) {
+      remessaSelecionada.style.borderColor = '#eee';
+      remessaSelecionada.style.background = '';
+      remessaSelecionada = null;
+    }
+    document.getElementById('barraAcoes').style.display = 'none';
+  }
+
+  document.querySelectorAll('.remessa-card').forEach(function(card) {
+    card.addEventListener('click', function() {
+      if (remessaSelecionada === card) {
+        desselecionarRemessa();
+        return;
+      }
+      desselecionarRemessa();
+      remessaSelecionada = card;
+      card.style.borderColor = '#a0522d';
+      card.style.background = '#fdf6f0';
+
+      var barra = document.getElementById('barraAcoes');
+      document.getElementById('barraInfo').textContent =
+        'Remessa Nº ' + card.dataset.numero + ' selecionada';
+      document.getElementById('btnVisualizar').href = card.dataset.view;
+      document.getElementById('btnImprimir').href = card.dataset.print;
+      document.getElementById('btnCancelar').onclick = function() {
+        if (confirm(card.dataset.confirm)) {
+          var form = document.getElementById('formCancelar');
+          form.action = card.dataset.cancel;
+          form.submit();
+        }
+      };
+      barra.style.display = 'flex';
+    });
+  });
+</script>
+
+{# Modal: serviço não cadastrado #}
+<div id="modalSemServico" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px 28px 22px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+    <h3 style="margin:0 0 10px;color:#5a3e2b;font-size:15px;">⚠ Serviço não encontrado</h3>
+    <p style="font-size:13px;color:#5a3e2b;margin:0 0 18px;line-height:1.6;">
+      Um ou mais itens da remessa não possuem serviço cadastrado para o produto selecionado.<br><br>
+      Deseja ir ao <b>Cadastro de Serviços</b> agora para registrar e depois voltar aqui?<br>
+      <span style="font-size:11.5px;color:#a0522d;">A remessa ficará pendente nesta aba — basta voltar e clicar em <b>Registrar remessa</b>.</span>
+    </p>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button type="button" class="btn secondary" onclick="document.getElementById('modalSemServico').style.display='none'">Cancelar</button>
+      <a href="/cadastros/servicos" target="_blank" class="btn" onclick="document.getElementById('modalSemServico').style.display='none'">Ir para Cadastro de Serviços</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+

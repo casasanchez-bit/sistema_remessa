@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Editar terceirizado ({{ terceirizado.codigo }})</h2>
+  <form method="post">
+    <div class="grid">
+      <div><label>Nome</label><input name="nome" value="{{ terceirizado.nome }}" required></div>
+      <div><label>Telefone</label><input name="telefone" value="{{ terceirizado.telefone or '' }}"></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <label style="margin:0;font-weight:500;">Registrado?</label>
+        <label style="display:flex;gap:4px;align-items:center;font-weight:400;">
+          <input type="radio" name="registrado" value="1" {% if terceirizado.registrado %}checked{% endif %}> Sim
+        </label>
+        <label style="display:flex;gap:4px;align-items:center;font-weight:400;">
+          <input type="radio" name="registrado" value="0" {% if not terceirizado.registrado %}checked{% endif %}> Não
+        </label>
+      </div>
+    </div>
+    <button class="btn" type="submit">Salvar</button>
+    <a href="/cadastros/terceirizados" class="btn secondary">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}MP Necessárias — Remessa Nº {{ remessa.numero }}{% endblock %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:4px;">
+    <h1 style="margin:0;font-size:1.2rem;">Matérias-Primas Necessárias</h1>
+    <span style="font-size:13px;color:#6b5344;">Remessa Nº {{ remessa.numero }} — {{ remessa.terceirizado_codigo }} {{ remessa.terceirizado_nome }}</span>
+  </div>
+  <a href="{{ url_for('remessa_editar', id=remessa.id) }}" class="btn-mini ver" style="margin-top:10px;display:inline-block;">← Voltar à Remessa</a>
+</div>
+
+<div class="card">
+  <h2 style="font-size:1rem;margin-bottom:12px;">Itens da Remessa</h2>
+  <table>
+    <tr>
+      <th>Produto</th>
+      <th>Cor/Estampa</th>
+      <th>Serviço</th>
+      <th style="text-align:right;">Qtde Enviada</th>
+    </tr>
+    {% for item in itens %}
+    <tr>
+      <td><b>{{ item.produto_codigo }}</b> — {{ item.produto_descricao }}</td>
+      <td>{{ item.cor_descricao }}</td>
+      <td>{{ item.servico_descricao }}</td>
+      <td style="text-align:right;">{{ item.qtd_enviada }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="card">
+  <h2 style="font-size:1rem;margin-bottom:12px;">Total de Matérias-Primas Necessárias</h2>
+  {% if mps %}
+  <table>
+    <tr>
+      <th>Código MP</th>
+      <th>Descrição da Matéria-Prima</th>
+      <th style="width:80px;text-align:center;">Unidade</th>
+      <th style="text-align:right;">Total Necessário</th>
+    </tr>
+    {% for mp in mps %}
+    <tr>
+      <td><b>{{ mp.codigo }}</b></td>
+      <td>{{ mp.descricao }}</td>
+      <td style="text-align:center;">{{ mp.unidade }}</td>
+      <td style="text-align:right;font-weight:700;font-variant-numeric:tabular-nums;">{{ mp.total|qty }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p style="font-size:11px;color:#888;margin-top:8px;">
+    Calculado com base na ficha técnica de cada produto × quantidade enviada na remessa.
+    Produtos sem ficha técnica cadastrada não aparecem nesta lista.
+  </p>
+  {% else %}
+  <p style="color:#888;font-size:13px;">
+    Nenhuma matéria-prima encontrada. Verifique se os produtos desta remessa possuem ficha técnica cadastrada.<br>
+    Importe via <a href="{{ url_for('importar_cadastros') }}">Exportar/Importar em Massa</a> usando a aba <b>5-Composicao_MP</b>.
+  </p>
+  {% endif %}
+</div>
+{% endblock %}

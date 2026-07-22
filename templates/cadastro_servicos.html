@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% block content %}
+
+{# ── CATÁLOGO DE SERVIÇOS ─────────────────────────────────────────────── #}
+<div class="card" style="margin-bottom:18px;">
+  <h2>Catálogo de Serviços</h2>
+  <p class="small">Cadastre aqui os nomes de serviços disponíveis. Nomes são únicos — sem repetição.</p>
+
+  <form method="post" action="/catalogo-servicos/adicionar" class="grid" style="margin-bottom:12px;">
+    <input name="novo_servico" placeholder="Nome do serviço (ex: COSTURA E OVERLOQUE COMPLETO)" required style="text-transform:uppercase;">
+    <button class="btn" type="submit" style="white-space:nowrap;">Adicionar ao Catálogo</button>
+  </form>
+
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+    <input type="text" id="buscaCatalogoSv" placeholder="Pesquisar no catálogo..."
+           style="flex:1;" oninput="filtrarCatalogoSv(this.value)" disabled>
+    <button class="btn secondary" id="btnDetalhaCatalogoSv" onclick="toggleCatalogoSv()">Detalhar</button>
+  </div>
+
+  <div id="wrapCatalogoSv" style="display:none;">
+    {% if catalogo_servicos %}
+    <table id="tabelaCatalogoSv">
+      <tr><th>Nome do Serviço</th><th style="width:180px;">Ações</th></tr>
+      {% for s in catalogo_servicos %}
+      <tr>
+        <td id="txtCatSv{{ s.id }}">{{ s.descricao }}</td>
+        <td class="actions">
+          <button class="btn-mini editar" type="button"
+                  onclick="abrirEditCatSv({{ s.id }}, '{{ s.descricao|replace("'", "\\'") }}')">EDITAR</button>
+          <form method="post" action="/catalogo-servicos/{{ s.id }}/excluir" style="display:inline;"
+                onsubmit="return confirm('Excluir {{ s.descricao }} do catálogo?')">
+            <button class="btn-mini excluir" type="submit">EXCLUIR</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="small" style="color:#999;">Nenhum serviço cadastrado no catálogo ainda.</p>
+    {% endif %}
+  </div>
+
+  {# Modal de edição inline do catálogo #}
+  <div id="modalEditCatSv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:8px;padding:24px;min-width:340px;max-width:480px;width:90%;box-shadow:0 4px 24px rgba(0,0,0,.2);">
+      <h3 style="margin-bottom:14px;">Editar nome do serviço</h3>
+      <form id="formEditCatSv" method="post">
+        <label style="display:block;margin-bottom:6px;">Nome do Serviço</label>
+        <input id="inputEditCatSv" name="descricao" required style="width:100%;margin-bottom:14px;text-transform:uppercase;">
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button type="button" class="btn secondary" onclick="fecharEditCatSv()">Cancelar</button>
+          <button type="submit" class="btn">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <p class="small" id="dicaCatalogoSv" style="color:#999;">
+    {{ catalogo_servicos|length }} serviço(s) cadastrado(s). Clique em "Detalhar" para visualizar ou pesquisar.
+  </p>
+</div>
+
+{# ── ATRIBUIÇÃO DE SERVIÇO A PRODUTO ──────────────────────────────────── #}
+<div class="card">
+  <h2>Atribuição de Serviço a Produto</h2>
+
+  {# Formulário — sempre visível no topo #}
+  {% if catalogo_servicos %}
+  <form method="post" action="/cadastros/servico">
+    <div class="grid" style="margin-bottom:10px;">
+      <div>
+        <label>Produto</label>
+        <select name="produto_id" id="produtoServicoSelect" data-placeholder="Buscar por nome ou código..." data-search="contains" required>
+          <option value=""></option>
+          {% for p in produtos %}
+          <option value="{{ p.id }}">{{ p.codigo }} - {{ p.descricao }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Serviço</label>
+        <select name="descricao" id="servicoCatalogoSelect" data-placeholder="Buscar serviço..." data-search="contains" required>
+          <option value=""></option>
+          {% for s in catalogo_servicos %}
+          <option value="{{ s.descricao }}">{{ s.descricao }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="grid" style="margin-bottom:10px;">
+      <div>
+        <label><span class="badge b-concluida">Valor COM Registro (R$)</span></label>
+        <input name="valor_com_registro" id="valorComReg" type="text" inputmode="decimal"
+               placeholder="Ex: 1,00" required autocomplete="off">
+      </div>
+      <div>
+        <label><span class="badge b-pendente">Valor SEM Registro (R$)</span></label>
+        <input name="valor_sem_registro" id="valorSemReg" type="text" inputmode="decimal"
+               placeholder="Ex: 1,40" required autocomplete="off">
+      </div>
+      <div style="display:flex;align-items:flex-end;">
+        <button class="btn" type="submit">Atribuir</button>
+      </div>
+    </div>
+  </form>
+  {% else %}
+  <p class="small" style="color:#c0392b;">
+    Cadastre pelo menos um serviço no catálogo acima antes de atribuir a um produto.
+  </p>
+  {% endif %}
+
+  {# Tabela de registros — padrão Detalhar/Ocultar com Voltar #}
+  <div style="display:flex;gap:8px;align-items:center;margin-top:16px;margin-bottom:8px;">
+    <input type="text" id="buscaServicos" placeholder="Pesquisar por produto, código ou serviço..."
+           style="flex:1;" disabled>
+    <button class="btn secondary" id="btnDetalhaAtrib" onclick="toggleAtrib()">Detalhar</button>
+    <a href="/cadastros/servicos" class="btn secondary" id="btnVoltarAtrib" style="display:none;">Voltar</a>
+  </div>
+
+  {# Barra de ações — atribuições #}
+  <div id="barraAcoesAtrib" style="display:none;position:sticky;top:0;z-index:100;background:#fff;border:1px solid #d4a96a;border-radius:8px;padding:10px 14px;margin-bottom:10px;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);">
+    <span id="barraInfoAtrib" style="flex:1;font-size:13px;font-weight:600;color:#5a3e2b;"></span>
+    <button id="btnEditarAtrib" type="button" class="btn secondary" style="font-size:13px;padding:6px 14px;" onclick="abrirEditAtrib()">Editar</button>
+    <button id="btnExcluirAtrib" type="button" class="btn-mini excluir" style="font-size:13px;padding:6px 14px;">Excluir</button>
+    <button type="button" class="btn secondary" style="font-size:13px;padding:6px 12px;" onclick="desselecionarAtrib()">✕</button>
+  </div>
+  <form id="formExcluirAtrib" method="post" style="display:none;"></form>
+
+  {# Modal de edição inline de atribuição #}
+  <div id="modalEditAtrib" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:10px;padding:26px 28px;min-width:360px;max-width:500px;width:92%;box-shadow:0 4px 28px rgba(0,0,0,.22);">
+      <h3 style="margin-bottom:4px;color:#5C442C;">Editar Atribuição</h3>
+      <p id="modalEditAtribLabel" style="font-size:12px;color:#8a6040;margin-bottom:16px;"></p>
+      <form id="formEditAtrib" method="post">
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;color:#888;">Valor COM Registro (R$)</label>
+          <input id="modalValorCom" name="valor_com_registro" type="text" inputmode="decimal"
+                 required style="width:100%;margin-top:4px;" placeholder="Ex: 1,00">
+        </div>
+        <div style="margin-bottom:18px;">
+          <label style="font-size:12px;color:#888;">Valor SEM Registro (R$)</label>
+          <input id="modalValorSem" name="valor_sem_registro" type="text" inputmode="decimal"
+                 required style="width:100%;margin-top:4px;" placeholder="Ex: 1,40">
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button type="button" class="btn secondary" onclick="fecharEditAtrib()">Cancelar</button>
+          <button type="submit" class="btn">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="wrapAtrib" style="display:none;">
+    {% if servicos %}
+    <table id="tabelaServicos">
+      <tr><th>Código</th><th>Cód. Produto</th><th>Produto</th><th>Serviço</th><th>Com Registro</th><th>Sem Registro</th></tr>
+      {% for s in servicos %}
+      <tr class="linha-selecionavel-atrib" style="cursor:pointer;transition:background .15s;"
+          data-id="{{ s.id }}"
+          data-label="{{ s.codigo }} — {{ s.descricao }} ({{ s.produto_descricao }})"
+          data-edit="/servicos/{{ s.id }}/editar"
+          data-valor-com="{{ s.valor_com_registro }}"
+          data-valor-sem="{{ s.valor_sem_registro }}"
+          data-delete="/servicos/{{ s.id }}/excluir"
+          data-confirm="Excluir a atribuição {{ s.descricao }} do produto {{ s.produto_descricao }}? Esta ação não pode ser desfeita.">
+        <td>{{ s.codigo }}</td>
+        <td>{{ s.produto_codigo }}</td>
+        <td>{{ s.produto_descricao }}</td>
+        <td>{{ s.descricao }}</td>
+        <td>R$ {{ s.valor_com_registro|brl }}</td>
+        <td>R$ {{ s.valor_sem_registro|brl }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="small" style="color:#999;">Nenhuma atribuição cadastrada ainda.</p>
+    {% endif %}
+  </div>
+  <p class="small" id="dicaAtrib" style="color:#999;">
+    {{ servicos|length }} atribuição(ões) cadastrada(s). Clique em "Detalhar" para visualizar ou pesquisar.
+  </p>
+</div>
+
+<script>
+  searchableSelect(document.getElementById('produtoServicoSelect'));
+  searchableSelect(document.getElementById('servicoCatalogoSelect'));
+
+  // Campos de valor: aceita vírgula, converte para ponto antes de enviar
+  ['valorComReg', 'valorSemReg'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', function() {
+      // permite só dígitos, vírgula e ponto
+      this.value = this.value.replace(/[^0-9.,]/g, '');
+    });
+    el.closest('form').addEventListener('submit', function() {
+      el.value = el.value.replace(',', '.');
+    });
+  });
+
+  function abrirEditCatSv(id, descricao) {
+    document.getElementById('inputEditCatSv').value = descricao;
+    document.getElementById('formEditCatSv').action = '/catalogo-servicos/' + id + '/editar';
+    var modal = document.getElementById('modalEditCatSv');
+    modal.style.display = 'flex';
+    document.getElementById('inputEditCatSv').focus();
+  }
+  function fecharEditCatSv() {
+    document.getElementById('modalEditCatSv').style.display = 'none';
+  }
+  document.getElementById('modalEditCatSv').addEventListener('click', function(e) {
+    if (e.target === this) fecharEditCatSv();
+  });
+
+  var catSvVisivel = false;
+  function toggleCatalogoSv() {
+    catSvVisivel = !catSvVisivel;
+    var wrap = document.getElementById('wrapCatalogoSv');
+    var input = document.getElementById('buscaCatalogoSv');
+    var dica = document.getElementById('dicaCatalogoSv');
+    var btn = document.getElementById('btnDetalhaCatalogoSv');
+    wrap.style.display = catSvVisivel ? '' : 'none';
+    input.disabled = !catSvVisivel;
+    if (dica) dica.style.display = catSvVisivel ? 'none' : '';
+    btn.textContent = catSvVisivel ? 'Ocultar' : 'Detalhar';
+    if (catSvVisivel) input.focus();
+  }
+
+  var atribVisivel = false;
+  function toggleAtrib() {
+    atribVisivel = !atribVisivel;
+    var wrap = document.getElementById('wrapAtrib');
+    var input = document.getElementById('buscaServicos');
+    var dica = document.getElementById('dicaAtrib');
+    var btn = document.getElementById('btnDetalhaAtrib');
+    var voltar = document.getElementById('btnVoltarAtrib');
+    wrap.style.display = atribVisivel ? '' : 'none';
+    input.disabled = !atribVisivel;
+    if (dica) dica.style.display = atribVisivel ? 'none' : '';
+    btn.textContent = atribVisivel ? 'Ocultar' : 'Detalhar';
+    voltar.style.display = atribVisivel ? '' : 'none';
+    if (atribVisivel) {
+      filtrarTabela('buscaServicos', 'tabelaServicos');
+      input.focus();
+      ativarSelecaoAtrib();
+    }
+  }
+
+  var linhaSelecionadaAtrib = null;
+  function desselecionarAtrib() {
+    if (linhaSelecionadaAtrib) {
+      linhaSelecionadaAtrib.style.background = '';
+      linhaSelecionadaAtrib.style.outline = '';
+      linhaSelecionadaAtrib = null;
+    }
+    document.getElementById('barraAcoesAtrib').style.display = 'none';
+  }
+
+  function abrirEditAtrib() {
+    if (!linhaSelecionadaAtrib) return;
+    var tr = linhaSelecionadaAtrib;
+    document.getElementById('modalEditAtribLabel').textContent = tr.dataset.label;
+    document.getElementById('formEditAtrib').action = tr.dataset.edit;
+    // Preencher valores formatados com vírgula para exibição
+    var vCom = parseFloat(tr.dataset.valorCom).toFixed(2).replace('.', ',');
+    var vSem = parseFloat(tr.dataset.valorSem).toFixed(2).replace('.', ',');
+    document.getElementById('modalValorCom').value = vCom;
+    document.getElementById('modalValorSem').value = vSem;
+    document.getElementById('modalEditAtrib').style.display = 'flex';
+    document.getElementById('modalValorCom').focus();
+  }
+  function fecharEditAtrib() {
+    document.getElementById('modalEditAtrib').style.display = 'none';
+  }
+  document.getElementById('modalEditAtrib').addEventListener('click', function(e) {
+    if (e.target === this) fecharEditAtrib();
+  });
+  // Converter vírgula para ponto antes de enviar
+  document.getElementById('formEditAtrib').addEventListener('submit', function() {
+    ['modalValorCom','modalValorSem'].forEach(function(id) {
+      var el = document.getElementById(id);
+      el.value = el.value.replace(',', '.');
+    });
+  });
+
+  function ativarSelecaoAtrib() {
+    document.querySelectorAll('.linha-selecionavel-atrib').forEach(function(tr) {
+      if (tr._selecaoAtivada) return;
+      tr._selecaoAtivada = true;
+      tr.addEventListener('click', function(e) {
+        if (e.target.tagName === 'BUTTON' || e.target.closest('form')) return;
+        if (linhaSelecionadaAtrib === tr) { desselecionarAtrib(); return; }
+        desselecionarAtrib();
+        linhaSelecionadaAtrib = tr;
+        tr.style.background = '#fdf6f0';
+        tr.style.outline = '2px solid #a0522d';
+        document.getElementById('barraInfoAtrib').textContent = tr.dataset.label + ' selecionado(a)';
+        document.getElementById('btnExcluirAtrib').onclick = function() {
+          if (confirm(tr.dataset.confirm)) {
+            var form = document.getElementById('formExcluirAtrib');
+            form.action = tr.dataset.delete;
+            form.submit();
+          }
+        };
+        document.getElementById('barraAcoesAtrib').style.display = 'flex';
+      });
+    });
+  }
+</script>
+{% endblock %}

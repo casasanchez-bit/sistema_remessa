@@ -1,0 +1,84 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Fechamento Mensal {{ mes }} - Impressão</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; margin: 0; background: #f5f5f7; }
+  .toolbar { padding: 14px; text-align: center; }
+  .toolbar button { background: #AF4005; color: #fff; border: none; padding: 10px 18px; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .toolbar a { margin-left: 10px; font-size: 13px; color: #5C442C; text-decoration: none; }
+
+  .folha { width: 190mm; margin: 8mm auto; padding: 8mm; background: #fff; border: 1px solid #999; }
+  .cabecalho { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #5C442C; padding-bottom: 8px; margin-bottom: 10px; }
+  .cabecalho h1 { font-size: 16px; margin: 0; color: #5C442C; }
+  .cabecalho .info { font-size: 12px; text-align: right; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th, td { border: 1px solid #ccc; padding: 5px 6px; text-align: left; }
+  th { background: #F9E9DC; font-size: 9.5px; text-transform: uppercase; }
+  tfoot td { font-weight: 700; font-size: 13px; border: none; padding-top: 10px; }
+  .rodape { font-size: 9px; color: #888; margin-top: 16px; text-align: center; }
+
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none; }
+    .folha { border: none; width: auto; margin: 0; }
+    @page { size: A4 portrait; margin: 12mm; }
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <button onclick="window.print()">Imprimir</button>
+    <a href="/fechamento">Voltar</a>
+  </div>
+
+  <div class="folha">
+    <div class="cabecalho">
+      <h1>FECHAMENTO MENSAL DE PRODUÇÃO — Casa Sanchez</h1>
+      <div class="info">
+        Mês de referência: {{ mes|brdate }}<br>
+        {% if terceirizado_nome %}Terceirizado: {{ terceirizado_nome }}{% else %}Todos os terceirizados{% endif %}
+        {% for lote in lotes_pagamento %}
+        <br><b style="color:#4d6b3a;">Lote {{ loop.index }} — pago em {{ lote.data_pagamento|brdate }} — R$ {{ lote.total|brl }}</b>
+        {% endfor %}
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Terceirizado</th><th>Código</th><th>Produto</th><th>Cor/Estampa</th><th>Serviço</th><th>Qtde Retornada</th><th>Preço Unit.</th><th>Total a Pagar</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for l in linhas %}
+        <tr>
+          <td>{{ l.terceirizado }}</td>
+          <td>{{ l.produto_codigo }}</td>
+          <td>{{ l.produto }}</td>
+          <td>{{ l.cor }}</td>
+          <td>{{ l.servico }}</td>
+          <td>{{ l.qtd }}</td>
+          <td>R$ {{ l.preco|brl }}</td>
+          <td>R$ {{ l.total|brl }}</td>
+          <td>{% if l.pago %}PAGO ({{ l.data_pagamento|brdate }}){% else %}PENDENTE{% endif %}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9">Nenhum retorno encontrado neste período.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr><td colspan="8" style="text-align:right;">Total geral a pagar:</td><td>R$ {{ total_geral|brl }}</td></tr>
+      </tfoot>
+    </table>
+    <div class="rodape">Casa Sanchez · Controle de Remessa e Retorno — Emitido em <span class="data-emissao"></span></div>
+  </div>
+<script>
+  var hoje = new Date();
+  var d = String(hoje.getDate()).padStart(2,'0');
+  var m = String(hoje.getMonth()+1).padStart(2,'0');
+  var a = hoje.getFullYear();
+  document.querySelectorAll('.data-emissao').forEach(function(el){ el.textContent = d+'/'+m+'/'+a; });
+</script>
+</body>
+</html>
+
