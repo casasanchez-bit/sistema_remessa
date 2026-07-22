@@ -1604,12 +1604,15 @@ def excluir_remessa(remessa_id):
     elif remessa_tem_retorno_pago(db, remessa_id):
         flash("Esta remessa não pode mais ser excluída: o pagamento do período já foi confirmado.", "erro")
     else:
+        remessa = db.execute("SELECT numero FROM remessas WHERE id = ?", (remessa_id,)).fetchone()
         item_ids = [r["id"] for r in db.execute(
             "SELECT id FROM itens_remessa WHERE remessa_id = ?", (remessa_id,)).fetchall()]
         for iid in item_ids:
             db.execute("DELETE FROM item_servicos_remessa WHERE item_remessa_id = ?", (iid,))
         db.execute("DELETE FROM itens_remessa WHERE remessa_id = ?", (remessa_id,))
         db.execute("DELETE FROM remessas WHERE id = ?", (remessa_id,))
+        if remessa:
+            registrar_historico(db, "remessas", remessa_id, f"Remessa Nº {remessa['numero']} excluída")
         db.commit()
     return redirect(url_for("remessas"))
 
@@ -1807,6 +1810,10 @@ def editar_item_remessa(item_id):
                 ),
             )
             recalcular_finalizada(db, item_id)
+            remessa_numero = db.execute(
+                "SELECT numero FROM remessas WHERE id = ?", (item["remessa_id"],)
+            ).fetchone()["numero"]
+            registrar_historico(db, "remessas", item["remessa_id"], f"Item alterado na Remessa Nº {remessa_numero}")
             db.commit()
             return redirect(url_for("editar_remessa", remessa_id=item["remessa_id"]))
     produtos = db.execute("SELECT * FROM produtos ORDER BY descricao").fetchall()
@@ -1838,6 +1845,9 @@ def excluir_item_remessa(item_id):
     elif item_tem_retorno_pago(db, item_id):
         flash("Este item não pode mais ser excluído: o pagamento do período já foi confirmado.", "erro")
     else:
+        remessa_numero = db.execute(
+            "SELECT numero FROM remessas WHERE id = ?", (remessa_id,)
+        ).fetchone()["numero"]
         db.execute("DELETE FROM item_servicos_remessa WHERE item_remessa_id = ?", (item_id,))
         db.execute("DELETE FROM itens_remessa WHERE id = ?", (item_id,))
         restantes = db.execute(
@@ -1845,8 +1855,13 @@ def excluir_item_remessa(item_id):
         ).fetchone()["n"]
         if restantes == 0:
             db.execute("DELETE FROM remessas WHERE id = ?", (remessa_id,))
+            registrar_historico(
+                db, "remessas", remessa_id,
+                f"Item removido e Remessa Nº {remessa_numero} excluída (ficou sem itens)"
+            )
             db.commit()
             return redirect(url_for("remessas"))
+        registrar_historico(db, "remessas", remessa_id, f"Item removido da Remessa Nº {remessa_numero}")
         db.commit()
     return redirect(url_for("editar_remessa", remessa_id=remessa_id))
 
@@ -2078,6 +2093,7 @@ def editar_retorno(retorno_id):
                 "UPDATE retornos SET terceirizado_id = ?, data_retorno = ?, observacao = ? WHERE id = ?",
                 (terceirizado_id, data_retorno, observacao, retorno_id),
             )
+            registrar_historico(db, "retornos", retorno_id, f"Retorno Nº {retorno['numero']} editado")
             db.commit()
             return redirect(url_for("retornos"))
     terceirizados = db.execute("SELECT * FROM terceirizados ORDER BY nome").fetchall()
@@ -2108,6 +2124,7 @@ def excluir_retorno(retorno_id):
     if retorno_pago(db, retorno_id):
         flash("Este retorno não pode mais ser excluído: o pagamento do período já foi confirmado.", "erro")
         return redirect(url_for("retornos"))
+    retorno = db.execute("SELECT numero FROM retornos WHERE id = ?", (retorno_id,)).fetchone()
     item_ids = [
         row["item_remessa_id"]
         for row in db.execute(
@@ -2118,6 +2135,8 @@ def excluir_retorno(retorno_id):
     db.execute("DELETE FROM retornos WHERE id = ?", (retorno_id,))
     for item_id in item_ids:
         recalcular_finalizada(db, item_id)
+    if retorno:
+        registrar_historico(db, "retornos", retorno_id, f"Retorno Nº {retorno['numero']} excluído")
     db.commit()
     return redirect(url_for("retornos"))
 
@@ -2390,6 +2409,13 @@ def marcar_pagamento():
             "INSERT OR IGNORE INTO pagamentos_fechamento_retornos (pagamento_id, retorno_id) VALUES (?, ?)",
             (pagamento_id, retorno_id),
         )
+    terceirizado_nome = db.execute(
+        "SELECT nome FROM terceirizados WHERE id = ?", (terceirizado_id,)
+    ).fetchone()["nome"]
+    registrar_historico(
+        db, "fechamento", pagamento_id,
+        f"Fechamento pago: {terceirizado_nome} — {mes} ({len(retorno_ids)} retorno(s))"
+    )
     db.commit()
     flash(
         f"Novo lote de pagamento confirmado: {len(retorno_ids)} retorno(s) incluídos. "
@@ -2406,8 +2432,13 @@ def desfazer_pagamento():
     terceirizado_id = request.form.get("terceirizado_id", "").strip()
     mes = request.form.get("mes", "").strip()
     if pagamento_id:
+        terc = db.execute("SELECT nome FROM terceirizados WHERE id = ?", (terceirizado_id,)).fetchone()
         db.execute("DELETE FROM pagamentos_fechamento_retornos WHERE pagamento_id = ?", (pagamento_id,))
         db.execute("DELETE FROM pagamentos_fechamento WHERE id = ?", (pagamento_id,))
+        registrar_historico(
+            db, "fechamento", pagamento_id,
+            f"Fechamento desfeito: {terc['nome'] if terc else terceirizado_id} — {mes}"
+        )
     db.commit()
     flash("Lote de pagamento desfeito. Os retornos deste lote foram liberados novamente.", "sucesso")
     return redirect(url_for("fechamento", mes=mes, terceirizado_id=terceirizado_id))

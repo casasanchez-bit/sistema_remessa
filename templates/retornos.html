@@ -166,6 +166,9 @@
         {% if ret.pago %}<span class="badge b-pago">PAGO</span>{% else %}<span class="badge b-pendente">NÃO PAGO</span>{% endif %}
       </span>
     </div>
+    {% if ret.observacao %}
+    <div class="small" style="margin:4px 0;color:#7a5a3a;"><b>Observação:</b> {{ ret.observacao }}</div>
+    {% endif %}
     <table>
       <tr><th>Nº Remessa</th><th>Produto</th><th>Cor/Estampa</th><th>Serviço</th><th>Qtde Retornada</th><th>Finalizado</th></tr>
       {% for item in ret.itens %}

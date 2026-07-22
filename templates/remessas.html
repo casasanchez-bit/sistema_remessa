@@ -167,6 +167,9 @@
         <span class="badge" style="background:{% if r.pct_retornado == 100 %}#e6f4e0;color:#3a7d26;{% elif r.pct_retornado > 0 %}#fff3e0;color:#b45a00;{% else %}#fde8e4;color:#a63215;{% endif %}border:1px solid rgba(0,0,0,.1);" title="{{ r.total_retornado }} de {{ r.total_enviado }} retornados">{{ r.pct_retornado }}% retornado</span>
       </span>
     </div>
+    {% if r.observacao %}
+    <div class="small" style="margin:4px 0;color:#7a5a3a;"><b>Observação:</b> {{ r.observacao }}</div>
+    {% endif %}
     <table>
       <tr><th>Prioridade</th><th>Produto</th><th>Cor/Estampa</th><th>Serviço</th><th>Enviado</th><th>Retornado</th><th>Pendente</th><th>Status</th></tr>
       {% for item in r.itens %}
