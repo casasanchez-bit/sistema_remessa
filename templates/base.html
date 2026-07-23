@@ -426,7 +426,7 @@
           <a href="/cadastros/cores-estampas">Cores / Estampas</a>
           <a href="/cadastros/servicos">Serviços</a>
           <a href="/cadastros/materias-primas">Matérias-Primas</a>
-          <a href="/cadastros/usuarios">Usuários do Sistema</a>
+          {% if tem_permissao('gerenciar_usuarios') %}<a href="/cadastros/usuarios">Usuários do Sistema</a>{% endif %}
         </div>
       </div>
       <a href="/remessas" class="{{ 'active' if request.path == '/remessas' }}">Remessas</a>

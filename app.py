@@ -32,6 +32,7 @@ PERMISSOES_DISPONIVEIS = [
     ("alterar_excluir_remessa", "Editar/Excluir Remessas e itens"),
     ("alterar_excluir_retorno", "Editar/Excluir Retornos"),
     ("alterar_excluir_fechamento", "Pagar/Desfazer Fechamento"),
+    ("gerenciar_usuarios", "Gerenciar Usuários do Sistema (ver, criar, senhas e permissões)"),
 ]
 
 
@@ -347,7 +348,18 @@ def tem_permissao(chave):
             "SELECT permissao FROM permissoes_usuario WHERE usuario_id = ?", (usuario_id,)
         ).fetchall()
         g.permissoes = {r["permissao"] for r in rows}
-    return chave in g.permissoes
+    if chave in g.permissoes:
+        return True
+    if chave == "gerenciar_usuarios":
+        # Ninguém foi configurado com essa permissão ainda: libera pra não travar
+        # o acesso à própria tela que concede as permissões.
+        db = get_db()
+        alguem_configurado = db.execute(
+            "SELECT 1 FROM permissoes_usuario WHERE permissao = ? LIMIT 1", (chave,)
+        ).fetchone()
+        if alguem_configurado is None:
+            return True
+    return False
 
 
 @app.context_processor
@@ -437,6 +449,9 @@ def logout():
 
 @app.route("/cadastros/usuarios")
 def cadastros_usuarios():
+    if not tem_permissao("gerenciar_usuarios"):
+        flash("Você não tem permissão para acessar esta tela.", "erro")
+        return redirect(url_for("dashboard"))
     db = get_db()
     usuarios = db.execute("SELECT id, usuario, criado_em FROM usuarios ORDER BY usuario").fetchall()
     permissoes_por_usuario = {}
@@ -454,6 +469,9 @@ def cadastros_usuarios():
 
 @app.route("/cadastros/usuario", methods=["POST"])
 def add_usuario():
+    if not tem_permissao("gerenciar_usuarios"):
+        flash("Você não tem permissão para esta ação.", "erro")
+        return redirect(url_for("dashboard"))
     usuario = request.form.get("usuario", "").strip()
     senha = request.form.get("senha", "")
     if not usuario or not senha:
@@ -483,6 +501,9 @@ def add_usuario():
 
 @app.route("/usuarios/<int:usuario_id>/permissoes", methods=["POST"])
 def salvar_permissoes_usuario(usuario_id):
+    if not tem_permissao("gerenciar_usuarios"):
+        flash("Você não tem permissão para esta ação.", "erro")
+        return redirect(url_for("dashboard"))
     db = get_db()
     usuario = db.execute("SELECT * FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
     if usuario is None:
@@ -503,6 +524,9 @@ def salvar_permissoes_usuario(usuario_id):
 
 @app.route("/usuarios/<int:usuario_id>/senha", methods=["POST"])
 def alterar_senha_usuario(usuario_id):
+    if not tem_permissao("gerenciar_usuarios"):
+        flash("Você não tem permissão para esta ação.", "erro")
+        return redirect(url_for("dashboard"))
     db = get_db()
     usuario = db.execute("SELECT * FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
     if usuario is None:
@@ -523,6 +547,9 @@ def alterar_senha_usuario(usuario_id):
 
 @app.route("/usuarios/<int:usuario_id>/excluir", methods=["POST"])
 def excluir_usuario(usuario_id):
+    if not tem_permissao("gerenciar_usuarios"):
+        flash("Você não tem permissão para esta ação.", "erro")
+        return redirect(url_for("dashboard"))
     db = get_db()
     total = db.execute("SELECT COUNT(*) AS n FROM usuarios").fetchone()["n"]
     if total <= 1:
