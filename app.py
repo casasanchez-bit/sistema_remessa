@@ -2929,6 +2929,27 @@ def cadastros_materias_primas():
     return render_template("cadastro_materias_primas.html", mps=mps)
 
 
+@app.route("/cadastros/materia-prima/adicionar", methods=["POST"])
+def materia_prima_adicionar():
+    db = get_db()
+    codigo    = request.form.get("codigo", "").strip()
+    descricao = request.form.get("descricao", "").strip()
+    unidade   = request.form.get("unidade", "UN").strip().upper() or "UN"
+    if not codigo or not descricao:
+        flash("Informe o código e a descrição da matéria-prima.", "erro")
+    else:
+        try:
+            db.execute(
+                "INSERT INTO materias_primas (codigo, descricao, unidade) VALUES (?, ?, ?)",
+                (codigo, descricao, unidade),
+            )
+            db.commit()
+            flash("Matéria-prima adicionada.", "sucesso")
+        except sqlite3.IntegrityError:
+            flash(f'Já existe uma matéria-prima com o código "{codigo}".', "erro")
+    return redirect(url_for("cadastros_materias_primas"))
+
+
 @app.route("/cadastros/materia-prima/<int:mp_id>/editar", methods=["POST"])
 def materia_prima_editar(mp_id):
     db = get_db()

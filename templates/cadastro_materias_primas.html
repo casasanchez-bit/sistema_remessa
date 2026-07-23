@@ -6,6 +6,18 @@
     Alterações em descrição ou unidade refletem automaticamente em todas as composições vinculadas.
   </p>
 
+  <form method="post" action="/cadastros/materia-prima/adicionar"
+        style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+    <input type="text" name="codigo" placeholder="Código MP" required style="width:120px;">
+    <input type="text" name="descricao" placeholder="Descrição" required style="flex:1;min-width:220px;">
+    <select name="unidade" style="width:80px;">
+      {% for u in ['UN','MT','KG','PC','CX','RL','GR','LT','PR','JG','PÇ'] %}
+      <option value="{{ u }}" {% if u == 'UN' %}selected{% endif %}>{{ u }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn" type="submit">+ Adicionar</button>
+  </form>
+
   <input type="text" id="buscaMP" placeholder="Buscar por código ou descrição..."
          style="margin-bottom:10px;" oninput="filtrarMP()">
 
