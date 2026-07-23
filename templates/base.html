@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Controle de Remessa - Terceirização</title>
   <style>
     :root {
@@ -95,6 +96,20 @@
       body { background: #fff !important; }
       main { max-width: 100%; margin: 0; padding: 0; }
       .card { border: 1px solid #ccc !important; page-break-inside: avoid; }
+    }
+    @media (max-width: 768px) {
+      header { flex-wrap: wrap; padding: 10px 14px; gap: 8px 14px; }
+      nav { flex-wrap: wrap; gap: 6px; }
+      main { padding: 0 10px; margin: 14px auto; }
+      .card { padding: 12px; overflow-x: auto; }
+      table { font-size: 12px; }
+      .grid { grid-template-columns: 1fr; }
+      .item-row { grid-template-columns: 1fr; }
+      .kpi { grid-template-columns: 1fr; }
+      .actions { flex-wrap: wrap; }
+      .submenu { left: auto; right: 0; max-width: calc(100vw - 30px); }
+      #toast-container { left: 10px; right: 10px; bottom: 10px; }
+      .toast { max-width: none; }
     }
   </style>
   <script>
