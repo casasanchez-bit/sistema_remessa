@@ -29,11 +29,19 @@
   <h2>Usuários cadastrados</h2>
   {% for u in usuarios %}
   <div style="border:1px solid #eee;border-radius:8px;padding:10px 14px;margin-bottom:10px;">
-    <div class="small" style="display:flex;justify-content:space-between;align-items:center;">
+    <div class="small" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
       <span><b>{{ u.usuario }}</b> — criado em {{ u.criado_em|brdate }}</span>
-      <form method="post" action="/usuarios/{{ u.id }}/excluir" onsubmit="return confirm('Excluir o usuário {{ u.usuario }}?');">
-        <button class="btn-mini excluir" type="submit">EXCLUIR</button>
-      </form>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <form method="post" action="/usuarios/{{ u.id }}/senha" style="display:flex;align-items:center;gap:6px;"
+              onsubmit="return confirm('Alterar a senha de {{ u.usuario }}?');">
+          <input type="password" name="nova_senha" placeholder="Nova senha" minlength="4" required
+                 style="width:140px;padding:5px 8px;font-size:12.5px;">
+          <button class="btn-mini" type="submit">Alterar Senha</button>
+        </form>
+        <form method="post" action="/usuarios/{{ u.id }}/excluir" onsubmit="return confirm('Excluir o usuário {{ u.usuario }}?');">
+          <button class="btn-mini excluir" type="submit">EXCLUIR</button>
+        </form>
+      </div>
     </div>
     <form method="post" action="/usuarios/{{ u.id }}/permissoes">
       <div class="small" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:4px 14px;margin:8px 0;">

@@ -501,6 +501,26 @@ def salvar_permissoes_usuario(usuario_id):
     return redirect(url_for("cadastros_usuarios"))
 
 
+@app.route("/usuarios/<int:usuario_id>/senha", methods=["POST"])
+def alterar_senha_usuario(usuario_id):
+    db = get_db()
+    usuario = db.execute("SELECT * FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+    if usuario is None:
+        flash("Usuário não encontrado.", "erro")
+        return redirect(url_for("cadastros_usuarios"))
+    nova_senha = request.form.get("nova_senha", "")
+    if len(nova_senha) < 4:
+        flash("A senha deve ter pelo menos 4 caracteres.", "erro")
+    else:
+        db.execute(
+            "UPDATE usuarios SET senha_hash = ? WHERE id = ?",
+            (generate_password_hash(nova_senha), usuario_id),
+        )
+        db.commit()
+        flash(f"Senha de {usuario['usuario']} alterada com sucesso.", "sucesso")
+    return redirect(url_for("cadastros_usuarios"))
+
+
 @app.route("/usuarios/<int:usuario_id>/excluir", methods=["POST"])
 def excluir_usuario(usuario_id):
     db = get_db()
