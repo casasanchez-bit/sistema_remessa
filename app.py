@@ -2477,10 +2477,9 @@ def fechamento():
         SELECT DISTINCT terceirizados.id, terceirizados.codigo, terceirizados.nome, terceirizados.registrado
         FROM terceirizados
         JOIN retornos ON retornos.terceirizado_id = terceirizados.id
-        JOIN itens_retorno ON itens_retorno.retorno_id = retornos.id
-        WHERE retornos.id NOT IN (SELECT retorno_id FROM pagamentos_fechamento_retornos)
+        WHERE strftime('%Y-%m', retornos.data_retorno) = ?
         ORDER BY terceirizados.nome
-    """).fetchall()
+    """, (mes,)).fetchall()
 
     fechamento_linhas, total_geral = [], 0
     total_pago = total_pendente = 0
