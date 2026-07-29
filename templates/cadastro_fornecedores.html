@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Fornecedores</h2>
+  <p class="small" style="margin-top:-4px;margin-bottom:12px;">
+    Cadastre os fornecedores de tecido para usar nos Planos de Corte.
+  </p>
+
+  {# ── Formulário de adição ── #}
+  <form method="post" action="/cadastros/fornecedor/adicionar"
+        style="display:grid;grid-template-columns:100px 1fr 130px 1fr 130px auto;gap:8px;align-items:end;margin-bottom:16px;">
+    <div>
+      <label style="font-size:11px;margin-bottom:2px;display:block;">Código *</label>
+      <input type="text" name="codigo" placeholder="Ex: F001" required>
+    </div>
+    <div>
+      <label style="font-size:11px;margin-bottom:2px;display:block;">Nome / Razão Social *</label>
+      <input type="text" name="nome_razao_social" placeholder="Razão social ou nome do fornecedor" required style="width:100%;">
+    </div>
+    <div>
+      <label style="font-size:11px;margin-bottom:2px;display:block;">Telefone Empresa</label>
+      <input type="text" name="telefone_empresa" placeholder="(00) 0000-0000" class="tel-mask">
+    </div>
+    <div>
+      <label style="font-size:11px;margin-bottom:2px;display:block;">Nome do Representante</label>
+      <input type="text" name="nome_representante" placeholder="Nome do representante" style="width:100%;">
+    </div>
+    <div>
+      <label style="font-size:11px;margin-bottom:2px;display:block;">Telefone Representante</label>
+      <input type="text" name="telefone_representante" placeholder="(00) 00000-0000" class="tel-mask">
+    </div>
+    <div>
+      <button class="btn" type="submit" style="white-space:nowrap;">+ Adicionar</button>
+    </div>
+  </form>
+
+  <input type="text" id="buscaForn" placeholder="Buscar por código ou nome..."
+         style="margin-bottom:10px;" oninput="filtrarForn()">
+
+  <div style="overflow-x:auto;">
+  <table id="tabelaForn">
+    <thead>
+      <tr>
+        <th style="width:90px;">Código</th>
+        <th>Nome / Razão Social</th>
+        <th style="width:140px;">Tel. Empresa</th>
+        <th style="width:160px;">Representante</th>
+        <th style="width:140px;">Tel. Representante</th>
+        <th style="width:110px;"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in fornecedores %}
+      <tr id="linha-{{ f.id }}" data-busca="{{ f.codigo|lower }} {{ f.nome_razao_social|lower }}">
+        {# Modo visualização #}
+        <td class="modo-ver"><b>{{ f.codigo }}</b></td>
+        <td class="modo-ver">{{ f.nome_razao_social }}</td>
+        <td class="modo-ver">{{ f.telefone_empresa or '—' }}</td>
+        <td class="modo-ver">{{ f.nome_representante or '—' }}</td>
+        <td class="modo-ver">{{ f.telefone_representante or '—' }}</td>
+        <td class="modo-ver" style="text-align:center;">
+          <button type="button" class="btn-mini ver" onclick="abrirEdicao({{ f.id }})">Editar</button>
+          <form method="post" action="/cadastros/fornecedor/{{ f.id }}/excluir" style="display:inline;"
+                onsubmit="return confirm('Excluir {{ f.nome_razao_social }}?');">
+            <button type="submit" class="btn-mini" style="background:#c0392b;color:#fff;">Excluir</button>
+          </form>
+        </td>
+
+        {# Modo edição (oculto por padrão) #}
+        <td class="modo-edit" style="display:none;"><b>{{ f.codigo }}</b></td>
+        <td class="modo-edit" style="display:none;" colspan="4">
+          <form id="form-{{ f.id }}" method="post"
+                action="/cadastros/fornecedor/{{ f.id }}/editar"
+                style="display:grid;grid-template-columns:1fr 130px 1fr 130px;gap:6px;">
+            <input name="nome_razao_social" value="{{ f.nome_razao_social }}" placeholder="Nome / Razão Social" required style="font-size:13px;padding:4px 7px;">
+            <input name="telefone_empresa" value="{{ f.telefone_empresa or '' }}" placeholder="Tel. Empresa" class="tel-mask" style="font-size:13px;padding:4px 7px;">
+            <input name="nome_representante" value="{{ f.nome_representante or '' }}" placeholder="Representante" style="font-size:13px;padding:4px 7px;">
+            <input name="telefone_representante" value="{{ f.telefone_representante or '' }}" placeholder="Tel. Representante" class="tel-mask" style="font-size:13px;padding:4px 7px;">
+          </form>
+        </td>
+        <td class="modo-edit" style="display:none;text-align:center;">
+          <button type="submit" form="form-{{ f.id }}" class="btn-mini" style="background:#5a3e2b;color:#fff;">Salvar</button>
+          <button type="button" class="btn-mini secondary" onclick="fecharEdicao({{ f.id }})">✕</button>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="small">Nenhum fornecedor cadastrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="small" style="margin-top:8px;">{{ fornecedores|length }} fornecedor(es) no cadastro.</p>
+</div>
+
+<script>
+function abrirEdicao(id) {
+  var tr = document.getElementById('linha-' + id);
+  tr.querySelectorAll('.modo-ver').forEach(function(el){ el.style.display = 'none'; });
+  tr.querySelectorAll('.modo-edit').forEach(function(el){ el.style.display = ''; });
+}
+function fecharEdicao(id) {
+  var tr = document.getElementById('linha-' + id);
+  tr.querySelectorAll('.modo-ver').forEach(function(el){ el.style.display = ''; });
+  tr.querySelectorAll('.modo-edit').forEach(function(el){ el.style.display = 'none'; });
+}
+function filtrarForn() {
+  var q = document.getElementById('buscaForn').value.toLowerCase();
+  document.querySelectorAll('#tabelaForn tbody tr[data-busca]').forEach(function(tr) {
+    tr.style.display = tr.dataset.busca.includes(q) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

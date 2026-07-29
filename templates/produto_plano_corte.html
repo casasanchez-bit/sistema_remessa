@@ -45,18 +45,23 @@
         <input type="text" name="colecao" value="{{ plano.colecao if plano and plano.colecao else '' }}" placeholder="Ex: Inverno 2025">
       </div>
     </div>
-    <div class="grid" style="margin-bottom:12px;">
-      <div>
-        <label>Fornecedor Tecido 1</label>
-        <input type="text" name="fornecedor1" value="{{ plano.fornecedor1 if plano and plano.fornecedor1 else '' }}">
-      </div>
-      <div>
-        <label>Fornecedor Tecido 2</label>
-        <input type="text" name="fornecedor2" value="{{ plano.fornecedor2 if plano and plano.fornecedor2 else '' }}">
-      </div>
-      <div>
-        <label>Fornecedor Tecido 3</label>
-        <input type="text" name="fornecedor3" value="{{ plano.fornecedor3 if plano and plano.fornecedor3 else '' }}">
+    <div style="margin-bottom:12px;">
+      <p style="font-size:11px;color:#9e7f6a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Fornecedores do Tecido</p>
+      <div class="grid" style="grid-template-columns:repeat(5,1fr);gap:8px;">
+        {% for n in [1,2,3,4,5] %}
+        <div>
+          <label>Fornecedor {{ n }}</label>
+          <select name="fornecedor{{ n }}_id" id="selForn{{ n }}" data-placeholder="Buscar fornecedor..." data-search="contains">
+            <option value=""></option>
+            {% for f in fornecedores %}
+            <option value="{{ f.id }}"
+              {% if plano and plano['fornecedor' ~ n ~ '_id'] == f.id %}selected{% endif %}>
+              {{ f.codigo }} — {{ f.nome_razao_social }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endfor %}
       </div>
     </div>
     <div class="grid" style="margin-bottom:20px;">
@@ -751,6 +756,7 @@
 
 <script>
   searchableSelect(document.getElementById('selectTipoTecido'));
+  [1,2,3,4,5].forEach(function(n){ searchableSelect(document.getElementById('selForn'+n)); });
 
   function toggleFormato() {
     var fmt = document.getElementById('formato_produto').value;

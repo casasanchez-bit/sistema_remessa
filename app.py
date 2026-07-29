@@ -99,6 +99,19 @@ def _migrar_banco():
             permissao TEXT NOT NULL,
             UNIQUE(usuario_id, permissao)
         )""",
+        """CREATE TABLE IF NOT EXISTS fornecedores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            codigo TEXT NOT NULL UNIQUE,
+            nome_razao_social TEXT NOT NULL,
+            telefone_empresa TEXT,
+            nome_representante TEXT,
+            telefone_representante TEXT
+        )""",
+        "ALTER TABLE planos_corte ADD COLUMN fornecedor1_id INTEGER REFERENCES fornecedores(id)",
+        "ALTER TABLE planos_corte ADD COLUMN fornecedor2_id INTEGER REFERENCES fornecedores(id)",
+        "ALTER TABLE planos_corte ADD COLUMN fornecedor3_id INTEGER REFERENCES fornecedores(id)",
+        "ALTER TABLE planos_corte ADD COLUMN fornecedor4_id INTEGER REFERENCES fornecedores(id)",
+        "ALTER TABLE planos_corte ADD COLUMN fornecedor5_id INTEGER REFERENCES fornecedores(id)",
     ]
     for sql in migrações:
         try:
@@ -2965,6 +2978,75 @@ def materia_prima_editar(mp_id):
 
 
 # ---------------------------------------------------------------------------
+# Cadastro de Fornecedores
+# ---------------------------------------------------------------------------
+
+@app.route("/cadastros/fornecedores")
+def cadastros_fornecedores():
+    db = get_db()
+    fornecedores = db.execute("SELECT * FROM fornecedores ORDER BY codigo").fetchall()
+    return render_template("cadastro_fornecedores.html", fornecedores=fornecedores)
+
+
+@app.route("/cadastros/fornecedor/adicionar", methods=["POST"])
+def fornecedor_adicionar():
+    db = get_db()
+    codigo = request.form.get("codigo", "").strip()
+    nome = request.form.get("nome_razao_social", "").strip()
+    if not codigo or not nome:
+        flash("Código e Nome/Razão Social são obrigatórios.", "erro")
+        return redirect(url_for("cadastros_fornecedores"))
+    try:
+        db.execute(
+            "INSERT INTO fornecedores (codigo, nome_razao_social, telefone_empresa, nome_representante, telefone_representante) VALUES (?,?,?,?,?)",
+            (codigo, nome,
+             request.form.get("telefone_empresa", "").strip() or None,
+             request.form.get("nome_representante", "").strip() or None,
+             request.form.get("telefone_representante", "").strip() or None)
+        )
+        db.commit()
+        flash("Fornecedor cadastrado.", "ok")
+    except Exception:
+        flash("Código já existe.", "erro")
+    return redirect(url_for("cadastros_fornecedores"))
+
+
+@app.route("/cadastros/fornecedor/<int:forn_id>/editar", methods=["POST"])
+def fornecedor_editar(forn_id):
+    db = get_db()
+    nome = request.form.get("nome_razao_social", "").strip()
+    if not nome:
+        flash("Nome/Razão Social é obrigatório.", "erro")
+        return redirect(url_for("cadastros_fornecedores"))
+    db.execute(
+        "UPDATE fornecedores SET nome_razao_social=?, telefone_empresa=?, nome_representante=?, telefone_representante=? WHERE id=?",
+        (nome,
+         request.form.get("telefone_empresa", "").strip() or None,
+         request.form.get("nome_representante", "").strip() or None,
+         request.form.get("telefone_representante", "").strip() or None,
+         forn_id)
+    )
+    db.commit()
+    flash("Fornecedor atualizado.", "ok")
+    return redirect(url_for("cadastros_fornecedores"))
+
+
+@app.route("/cadastros/fornecedor/<int:forn_id>/excluir", methods=["POST"])
+def fornecedor_excluir(forn_id):
+    db = get_db()
+    ids_cols = ["fornecedor1_id", "fornecedor2_id", "fornecedor3_id", "fornecedor4_id", "fornecedor5_id"]
+    where = " OR ".join(f"{c}=?" for c in ids_cols)
+    vinculado = db.execute(f"SELECT id FROM planos_corte WHERE {where}", [forn_id] * 5).fetchone()
+    if vinculado:
+        flash("Este fornecedor está vinculado a um ou mais planos de corte e não pode ser excluído.", "erro")
+        return redirect(url_for("cadastros_fornecedores"))
+    db.execute("DELETE FROM fornecedores WHERE id=?", (forn_id,))
+    db.commit()
+    flash("Fornecedor excluído.", "ok")
+    return redirect(url_for("cadastros_fornecedores"))
+
+
+# ---------------------------------------------------------------------------
 # Cronometragem de Corte
 # ---------------------------------------------------------------------------
 
@@ -3470,11 +3552,16 @@ def produto_plano_corte(produto_id):
         flash("Produto não encontrado.", "erro")
         return redirect(url_for("cadastros_produtos"))
     if request.method == "POST":
+        def _forn_id(n):
+            v = request.form.get(f"fornecedor{n}_id", "").strip()
+            return int(v) if v else None
         campos = {
             "tipo_tecido":        request.form.get("tipo_tecido", "").strip() or None,
-            "fornecedor1":        request.form.get("fornecedor1", "").strip() or None,
-            "fornecedor2":        request.form.get("fornecedor2", "").strip() or None,
-            "fornecedor3":        request.form.get("fornecedor3", "").strip() or None,
+            "fornecedor1_id":     _forn_id(1),
+            "fornecedor2_id":     _forn_id(2),
+            "fornecedor3_id":     _forn_id(3),
+            "fornecedor4_id":     _forn_id(4),
+            "fornecedor5_id":     _forn_id(5),
             "marca":              request.form.get("marca", "").strip() or None,
             "colecao":            request.form.get("colecao", "").strip() or None,
             "tamanho_final":      request.form.get("tamanho_final", "").strip() or None,
@@ -3514,7 +3601,8 @@ def produto_plano_corte(produto_id):
         existente = db.execute("SELECT id FROM planos_corte WHERE produto_id = ?", (produto_id,)).fetchone()
         if existente:
             db.execute("""
-                UPDATE planos_corte SET tipo_tecido=?, fornecedor1=?, fornecedor2=?, fornecedor3=?,
+                UPDATE planos_corte SET tipo_tecido=?,
+                fornecedor1_id=?, fornecedor2_id=?, fornecedor3_id=?, fornecedor4_id=?, fornecedor5_id=?,
                 marca=?, colecao=?, tamanho_final=?, largura_tecido=?, comprimento_enfesto=?,
                 largura_corte_cm=?, comprimento_corte_cm=?, tecido_dobrado=?,
                 tipo_ziper=?, puxadas_min=?, puxadas_max=?, formato_produto=?, diametro_cm=?,
@@ -3523,7 +3611,9 @@ def produto_plano_corte(produto_id):
                 largura_fundo_cm=?, comprimento_fundo_cm=?,
                 largura_fundo_menor_cm=?, comprimento_fundo_menor_cm=?
                 WHERE produto_id=?
-            """, (campos["tipo_tecido"], campos["fornecedor1"], campos["fornecedor2"], campos["fornecedor3"],
+            """, (campos["tipo_tecido"],
+                  campos["fornecedor1_id"], campos["fornecedor2_id"], campos["fornecedor3_id"],
+                  campos["fornecedor4_id"], campos["fornecedor5_id"],
                   campos["marca"], campos["colecao"], campos["tamanho_final"],
                   campos["largura_tecido"], campos["comprimento_enfesto"],
                   campos["largura_corte_cm"], campos["comprimento_corte_cm"], campos["tecido_dobrado"],
@@ -3536,7 +3626,8 @@ def produto_plano_corte(produto_id):
                   campos["largura_fundo_menor_cm"], campos["comprimento_fundo_menor_cm"], produto_id))
         else:
             db.execute("""
-                INSERT INTO planos_corte (produto_id, tipo_tecido, fornecedor1, fornecedor2, fornecedor3,
+                INSERT INTO planos_corte (produto_id, tipo_tecido,
+                fornecedor1_id, fornecedor2_id, fornecedor3_id, fornecedor4_id, fornecedor5_id,
                 marca, colecao, tamanho_final, largura_tecido, comprimento_enfesto,
                 largura_corte_cm, comprimento_corte_cm, tecido_dobrado,
                 tipo_ziper, puxadas_min, puxadas_max, formato_produto, diametro_cm,
@@ -3544,8 +3635,10 @@ def produto_plano_corte(produto_id):
                 tem_frente_fundo, largura_frente_cm, comprimento_frente_cm,
                 largura_fundo_cm, comprimento_fundo_cm,
                 largura_fundo_menor_cm, comprimento_fundo_menor_cm)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            """, (produto_id, campos["tipo_tecido"], campos["fornecedor1"], campos["fornecedor2"], campos["fornecedor3"],
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """, (produto_id, campos["tipo_tecido"],
+                  campos["fornecedor1_id"], campos["fornecedor2_id"], campos["fornecedor3_id"],
+                  campos["fornecedor4_id"], campos["fornecedor5_id"],
                   campos["marca"], campos["colecao"], campos["tamanho_final"],
                   campos["largura_tecido"], campos["comprimento_enfesto"],
                   campos["largura_corte_cm"], campos["comprimento_corte_cm"], campos["tecido_dobrado"],
@@ -3561,6 +3654,7 @@ def produto_plano_corte(produto_id):
         return redirect(url_for("produto_plano_corte", produto_id=produto_id))
     plano = db.execute("SELECT * FROM planos_corte WHERE produto_id = ?", (produto_id,)).fetchone()
     materias_primas = db.execute("SELECT codigo, descricao FROM materias_primas ORDER BY codigo").fetchall()
+    fornecedores = db.execute("SELECT * FROM fornecedores ORDER BY codigo").fetchall()
     composicao = db.execute("""
         SELECT mp.codigo, mp.descricao, pc.quantidade
         FROM produto_composicao pc
@@ -3585,7 +3679,8 @@ def produto_plano_corte(produto_id):
         })
     cron_media = _calcular_media_cronometragem(cron_medidas)
     return render_template("produto_plano_corte.html", produto=produto, plano=plano,
-                           materias_primas=materias_primas, composicao=composicao,
+                           materias_primas=materias_primas, fornecedores=fornecedores,
+                           composicao=composicao,
                            cron_medidas=cron_medidas, cron_media=cron_media)
 
 
