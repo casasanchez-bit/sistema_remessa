@@ -236,60 +236,63 @@
       {% endif %}
     </div>
 
-    {# Bloco 3: Composição de matérias-primas #}
-    <div class="bloco bloco-mps">
-      <div class="bloco-titulo">Composição das Matérias-Primas</div>
-      {% if composicao %}
-      <table class="mp-table">
-        <tr><th>Cód.</th><th>Descrição</th><th>Qtd</th></tr>
-        {% for mp in composicao %}
-        <tr>
-          <td>{{ mp.codigo }}</td>
-          <td>{{ mp.descricao }}</td>
-          <td>{{ '%.3f'|format(mp.quantidade) }}</td>
-        </tr>
-        {% endfor %}
-      </table>
-      {% else %}
-      <p style="font-size:8px;color:#aaa;margin:4px 0;">Nenhuma composição cadastrada para este produto.</p>
-      {% endif %}
-    </div>
-
-    {# Bloco 4: Cronometragem de Corte #}
+    {# Blocos 3+4: Composição e Cronometragem compartilham o espaço restante #}
     {% set tem_cron_prev = cron_medidas and cron_medidas|selectattr('tempo_str')|list %}
-    {% if tem_cron_prev %}
-    <div class="bloco" style="flex-shrink:0;">
-      <div class="bloco-titulo">Cronometragem de Corte</div>
-      <table class="mp-table" style="min-width:0;">
-        <tr>
-          <th style="text-align:center;width:16px;">Nº</th>
-          <th style="text-align:center;width:52px;">Data</th>
-          <th style="text-align:center;width:42px;">HH:MM</th>
-          <th style="text-align:center;width:32px;">Qtde</th>
-          <th style="text-align:left;">Cortadores</th>
-        </tr>
-        {% for m in cron_medidas %}{% if m.tempo_str or m.qtd_cortada %}
-        <tr>
-          <td style="text-align:center;font-weight:700;">{{ m.numero }}</td>
-          <td style="text-align:center;">{{ m.data_medicao|brdate if m.data_medicao else '—' }}</td>
-          <td style="text-align:center;font-family:monospace;">{{ m.tempo_str or '—' }}</td>
-          <td style="text-align:center;">{{ m.qtd_cortada or '—' }}</td>
-          <td>{{ m.nomes_pessoas or '—' }}</td>
-        </tr>
-        {% endif %}{% endfor %}
-        {% if cron_media %}
-        <tr style="background:#f5ede4;font-weight:700;">
-          <td colspan="2" style="text-align:center;">Média</td>
-          <td style="text-align:center;font-family:monospace;">{{ cron_media.tempo_str }}</td>
-          <td style="text-align:center;">{{ cron_media.qtd_cortada or '—' }}</td>
-          <td style="font-size:7px;color:#5C442C;">
-            {% if cron_media.pcs_hora %}{{ cron_media.pcs_hora }} pç/h{% endif %}
-          </td>
-        </tr>
+    <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:3mm;overflow:hidden;">
+
+      <div class="bloco" style="flex:1;overflow:hidden;">
+        <div class="bloco-titulo">Composição das Matérias-Primas</div>
+        {% if composicao %}
+        <table class="mp-table">
+          <tr><th>Cód.</th><th>Descrição</th><th>Qtd</th></tr>
+          {% for mp in composicao %}
+          <tr>
+            <td>{{ mp.codigo }}</td>
+            <td>{{ mp.descricao }}</td>
+            <td>{{ '%.3f'|format(mp.quantidade) }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+        {% else %}
+        <p style="font-size:8px;color:#aaa;margin:4px 0;">Nenhuma composição cadastrada para este produto.</p>
         {% endif %}
-      </table>
+      </div>
+
+      {% if tem_cron_prev %}
+      <div class="bloco" style="flex-shrink:0;">
+        <div class="bloco-titulo">Cronometragem de Corte</div>
+        <table class="mp-table" style="min-width:0;">
+          <tr>
+            <th style="text-align:center;width:16px;">Nº</th>
+            <th style="text-align:center;width:52px;">Data</th>
+            <th style="text-align:center;width:42px;">HH:MM</th>
+            <th style="text-align:center;width:32px;">Qtde</th>
+            <th style="text-align:left;">Cortadores</th>
+          </tr>
+          {% for m in cron_medidas %}{% if m.tempo_str or m.qtd_cortada %}
+          <tr>
+            <td style="text-align:center;font-weight:700;">{{ m.numero }}</td>
+            <td style="text-align:center;">{{ m.data_medicao|brdate if m.data_medicao else '—' }}</td>
+            <td style="text-align:center;font-family:monospace;">{{ m.tempo_str or '—' }}</td>
+            <td style="text-align:center;">{{ m.qtd_cortada or '—' }}</td>
+            <td>{{ m.nomes_pessoas or '—' }}</td>
+          </tr>
+          {% endif %}{% endfor %}
+          {% if cron_media %}
+          <tr style="background:#f5ede4;font-weight:700;">
+            <td colspan="2" style="text-align:center;">Média</td>
+            <td style="text-align:center;font-family:monospace;">{{ cron_media.tempo_str }}</td>
+            <td style="text-align:center;">{{ cron_media.qtd_cortada or '—' }}</td>
+            <td style="font-size:7px;color:#5C442C;">
+              {% if cron_media.pcs_hora %}{{ cron_media.pcs_hora }} pç/h{% endif %}
+            </td>
+          </tr>
+          {% endif %}
+        </table>
+      </div>
+      {% endif %}
+
     </div>
-    {% endif %}
 
   </div>
 </div>
