@@ -21,6 +21,10 @@
         <input type="number" name="qtd_enviada" min="1" value="{{ item.qtd_enviada }}" required>
       </div>
       <div>
+        <label>Previsão de Entrega</label>
+        <input type="date" name="previsao_entrega" value="{{ item.previsao_entrega or '' }}">
+      </div>
+      <div>
         <label>Prioridade de produção</label>
         <select name="prioridade">
           <option value="">Sem prioridade</option>

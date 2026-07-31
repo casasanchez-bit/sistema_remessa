@@ -43,6 +43,7 @@
         <b>{{ item.produto_completo }}</b> — {{ item.cor_descricao }}
       </span>
       <span style="margin-left:auto;font-size:12px;color:#666;">
+        {% if item.previsao_entrega %}<span style="margin-right:10px;">Prev. Entrega: <b>{{ item.previsao_entrega|brdate }}</b></span>{% endif %}
         Env: <b>{{ item.qtd_enviada }}</b> | Ret: <b>{{ item.qtd_retornada }}</b> | Pend: <b>{{ item.pendente }}</b>
       </span>
       <a class="btn-mini editar" href="/itens-remessa/{{ item.id }}/editar" style="font-size:10px;padding:2px 7px;">EDITAR</a>

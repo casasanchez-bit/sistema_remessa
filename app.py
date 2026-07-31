@@ -112,6 +112,7 @@ def _migrar_banco():
         "ALTER TABLE planos_corte ADD COLUMN fornecedor3_id INTEGER REFERENCES fornecedores(id)",
         "ALTER TABLE planos_corte ADD COLUMN fornecedor4_id INTEGER REFERENCES fornecedores(id)",
         "ALTER TABLE planos_corte ADD COLUMN fornecedor5_id INTEGER REFERENCES fornecedores(id)",
+        "ALTER TABLE itens_remessa ADD COLUMN previsao_entrega DATE",
     ]
     for sql in migrações:
         try:
@@ -1535,10 +1536,11 @@ def remessas():
 @app.route("/remessas/nova", methods=["POST"])
 def nova_remessa():
     db = get_db()
-    produto_ids  = request.form.getlist("produto_id")
-    cor_ids      = request.form.getlist("cor_estampa_id")
-    quantidades  = request.form.getlist("qtd_enviada")
-    prioridades  = request.form.getlist("prioridade")
+    produto_ids       = request.form.getlist("produto_id")
+    cor_ids           = request.form.getlist("cor_estampa_id")
+    quantidades       = request.form.getlist("qtd_enviada")
+    prioridades       = request.form.getlist("prioridade")
+    previsoes_entrega = request.form.getlist("previsao_entrega")
 
     itens_validos = []
     for idx, (produto_id, cor_id, qtd, prioridade) in enumerate(
@@ -1554,8 +1556,10 @@ def nova_remessa():
         svc_ids = [s for s in request.form.getlist(f"svc_id_{idx}") if s]
         if not svc_ids:
             continue
+        previsao = previsoes_entrega[idx].strip() if idx < len(previsoes_entrega) else ""
         itens_validos.append((produto_id, cor_id, qtd_int,
-                               int(prioridade) if prioridade else None, svc_ids))
+                               int(prioridade) if prioridade else None, svc_ids,
+                               previsao or None))
 
     if not itens_validos:
         flash("Informe ao menos um item com quantidade e pelo menos um serviço.", "erro")
@@ -1579,12 +1583,12 @@ def nova_remessa():
         return redirect(url_for("remessas"))
     remessa_id = cur.lastrowid
 
-    for produto_id, cor_id, qtd_int, prioridade, svc_ids in itens_validos:
+    for produto_id, cor_id, qtd_int, prioridade, svc_ids, previsao in itens_validos:
         cur2 = db.execute(
             """INSERT INTO itens_remessa
-               (remessa_id, produto_id, cor_estampa_id, qtd_enviada, prioridade)
-               VALUES (?, ?, ?, ?, ?)""",
-            (remessa_id, produto_id, cor_id, qtd_int, prioridade),
+               (remessa_id, produto_id, cor_estampa_id, qtd_enviada, prioridade, previsao_entrega)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (remessa_id, produto_id, cor_id, qtd_int, prioridade, previsao),
         )
         item_id = cur2.lastrowid
         for svc_id in svc_ids:
@@ -1941,14 +1945,16 @@ def editar_item_remessa(item_id):
             )
         elif qtd_enviada > 0:
             prioridade = request.form.get("prioridade", "").strip()
+            previsao_entrega = request.form.get("previsao_entrega", "").strip() or None
             db.execute(
-                """UPDATE itens_remessa SET produto_id = ?, cor_estampa_id = ?, qtd_enviada = ?, prioridade = ?
+                """UPDATE itens_remessa SET produto_id = ?, cor_estampa_id = ?, qtd_enviada = ?, prioridade = ?, previsao_entrega = ?
                    WHERE id = ?""",
                 (
                     request.form["produto_id"],
                     request.form["cor_estampa_id"],
                     qtd_enviada,
                     int(prioridade) if prioridade else None,
+                    previsao_entrega,
                     item_id,
                 ),
             )
