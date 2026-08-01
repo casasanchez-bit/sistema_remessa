@@ -545,43 +545,62 @@
 </style>
 
 <script>
-(function () {
-  var lt     = {{ plano.largura_tecido or 0 if plano else 0 }};
-  var ce     = {{ plano.comprimento_enfesto or 0 if plano else 0 }};
-  var lc     = {{ plano.largura_corte_cm or 0 if plano else 0 }};
-  var cc     = {{ plano.comprimento_corte_cm or 0 if plano else 0 }};
-  var dob    = {{ (1 if plano.tecido_dobrado else 0) if plano else 0 }};
-  var fmt    = "{{ plano.formato_produto if plano and plano.formato_produto else 'retangular' }}";
-  var diametro = {{ plano.diametro_cm or 0 if plano else 0 }};
+/* ── Dados do plano ──────────────────────────────────────────────────── */
+var _lt      = {{ plano.largura_tecido or 0 if plano else 0 }};
+var _ce      = {{ plano.comprimento_enfesto or 0 if plano else 0 }};
+var _lc      = {{ plano.largura_corte_cm or 0 if plano else 0 }};
+var _cc      = {{ plano.comprimento_corte_cm or 0 if plano else 0 }};
+var _dob     = {{ (1 if plano.tecido_dobrado else 0) if plano else 0 }};
+var _fmt     = "{{ plano.formato_produto if plano and plano.formato_produto else 'retangular' }}";
+var _diam    = {{ plano.diametro_cm or 0 if plano else 0 }};
+var _ff      = {{ (1 if plano.tem_frente_fundo else 0) if plano else 0 }};
+var _lc_frt  = {{ plano.largura_frente_cm or 0 if plano else 0 }};
+var _cc_frt  = {{ plano.comprimento_frente_cm or 0 if plano else 0 }};
+var _lc_fnd  = {{ plano.largura_fundo_cm or 0 if plano else 0 }};
+var _cc_fnd  = {{ plano.comprimento_fundo_cm or 0 if plano else 0 }};
+var _lc_fnd_mn = {{ plano.largura_fundo_menor_cm or 0 if plano else 0 }};
+var _cc_fnd_mn = {{ plano.comprimento_fundo_menor_cm or 0 if plano else 0 }};
+var _tipoZiper = "{{ plano.tipo_ziper or '' if plano else '' }}";
 
+function atualizarFormZiper() {
+  var sel = document.getElementById('selectTipoZiper');
+  var prv = document.getElementById('prevZiperForm');
+  var img = document.getElementById('imgPrevZiperForm');
+  var lbl = document.getElementById('lblPrevZiperForm');
+  if (!sel || !prv || !img) return;
+  var tipo = sel.value;
+  var src = '';
+  if (tipo === 'Zíper Branco N5')
+    src = "{{ url_for('static', filename='ziper/ziper_branco_n5.jpg') }}";
+  else if (tipo === 'Invisível Colorido' || tipo === 'Semi-Invisível Colorido')
+    src = "{{ url_for('static', filename='ziper/invisivel_colorido.jpg') }}";
+  if (src) { img.src = src; if (lbl) lbl.textContent = tipo; prv.style.display = 'block'; }
+  else { prv.style.display = 'none'; }
+  _tipoZiper = tipo;
+  atualizarPreview();
+}
+
+/* ── Função central de desenho do diagrama ───────────────────────────── */
+function desenharDiagrama(cv, W, H, lt, ce, lcIn, ccIn, dob, fmt, diametro, ff, lc_frt, cc_frt, lc_fnd, cc_fnd, lc_fnd_mn, cc_fnd_mn, tipoZiper, ziperImg) {
+  var isFrFnd  = ff && fmt !== 'redondo';
   var isRedondo = (fmt === 'redondo');
+  var lc = lcIn, cc = ccIn;
   if (isRedondo) { lc = diametro; cc = diametro; }
-  if (!lt || !ce || !lc || !cc) return;
 
-  var cols  = Math.floor(lt / lc);
-  var rows  = Math.floor(ce / cc);
-  var total = cols * rows;
-  var aprov = isRedondo
-    ? (total * Math.PI * (diametro/2) * (diametro/2)) / (lt * ce) * 100
-    : (cols * lc * rows * cc) / (lt * ce) * 100;
+  if (isFrFnd) {
+    if (!lt || !ce || !lc_frt || !cc_frt || !lc_fnd || !cc_fnd) return null;
+  } else {
+    if (!lt || !ce || !lc || !cc) return null;
+  }
 
-  document.getElementById('pCols').textContent  = cols + ' coluna(s)';
-  document.getElementById('pRows').textContent  = rows + ' fileira(s)';
-  document.getElementById('pTotal').textContent = total + ' peças';
-  document.getElementById('pAprov').textContent = aprov.toFixed(1) + ' %';
-
-  var wrap = document.querySelector('.diagrama-wrap');
-  var cv   = document.getElementById('cvDiagrama');
-  var W    = wrap.offsetWidth  || 230;
-  var H    = wrap.offsetHeight || 560;
-
-  var ROLL_H  = 36;   // altura da ilustração do rolo
-  var FOLD_H  = dob ? 44 : 0;  // altura da ilustração de dobra
-  var PAD     = 14;
-  var COTA_H  = 18;
+  var ROLL_H = 36;
+  var FOLD_H = dob ? 44 : 0;
+  var PAD    = 14;
+  var COTA_H = 18;
+  var ZIPER_H = (tipoZiper && ziperImg) ? 76 : 0;
 
   var areaW = W - PAD * 2;
-  var areaH = H - PAD - ROLL_H - 6 - COTA_H - FOLD_H - PAD;
+  var areaH = H - PAD - ROLL_H - 6 - COTA_H - FOLD_H - ZIPER_H - PAD;
   var esc   = Math.min(areaW / lt, areaH / ce);
   var fw    = lt * esc;
   var fh    = ce * esc;
@@ -589,269 +608,387 @@
   var oy    = PAD + ROLL_H + 6;
 
   var dpr = window.devicePixelRatio || 1;
-  cv.width  = W * dpr;
-  cv.height = H * dpr;
-  cv.style.width  = W + 'px';
-  cv.style.height = H + 'px';
+  cv.width  = W * dpr; cv.height = H * dpr;
+  cv.style.width  = W + 'px'; cv.style.height = H + 'px';
   var ctx = cv.getContext('2d');
   ctx.scale(dpr, dpr);
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
 
-  // ── Rolo de tecido (topo) ──────────────────────────────────────────
+  // ── Rolo de tecido ──────────────────────────────────────────────────
   var rx = ox, ry = PAD, rw = fw, rh = ROLL_H;
-  var er = rh * 0.38; // raio do elipse lateral
-
-  // Corpo do rolo (retângulo com elipses nas pontas)
+  var er = rh * 0.38;
   ctx.fillStyle = '#E8DDD0';
   ctx.beginPath();
-  ctx.moveTo(rx + er, ry);
-  ctx.lineTo(rx + rw - er, ry);
-  ctx.ellipse(rx + rw - er, ry + rh / 2, er * 0.55, rh / 2, 0, -Math.PI / 2, Math.PI / 2);
-  ctx.lineTo(rx + er, ry + rh);
-  ctx.ellipse(rx + er, ry + rh / 2, er * 0.55, rh / 2, 0, Math.PI / 2, -Math.PI / 2);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = '#8B6347'; ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // Elipse esquerda (topo visível do cilindro)
+  ctx.moveTo(rx+er, ry); ctx.lineTo(rx+rw-er, ry);
+  ctx.ellipse(rx+rw-er, ry+rh/2, er*0.55, rh/2, 0, -Math.PI/2, Math.PI/2);
+  ctx.lineTo(rx+er, ry+rh);
+  ctx.ellipse(rx+er, ry+rh/2, er*0.55, rh/2, 0, Math.PI/2, -Math.PI/2);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#8B6347'; ctx.lineWidth = 1; ctx.stroke();
   ctx.fillStyle = '#D5C5B0';
-  ctx.beginPath();
-  ctx.ellipse(rx + er, ry + rh / 2, er * 0.55, rh / 2, 0, 0, Math.PI * 2);
-  ctx.fill(); ctx.stroke();
-
-  // Núcleo interno
+  ctx.beginPath(); ctx.ellipse(rx+er, ry+rh/2, er*0.55, rh/2, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#C4A882';
-  ctx.beginPath();
-  ctx.ellipse(rx + er, ry + rh / 2, er * 0.22, rh * 0.2, 0, 0, Math.PI * 2);
-  ctx.fill(); ctx.stroke();
-
-  // Linhas de textura do tecido enrolado
+  ctx.beginPath(); ctx.ellipse(rx+er, ry+rh/2, er*0.22, rh*0.2, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = '#C4A882'; ctx.lineWidth = 0.5;
-  for (var i = 1; i < 4; i++) {
-    var lx = rx + er + (rw - er * 2) * (i / 4);
-    ctx.beginPath(); ctx.moveTo(lx, ry + 2); ctx.lineTo(lx, ry + rh - 2); ctx.stroke();
-  }
+  for (var i=1;i<4;i++){var lxr=rx+er+(rw-er*2)*(i/4);ctx.beginPath();ctx.moveTo(lxr,ry+2);ctx.lineTo(lxr,ry+rh-2);ctx.stroke();}
+  ctx.fillStyle='#5C442C'; ctx.font='bold 8px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('ROLO DE TECIDO — '+lt+' cm largura', rx+rw/2+er/2, ry+rh/2);
+  ctx.strokeStyle='#8B6347'; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.moveTo(ox+fw/2, ry+rh); ctx.lineTo(ox+fw/2, oy-2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox+fw/2-4,oy-6); ctx.lineTo(ox+fw/2,oy-1); ctx.lineTo(ox+fw/2+4,oy-6); ctx.stroke();
 
-  // Label do rolo
-  ctx.fillStyle = '#5C442C'; ctx.font = 'bold 8px Arial';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('ROLO DE TECIDO — ' + lt + ' cm largura', rx + rw / 2 + er / 2, ry + rh / 2);
+  // ── Grade do enfesto ────────────────────────────────────────────────
+  ctx.strokeStyle='#3a2a1a'; ctx.lineWidth=1.5; ctx.strokeRect(ox, oy, fw, fh);
 
-  // Seta do rolo para o enfesto
-  ctx.strokeStyle = '#8B6347'; ctx.lineWidth = 0.8;
-  ctx.beginPath();
-  ctx.moveTo(ox + fw / 2, ry + rh);
-  ctx.lineTo(ox + fw / 2, oy - 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(ox + fw / 2 - 4, oy - 6);
-  ctx.lineTo(ox + fw / 2, oy - 1);
-  ctx.lineTo(ox + fw / 2 + 4, oy - 6);
-  ctx.stroke();
+  var mT = 2*esc, mL = 1*esc, ESQ_COLOR = '#006994';
+  var gx = ox+mL, gy = oy+mT;
+  var cores = ['#F0EBE5','#EDE4DB'];
 
-  // ── Grade do enfesto ───────────────────────────────────────────────
-  ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1.5;
-  ctx.strokeRect(ox, oy, fw, fh);
+  var result;
 
-  var mT = 2 * esc;  // 2cm topo
-  var mL = 1 * esc;  // 1cm lateral
-  var ESQ_COLOR = '#006994';
+  if (isFrFnd) {
+    // ── Modo Frente + Fundo Maior + Fundo Menor ──────────────────────
+    var cols_frt = Math.floor(lt / lc_frt);
+    var cols_fm  = Math.floor(lt / lc_fnd);
+    if (!cols_frt || !cols_fm) return null;
 
-  // Grade de peças começa após as margens
-  var gx = ox + mL;
-  var gy = oy + mT;
-  var pw = lc * esc;
-  var ph = cc * esc;
-  var cores = ['#F0EBE5', '#EDE4DB'];
+    var hasMenor = lc_fnd_mn > 0 && cc_fnd_mn > 0;
+    var cols_fn  = hasMenor ? Math.floor(lt / lc_fnd_mn) : 0;
+    if (hasMenor && !cols_fn) return null;
 
-  for (var r = 0; r < rows; r++) {
-    for (var c = 0; c < cols; c++) {
-      var px = gx + c * pw;
-      var py = gy + r * ph;
-      ctx.fillStyle = cores[(r + c) % 2];
-      if (isRedondo) {
-        var rad = pw / 2 - 1;
-        var cx2 = px + pw / 2, cy2 = py + ph / 2;
-        ctx.beginPath(); ctx.arc(cx2, cy2, rad, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#8B6347'; ctx.lineWidth = 0.8; ctx.stroke();
-        if (pw > 24) {
-          var fs = Math.min(9, pw / 5);
-          ctx.fillStyle = '#5C3D1E'; ctx.font = 'bold ' + fs + 'px Arial';
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText('⌀ ' + diametro + ' cm', cx2, cy2);
+    var best_units = 0, best_rf = 1, best_rm = 1, best_rn = 0;
+
+    if (hasMenor) {
+      for (var rf = 1; rf * cc_frt <= ce; rf++) {
+        var rem1 = ce - rf * cc_frt;
+        for (var rm = 1; rm * cc_fnd <= rem1; rm++) {
+          var rn = Math.floor((rem1 - rm * cc_fnd) / cc_fnd_mn);
+          if (rn < 1) continue;
+          var units = Math.min(cols_frt * rf, cols_fm * rm, cols_fn * rn);
+          if (units > best_units) { best_units = units; best_rf = rf; best_rm = rm; best_rn = rn; }
         }
-      } else {
-        ctx.fillRect(px + 1, py + 1, pw - 2, ph - 2);
-        ctx.strokeStyle = '#8B6347'; ctx.lineWidth = 0.8;
-        ctx.strokeRect(px + 1, py + 1, pw - 2, ph - 2);
-        if (pw > 24 && ph > 14) {
-          var fs = Math.min(9, pw / 5);
-          ctx.fillStyle = '#5C3D1E';
-          ctx.font = 'bold ' + fs + 'px Arial';
-          ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-          ctx.fillText(lc + ' cm', px + pw / 2, py + 4);
-          ctx.save();
-          ctx.translate(px + 10, py + ph / 2);
-          ctx.rotate(-Math.PI / 2);
-          ctx.font = 'bold ' + fs + 'px Arial';
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText(cc + ' cm', 0, 0);
-          ctx.restore();
+      }
+    } else {
+      for (var rf = 1; rf * cc_frt <= ce; rf++) {
+        var rm_max = Math.floor((ce - rf * cc_frt) / cc_fnd);
+        if (rm_max < 1) continue;
+        var units = Math.min(cols_frt * rf, cols_fm * rm_max);
+        if (units > best_units) { best_units = units; best_rf = rf; best_rm = rm_max; best_rn = 0; }
+      }
+    }
+
+    var pw_frt = lc_frt * esc, ph_frt = cc_frt * esc;
+    var pw_fm  = lc_fnd * esc, ph_fm  = cc_fnd * esc;
+    var pw_fn  = hasMenor ? lc_fnd_mn * esc : 0;
+    var ph_fn  = hasMenor ? cc_fnd_mn * esc : 0;
+    var cores_fm  = ['#E5EBF0','#DBE4ED'];
+    var cores_fn  = ['#FFF3DC','#FAE8C0'];
+    var sep_y = gy + best_rf * ph_frt;
+
+    function _lateralWaste(sX, startY, secH, sobraLarg) {
+      var sW = (ox+fw) - sX;
+      if (sW <= 2) return;
+      ctx.save(); ctx.beginPath(); ctx.rect(sX,startY,sW,secH); ctx.clip();
+      ctx.fillStyle='rgba(255,200,0,0.18)'; ctx.fillRect(sX,startY,sW,secH);
+      ctx.strokeStyle='#B8860B'; ctx.lineWidth=0.7;
+      for(var si=-secH;si<sW;si+=8){ctx.beginPath();ctx.moveTo(sX+si,startY);ctx.lineTo(sX+si+secH,startY+secH);ctx.stroke();}
+      ctx.restore();
+      ctx.strokeStyle='#B8860B'; ctx.lineWidth=1; ctx.setLineDash([3,2]);
+      ctx.beginPath(); ctx.moveTo(sX,startY); ctx.lineTo(sX,startY+secH); ctx.stroke(); ctx.setLineDash([]);
+      if (sW > 10) {
+        var slblL='⚠ '+sobraLarg.toFixed(1)+' cm';
+        ctx.save(); ctx.translate(sX+sW/2,startY+secH/2); ctx.rotate(-Math.PI/2);
+        ctx.font='bold 7.5px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        var slWL=ctx.measureText(slblL).width;
+        ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillRect(-slWL/2-4,-7,slWL+8,14);
+        ctx.fillStyle='#8B6000'; ctx.fillText(slblL,0,0); ctx.restore();
+      }
+    }
+    function _sectionLabel(txt, color, lx, ly) {
+      ctx.font='bold 8px Arial'; ctx.textAlign='left'; ctx.textBaseline='top';
+      var tw=ctx.measureText(txt).width;
+      ctx.fillStyle='rgba(255,255,255,0.88)'; ctx.fillRect(lx,ly,tw+6,12);
+      ctx.fillStyle=color; ctx.fillText(txt,lx+2,ly+1);
+    }
+
+    // Peças FRENTE (verde)
+    for (var r=0;r<best_rf;r++) {
+      for (var c=0;c<cols_frt;c++) {
+        var px=gx+c*pw_frt, py=gy+r*ph_frt;
+        ctx.fillStyle=cores[(r+c)%2]; ctx.fillRect(px+1,py+1,pw_frt-2,ph_frt-2);
+        ctx.strokeStyle='#4B8A36'; ctx.lineWidth=0.8; ctx.strokeRect(px+1,py+1,pw_frt-2,ph_frt-2);
+        if (pw_frt>24&&ph_frt>14){
+          var fsF=Math.min(9,pw_frt/5); ctx.fillStyle='#2a5a14';
+          ctx.font='bold '+fsF+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='top';
+          ctx.fillText(lc_frt+' cm',px+pw_frt/2,py+4);
+          ctx.save(); ctx.translate(px+10,py+ph_frt/2); ctx.rotate(-Math.PI/2);
+          ctx.font='bold '+fsF+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.fillText(cc_frt+' cm',0,0); ctx.restore();
         }
       }
     }
-  }
+    _lateralWaste(gx+cols_frt*pw_frt, gy, best_rf*ph_frt, lt-cols_frt*lc_frt);
+    _sectionLabel('▶ FRENTE ('+best_rf+' fil. × '+cols_frt+' col. = '+(best_rf*cols_frt)+' pç)','#2a6a1a',gx,gy+2);
 
-  // Linhas de dobra (só para retangular)
-  if (dob && !isRedondo) {
-    ctx.setLineDash([3, 3]);
-    ctx.strokeStyle = '#AF4005'; ctx.lineWidth = 1;
-    for (var r2 = 0; r2 < rows; r2++) {
-      var lineY = gy + r2 * ph + ph / 2;
-      ctx.beginPath(); ctx.moveTo(gx, lineY); ctx.lineTo(gx + cols * pw, lineY); ctx.stroke();
-    }
-    ctx.setLineDash([]);
-    ctx.fillStyle = '#AF4005'; ctx.font = 'bold 7px Arial';
-    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    ctx.fillText('DOBRA', gx + pw * 0.18, gy + ph / 2 + 12);
-  }
+    // Separador FRENTE / FUNDO MAIOR
+    ctx.setLineDash([4,3]); ctx.strokeStyle='#1a3d7a'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(ox,sep_y); ctx.lineTo(ox+fw,sep_y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.font='bold 8px Arial'; ctx.textAlign='center';
+    var sepLblFM='▼ FUNDO MAIOR', slWFM=ctx.measureText(sepLblFM).width+10;
+    ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.fillRect(ox+fw/2-slWFM/2,sep_y-7,slWFM,14);
+    ctx.fillStyle='#1a3d7a'; ctx.textBaseline='middle'; ctx.fillText(sepLblFM,ox+fw/2,sep_y);
 
-  // Área de sobra inferior (comprimento)
-  var sobraY = gy + rows * ph;
-  var sobraH = (oy + fh) - sobraY;
-  var sobraCompCm = ce - rows * cc;
-  var faltaCompCm = cc - sobraCompCm;
-  if (sobraH > 2) {
-    ctx.save();
-    ctx.beginPath(); ctx.rect(ox, sobraY, fw, sobraH); ctx.clip();
-    ctx.fillStyle = 'rgba(255, 200, 0, 0.18)'; ctx.fillRect(ox, sobraY, fw, sobraH);
-    ctx.strokeStyle = '#B8860B'; ctx.lineWidth = 0.7;
-    for (var si = -sobraH; si < fw; si += 8) {
-      ctx.beginPath(); ctx.moveTo(ox + si, sobraY); ctx.lineTo(ox + si + sobraH, sobraY + sobraH); ctx.stroke();
+    // Peças FUNDO MAIOR (azul)
+    var gy_fm = sep_y;
+    for (var r2=0;r2<best_rm;r2++) {
+      for (var c2=0;c2<cols_fm;c2++) {
+        var px2=gx+c2*pw_fm, py2=gy_fm+r2*ph_fm;
+        ctx.fillStyle=cores_fm[(r2+c2)%2]; ctx.fillRect(px2+1,py2+1,pw_fm-2,ph_fm-2);
+        ctx.strokeStyle='#2D5A8B'; ctx.lineWidth=0.8; ctx.strokeRect(px2+1,py2+1,pw_fm-2,ph_fm-2);
+        if (pw_fm>24&&ph_fm>14){
+          var fsFM=Math.min(9,pw_fm/5); ctx.fillStyle='#1a3d5a';
+          ctx.font='bold '+fsFM+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='top';
+          ctx.fillText(lc_fnd+' cm',px2+pw_fm/2,py2+4);
+          ctx.save(); ctx.translate(px2+10,py2+ph_fm/2); ctx.rotate(-Math.PI/2);
+          ctx.font='bold '+fsFM+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.fillText(cc_fnd+' cm',0,0); ctx.restore();
+        }
+      }
     }
-    ctx.restore();
-    ctx.strokeStyle = '#B8860B'; ctx.lineWidth = 1; ctx.setLineDash([3,2]);
-    ctx.beginPath(); ctx.moveTo(ox, sobraY); ctx.lineTo(ox + fw, sobraY); ctx.stroke();
-    ctx.setLineDash([]);
-    if (sobraH > 10) {
-      var sobraLabel = '⚠ Sobra ' + sobraCompCm.toFixed(1) + ' cm — faltam ' + faltaCompCm.toFixed(1) + ' cm p/ + 1 fileira';
-      ctx.font = 'bold 7.5px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      var slW = ctx.measureText(sobraLabel).width;
-      var slX = ox + fw / 2, slY = sobraY + sobraH / 2;
-      ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(slX - slW/2 - 4, slY - 7, slW + 8, 14);
-      ctx.fillStyle = '#8B6000'; ctx.fillText(sobraLabel, slX, slY);
-    }
-  }
+    _lateralWaste(gx+cols_fm*pw_fm, gy_fm, best_rm*ph_fm, lt-cols_fm*lc_fnd);
+    _sectionLabel('▶ FUNDO MAIOR ('+best_rm+' fil. × '+cols_fm+' col. = '+(best_rm*cols_fm)+' pç)','#1a3d7a',gx,gy_fm+20);
 
-  // Área de sobra lateral direita (largura)
-  var sobraX = gx + cols * pw;
-  var sobraW = (ox + fw) - sobraX;
-  var sobraLargCm = lt - cols * lc;
-  var faltaLargCm = lc - sobraLargCm;
-  if (sobraW > 2) {
-    ctx.save();
-    ctx.beginPath(); ctx.rect(sobraX, gy, sobraW, rows * ph); ctx.clip();
-    ctx.fillStyle = 'rgba(255, 200, 0, 0.18)'; ctx.fillRect(sobraX, gy, sobraW, rows * ph);
-    ctx.strokeStyle = '#B8860B'; ctx.lineWidth = 0.7;
-    for (var si2 = -(rows * ph); si2 < sobraW; si2 += 8) {
-      ctx.beginPath(); ctx.moveTo(sobraX + si2, gy); ctx.lineTo(sobraX + si2 + rows * ph, gy + rows * ph); ctx.stroke();
+    var last_endY = gy_fm + best_rm * ph_fm;
+
+    if (hasMenor && best_rn > 0) {
+      var sep_y2 = last_endY;
+      ctx.setLineDash([4,3]); ctx.strokeStyle='#8B5A00'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(ox,sep_y2); ctx.lineTo(ox+fw,sep_y2); ctx.stroke(); ctx.setLineDash([]);
+      ctx.font='bold 8px Arial'; ctx.textAlign='center';
+      var sepLblFN='▼ FUNDO MENOR', slWFN=ctx.measureText(sepLblFN).width+10;
+      ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.fillRect(ox+fw/2-slWFN/2,sep_y2-7,slWFN,14);
+      ctx.fillStyle='#8B5A00'; ctx.textBaseline='middle'; ctx.fillText(sepLblFN,ox+fw/2,sep_y2);
+
+      // Peças FUNDO MENOR (âmbar)
+      var gy_fn = sep_y2;
+      for (var r3=0;r3<best_rn;r3++) {
+        for (var c3=0;c3<cols_fn;c3++) {
+          var px3=gx+c3*pw_fn, py3=gy_fn+r3*ph_fn;
+          ctx.fillStyle=cores_fn[(r3+c3)%2]; ctx.fillRect(px3+1,py3+1,pw_fn-2,ph_fn-2);
+          ctx.strokeStyle='#A0640A'; ctx.lineWidth=0.8; ctx.strokeRect(px3+1,py3+1,pw_fn-2,ph_fn-2);
+          if (pw_fn>24&&ph_fn>14){
+            var fsFN=Math.min(9,pw_fn/5); ctx.fillStyle='#5A3A00';
+            ctx.font='bold '+fsFN+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='top';
+            ctx.fillText(lc_fnd_mn+' cm',px3+pw_fn/2,py3+4);
+            ctx.save(); ctx.translate(px3+10,py3+ph_fn/2); ctx.rotate(-Math.PI/2);
+            ctx.font='bold '+fsFN+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText(cc_fnd_mn+' cm',0,0); ctx.restore();
+          }
+        }
+      }
+      _lateralWaste(gx+cols_fn*pw_fn, gy_fn, best_rn*ph_fn, lt-cols_fn*lc_fnd_mn);
+      _sectionLabel('▶ FUNDO MENOR ('+best_rn+' fil. × '+cols_fn+' col. = '+(best_rn*cols_fn)+' pç)','#8B5A00',gx,gy_fn+20);
+      last_endY = gy_fn + best_rn * ph_fn;
     }
-    ctx.restore();
-    ctx.strokeStyle = '#B8860B'; ctx.lineWidth = 1; ctx.setLineDash([3,2]);
-    ctx.beginPath(); ctx.moveTo(sobraX, gy); ctx.lineTo(sobraX, gy + rows * ph); ctx.stroke();
-    ctx.setLineDash([]);
-    if (sobraW > 10) {
-      var sobraLbl2 = '⚠ Sobra ' + sobraLargCm.toFixed(1) + ' cm na largura';
-      ctx.save();
-      ctx.translate(sobraX + sobraW / 2, gy + rows * ph / 2);
-      ctx.rotate(-Math.PI / 2);
-      ctx.font = 'bold 7.5px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      var slW2 = ctx.measureText(sobraLbl2).width;
-      ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(-slW2/2 - 4, -7, slW2 + 8, 14);
-      ctx.fillStyle = '#8B6000'; ctx.fillText(sobraLbl2, 0, 0);
+
+    // Sobra após última seção
+    var sobraH_ff  = (oy + fh) - last_endY;
+    var sobraCm_ff = ce - best_rf * cc_frt - best_rm * cc_fnd - (hasMenor ? best_rn * cc_fnd_mn : 0);
+    if (sobraH_ff > 2) {
+      ctx.save(); ctx.beginPath(); ctx.rect(ox,last_endY,fw,sobraH_ff); ctx.clip();
+      ctx.fillStyle='rgba(255,200,0,0.18)'; ctx.fillRect(ox,last_endY,fw,sobraH_ff);
+      ctx.strokeStyle='#B8860B'; ctx.lineWidth=0.7;
+      for(var si=-sobraH_ff;si<fw;si+=8){ctx.beginPath();ctx.moveTo(ox+si,last_endY);ctx.lineTo(ox+si+sobraH_ff,last_endY+sobraH_ff);ctx.stroke();}
       ctx.restore();
+      ctx.strokeStyle='#B8860B'; ctx.lineWidth=1; ctx.setLineDash([3,2]);
+      ctx.beginPath(); ctx.moveTo(ox,last_endY); ctx.lineTo(ox+fw,last_endY); ctx.stroke(); ctx.setLineDash([]);
+      if (sobraH_ff > 10) {
+        var slblFF='⚠ Sobra '+sobraCm_ff.toFixed(1)+' cm';
+        ctx.font='bold 7.5px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        var slWFF=ctx.measureText(slblFF).width;
+        ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillRect(ox+fw/2-slWFF/2-4,last_endY+sobraH_ff/2-7,slWFF+8,14);
+        ctx.fillStyle='#8B6000'; ctx.fillText(slblFF,ox+fw/2,last_endY+sobraH_ff/2);
+      }
     }
+
+    var areaUsada = (cols_frt*lc_frt*best_rf*cc_frt) + (cols_fm*lc_fnd*best_rm*cc_fnd)
+                  + (hasMenor ? cols_fn*lc_fnd_mn*best_rn*cc_fnd_mn : 0);
+    var aprov_ff = areaUsada / (lt * ce) * 100;
+    var colsStr = hasMenor ? cols_frt+'/'+cols_fm+'/'+cols_fn : cols_frt+'/'+cols_fm;
+    var rowsStr = hasMenor ? best_rf+'/'+best_rm+'/'+best_rn   : best_rf+'/'+best_rm;
+    result = { cols: colsStr, rows: rowsStr, total: best_units, aprov: aprov_ff };
+
+  } else {
+    // ── Modo Normal (retangular ou redondo) ─────────────────────────
+    var cols  = Math.floor(lt / lc);
+    var rows  = Math.floor(ce / cc);
+    var total = cols * rows;
+    var aprov = isRedondo
+      ? (total * Math.PI * (diametro/2) * (diametro/2)) / (lt * ce) * 100
+      : (cols * lc * rows * cc) / (lt * ce) * 100;
+
+    var pw = lc*esc, ph = cc*esc;
+
+    for (var r=0;r<rows;r++) {
+      for (var c=0;c<cols;c++) {
+        var px=gx+c*pw, py=gy+r*ph;
+        ctx.fillStyle=cores[(r+c)%2];
+        if (isRedondo) {
+          var rad=pw/2-1, cx2=px+pw/2, cy2=py+ph/2;
+          ctx.beginPath(); ctx.arc(cx2,cy2,rad,0,Math.PI*2); ctx.fill();
+          ctx.strokeStyle='#8B6347'; ctx.lineWidth=0.8; ctx.stroke();
+          if (pw>24){var fsR=Math.min(9,pw/5);ctx.fillStyle='#5C3D1E';ctx.font='bold '+fsR+'px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('⌀ '+diametro+' cm',cx2,cy2);}
+        } else {
+          ctx.fillRect(px+1,py+1,pw-2,ph-2);
+          ctx.strokeStyle='#8B6347'; ctx.lineWidth=0.8; ctx.strokeRect(px+1,py+1,pw-2,ph-2);
+          if (pw>24&&ph>14){
+            var fs=Math.min(9,pw/5); ctx.fillStyle='#5C3D1E';
+            ctx.font='bold '+fs+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='top';
+            ctx.fillText(lc+' cm',px+pw/2,py+4);
+            ctx.save(); ctx.translate(px+10,py+ph/2); ctx.rotate(-Math.PI/2);
+            ctx.font='bold '+fs+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText(cc+' cm',0,0); ctx.restore();
+          }
+        }
+      }
+    }
+
+    if (dob && !isRedondo) {
+      ctx.setLineDash([3,3]); ctx.strokeStyle='#AF4005'; ctx.lineWidth=1;
+      for (var rd=0;rd<rows;rd++){var lineY=gy+rd*ph+ph/2;ctx.beginPath();ctx.moveTo(gx,lineY);ctx.lineTo(gx+cols*pw,lineY);ctx.stroke();}
+      ctx.setLineDash([]); ctx.fillStyle='#AF4005'; ctx.font='bold 7px Arial'; ctx.textAlign='left'; ctx.textBaseline='top';
+      ctx.fillText('DOBRA',gx+pw*0.18,gy+ph/2+12);
+    }
+
+    var sobraY=gy+rows*ph, sobraH=(oy+fh)-sobraY, sobraCompCm=ce-rows*cc, faltaCompCm=cc-sobraCompCm;
+    if (sobraH>2) {
+      ctx.save(); ctx.beginPath(); ctx.rect(ox,sobraY,fw,sobraH); ctx.clip();
+      ctx.fillStyle='rgba(255,200,0,0.18)'; ctx.fillRect(ox,sobraY,fw,sobraH);
+      ctx.strokeStyle='#B8860B'; ctx.lineWidth=0.7;
+      for(var si=-sobraH;si<fw;si+=8){ctx.beginPath();ctx.moveTo(ox+si,sobraY);ctx.lineTo(ox+si+sobraH,sobraY+sobraH);ctx.stroke();}
+      ctx.restore();
+      ctx.strokeStyle='#B8860B'; ctx.lineWidth=1; ctx.setLineDash([3,2]);
+      ctx.beginPath(); ctx.moveTo(ox,sobraY); ctx.lineTo(ox+fw,sobraY); ctx.stroke(); ctx.setLineDash([]);
+      if (sobraH>10){
+        var slbl='⚠ Sobra '+sobraCompCm.toFixed(1)+' cm — faltam '+faltaCompCm.toFixed(1)+' cm p/ + 1 fileira';
+        ctx.font='bold 7.5px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        var slW=ctx.measureText(slbl).width, slX=ox+fw/2, slY=sobraY+sobraH/2;
+        ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillRect(slX-slW/2-4,slY-7,slW+8,14);
+        ctx.fillStyle='#8B6000'; ctx.fillText(slbl,slX,slY);
+      }
+    }
+
+    var sobraX=gx+cols*pw, sobraW2=(ox+fw)-sobraX, sobraLargCm=lt-cols*lc;
+    if (sobraW2>2) {
+      ctx.save(); ctx.beginPath(); ctx.rect(sobraX,gy,sobraW2,rows*ph); ctx.clip();
+      ctx.fillStyle='rgba(255,200,0,0.18)'; ctx.fillRect(sobraX,gy,sobraW2,rows*ph);
+      ctx.strokeStyle='#B8860B'; ctx.lineWidth=0.7;
+      for(var si2=-(rows*ph);si2<sobraW2;si2+=8){ctx.beginPath();ctx.moveTo(sobraX+si2,gy);ctx.lineTo(sobraX+si2+rows*ph,gy+rows*ph);ctx.stroke();}
+      ctx.restore();
+      ctx.strokeStyle='#B8860B'; ctx.lineWidth=1; ctx.setLineDash([3,2]);
+      ctx.beginPath(); ctx.moveTo(sobraX,gy); ctx.lineTo(sobraX,gy+rows*ph); ctx.stroke(); ctx.setLineDash([]);
+      if (sobraW2>10){
+        var slbl2='⚠ Sobra '+sobraLargCm.toFixed(1)+' cm na largura';
+        ctx.save(); ctx.translate(sobraX+sobraW2/2,gy+rows*ph/2); ctx.rotate(-Math.PI/2);
+        ctx.font='bold 7.5px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        var slWL=ctx.measureText(slbl2).width;
+        ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillRect(-slWL/2-4,-7,slWL+8,14);
+        ctx.fillStyle='#8B6000'; ctx.fillText(slbl2,0,0); ctx.restore();
+      }
+    }
+
+    result = { cols: cols, rows: rows, total: total, aprov: aprov };
   }
 
-  // Margens de esquadro — desenhadas por cima das peças
-  ctx.setLineDash([4, 3]);
-  ctx.strokeStyle = ESQ_COLOR; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(ox, oy + mT); ctx.lineTo(ox + fw, oy + mT); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(ox + mL, oy); ctx.lineTo(ox + mL, oy + fh); ctx.stroke();
+  // ── Margens de esquadro ──────────────────────────────────────────────
+  ctx.setLineDash([4,3]); ctx.strokeStyle=ESQ_COLOR; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(ox,oy+mT); ctx.lineTo(ox+fw,oy+mT); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox+mL,oy); ctx.lineTo(ox+mL,oy+fh); ctx.stroke();
   ctx.setLineDash([]);
-  // Label 2cm — fundo branco para legibilidade
-  var lbl2 = '2 cm (esquadro)';
-  ctx.font = 'bold 8px Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-  var tw2 = ctx.measureText(lbl2).width;
-  ctx.fillStyle = '#fff'; ctx.fillRect(ox + 4, oy + mT - 11, tw2 + 4, 10);
-  ctx.fillStyle = ESQ_COLOR; ctx.fillText(lbl2, ox + 6, oy + mT - 2);
-  // Label 1cm — vertical, fundo branco
-  ctx.save();
-  ctx.translate(ox + mL + 2, oy + fh / 2);
-  ctx.rotate(-Math.PI / 2);
-  ctx.font = 'bold 8px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-  var tw1 = ctx.measureText('1 cm (esquadro)').width;
-  ctx.fillStyle = '#fff'; ctx.fillRect(-tw1 / 2 - 2, -11, tw1 + 4, 10);
-  ctx.fillStyle = ESQ_COLOR; ctx.fillText('1 cm (esquadro)', 0, -2);
-  ctx.restore();
+  var lbl2='2 cm (esquadro)';
+  ctx.font='bold 8px Arial'; ctx.textAlign='left'; ctx.textBaseline='bottom';
+  var tw2=ctx.measureText(lbl2).width;
+  ctx.fillStyle='#fff'; ctx.fillRect(ox+4,oy+mT-11,tw2+4,10);
+  ctx.fillStyle=ESQ_COLOR; ctx.fillText(lbl2,ox+6,oy+mT-2);
+  ctx.save(); ctx.translate(ox+mL+2,oy+fh/2); ctx.rotate(-Math.PI/2);
+  ctx.font='bold 8px Arial'; ctx.textAlign='center'; ctx.textBaseline='bottom';
+  var tw1=ctx.measureText('1 cm (esquadro)').width;
+  ctx.fillStyle='#fff'; ctx.fillRect(-tw1/2-2,-11,tw1+4,10);
+  ctx.fillStyle=ESQ_COLOR; ctx.fillText('1 cm (esquadro)',0,-2); ctx.restore();
 
-  // Cota largura
-  var cotaY = oy + fh + 4;
-  ctx.strokeStyle = '#888'; ctx.lineWidth = 0.7; ctx.setLineDash([]);
-  ctx.beginPath(); ctx.moveTo(ox, cotaY); ctx.lineTo(ox + fw, cotaY); ctx.stroke();
-  ctx.fillStyle = '#666'; ctx.font = '7px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  ctx.fillText(lt + ' cm', ox + fw / 2, cotaY + 2);
-
-  // Cota altura
-  var cotaX = ox - 5;
-  ctx.beginPath(); ctx.moveTo(cotaX, oy); ctx.lineTo(cotaX, oy + fh); ctx.stroke();
-  ctx.save();
-  ctx.translate(cotaX - 4, oy + fh / 2);
-  ctx.rotate(-Math.PI / 2);
-  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-  ctx.fillText(ce + ' cm', 0, 0);
-  ctx.restore();
-
-  // ── Ilustração de dobra (rodapé) ──────────────────────────────────
-  if (dob) {
-    var fy = oy + fh + COTA_H + 4;
-    var fIlW = Math.min(fw * 0.7, 120);
-    var fIlH = FOLD_H - 10;
-    var fIlX = ox + (fw - fIlW) / 2;
-    var midX = fIlX + fIlW / 2;
-    var arrowY = fy + fIlH * 0.72;  // setas abaixo dos números
-
-    ctx.fillStyle = '#F0EBE5';
-    ctx.fillRect(fIlX, fy, fIlW, fIlH);
-    ctx.strokeStyle = '#8B6347'; ctx.lineWidth = 0.8;
-    ctx.strokeRect(fIlX, fy, fIlW, fIlH);
-
-    // Linha de dobra
-    ctx.setLineDash([3, 3]);
-    ctx.strokeStyle = '#AF4005'; ctx.lineWidth = 1.2;
-    ctx.beginPath(); ctx.moveTo(midX, fy); ctx.lineTo(midX, fy + fIlH); ctx.stroke();
+  // ── Imagem do zíper ──────────────────────────────────────────────────
+  if (ZIPER_H > 0 && tipoZiper && ziperImg) {
+    var zy = oy + fh + COTA_H + FOLD_H + 2;
+    ctx.strokeStyle = '#d9c6b3'; ctx.lineWidth = 0.8; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(ox, zy); ctx.lineTo(ox + fw, zy); ctx.stroke();
     ctx.setLineDash([]);
-
-    // Labels de dimensão no terço superior
-    ctx.fillStyle = '#5C3D1E'; ctx.font = '7px Arial'; ctx.textBaseline = 'middle';
-    ctx.textAlign = 'center';
-    ctx.fillText(lc + ' cm', fIlX + fIlW * 0.25, fy + fIlH * 0.3);
-    ctx.fillText(lc + ' cm', fIlX + fIlW * 0.75, fy + fIlH * 0.3);
-
-    // Setas no terço inferior
-    ctx.strokeStyle = '#AF4005'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(fIlX + 8, arrowY); ctx.lineTo(midX - 4, arrowY); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(midX - 8, arrowY - 3); ctx.lineTo(midX - 4, arrowY); ctx.lineTo(midX - 8, arrowY + 3); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(fIlX + fIlW - 8, arrowY); ctx.lineTo(midX + 4, arrowY); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(midX + 8, arrowY - 3); ctx.lineTo(midX + 4, arrowY); ctx.lineTo(midX + 8, arrowY + 3); ctx.stroke();
-
-    // Título
-    ctx.fillStyle = '#AF4005'; ctx.font = 'bold 7px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-    ctx.fillText('DOBRA AO MEIO PARA COSTURAR', fIlX + fIlW / 2, fy - 1);
+    ctx.font = 'bold 7.5px Arial'; ctx.fillStyle = '#5C442C';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('TIPO DE ZÍPER: ' + tipoZiper.toUpperCase(), ox + fw / 2, zy + 3);
+    var availH = ZIPER_H - 16, availW = fw * 0.65;
+    var iAR = ziperImg.naturalWidth / ziperImg.naturalHeight;
+    var drawW = Math.min(availW, availH * iAR), drawH = drawW / iAR;
+    ctx.drawImage(ziperImg, ox + (fw - drawW) / 2, zy + 13, drawW, drawH);
   }
-})();
+
+  // ── Cotas ────────────────────────────────────────────────────────────
+  var cotaY=oy+fh+4;
+  ctx.strokeStyle='#888'; ctx.lineWidth=0.7; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(ox,cotaY); ctx.lineTo(ox+fw,cotaY); ctx.stroke();
+  ctx.fillStyle='#666'; ctx.font='7px Arial'; ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText(lt+' cm',ox+fw/2,cotaY+2);
+  var cotaX=ox-5;
+  ctx.beginPath(); ctx.moveTo(cotaX,oy); ctx.lineTo(cotaX,oy+fh); ctx.stroke();
+  ctx.save(); ctx.translate(cotaX-4,oy+fh/2); ctx.rotate(-Math.PI/2);
+  ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillText(ce+' cm',0,0); ctx.restore();
+
+  // ── Ilustração de dobra ──────────────────────────────────────────────
+  if (dob) {
+    var lcDob = isFrFnd ? lc_frt : lc;
+    var fy=oy+fh+COTA_H+4, fIlW=Math.min(fw*0.7,120), fIlH=FOLD_H-10;
+    var fIlX=ox+(fw-fIlW)/2, midX=fIlX+fIlW/2, arrowY=fy+fIlH*0.72;
+    ctx.fillStyle='#F0EBE5'; ctx.fillRect(fIlX,fy,fIlW,fIlH);
+    ctx.strokeStyle='#8B6347'; ctx.lineWidth=0.8; ctx.strokeRect(fIlX,fy,fIlW,fIlH);
+    ctx.setLineDash([3,3]); ctx.strokeStyle='#AF4005'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(midX,fy); ctx.lineTo(midX,fy+fIlH); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#5C3D1E'; ctx.font='7px Arial'; ctx.textBaseline='middle'; ctx.textAlign='center';
+    ctx.fillText(lcDob+' cm',fIlX+fIlW*0.25,fy+fIlH*0.3);
+    ctx.fillText(lcDob+' cm',fIlX+fIlW*0.75,fy+fIlH*0.3);
+    ctx.strokeStyle='#AF4005'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(fIlX+8,arrowY); ctx.lineTo(midX-4,arrowY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(midX-8,arrowY-3); ctx.lineTo(midX-4,arrowY); ctx.lineTo(midX-8,arrowY+3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(fIlX+fIlW-8,arrowY); ctx.lineTo(midX+4,arrowY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(midX+8,arrowY-3); ctx.lineTo(midX+4,arrowY); ctx.lineTo(midX+8,arrowY+3); ctx.stroke();
+    ctx.fillStyle='#AF4005'; ctx.font='bold 7px Arial'; ctx.textAlign='center'; ctx.textBaseline='bottom';
+    ctx.fillText('DOBRA AO MEIO PARA COSTURAR',fIlX+fIlW/2,fy-1);
+  }
+
+  return result;
+}
+
+/* ── Preview na tela ─────────────────────────────────────────────────── */
+function atualizarPreview() {
+  var wrap = document.querySelector('.diagrama-wrap');
+  var cv   = document.getElementById('cvDiagrama');
+  if (!wrap || !cv) return;
+  var W = wrap.offsetWidth || 230, H = wrap.offsetHeight || 560;
+  var res = desenharDiagrama(cv, W, H, _lt, _ce, _lc, _cc, _dob, _fmt, _diam, _ff,
+    _lc_frt, _cc_frt, _lc_fnd, _cc_fnd, _lc_fnd_mn, _cc_fnd_mn, _tipoZiper, null);
+  if (res) {
+    var colTxt = _ff ? res.cols+' col.(F/FM/Fn)' : res.cols+' coluna(s)';
+    var rowTxt = _ff ? res.rows+' fil.(F/FM/Fn)' : res.rows+' fileira(s)';
+    var totTxt = _ff ? res.total+' produtos'     : res.total+' peças';
+    document.getElementById('pCols').textContent  = colTxt;
+    document.getElementById('pRows').textContent  = rowTxt;
+    document.getElementById('pTotal').textContent = totTxt;
+    document.getElementById('pAprov').textContent = res.aprov.toFixed(1) + ' %';
+    var p1c=document.getElementById('p1Cols'); if(p1c) p1c.textContent=colTxt;
+    var p1r=document.getElementById('p1Rows'); if(p1r) p1r.textContent=rowTxt;
+    var p1t=document.getElementById('p1Total'); if(p1t) p1t.textContent=totTxt;
+    var p1a=document.getElementById('p1Aprov'); if(p1a) p1a.textContent=res.aprov.toFixed(1)+' %';
+  }
+}
+atualizarPreview();
 </script>
 
 <script>
@@ -891,190 +1028,10 @@
   function desenharDiagramaSimples() {
     var cv = document.getElementById('cvDiagramaSimples');
     if (!cv) return;
-    var lt  = {{ plano.largura_tecido or 0 if plano else 0 }};
-    var ce  = {{ plano.comprimento_enfesto or 0 if plano else 0 }};
-    var lc  = {{ plano.largura_corte_cm or 0 if plano else 0 }};
-    var cc  = {{ plano.comprimento_corte_cm or 0 if plano else 0 }};
-    var dob = {{ (1 if plano.tecido_dobrado else 0) if plano else 0 }};
-    var fmtS = "{{ plano.formato_produto if plano and plano.formato_produto else 'retangular' }}";
-    var diamS = {{ plano.diametro_cm or 0 if plano else 0 }};
-    var isRedondoS = (fmtS === 'redondo');
-    if (isRedondoS) { lc = diamS; cc = diamS; }
-    if (!lt || !ce || !lc || !cc) return;
-
     var wrap = cv.parentElement;
-    var W = wrap.offsetWidth || 340;
-    var H = wrap.offsetHeight || 760;
-
-    var ROLL_H = 36;
-    var FOLD_H = dob ? 44 : 0;
-    var PAD = 14, COTA_H = 18;
-    var areaW = W - PAD * 2;
-    var areaH = H - PAD - ROLL_H - 6 - COTA_H - FOLD_H - PAD;
-    var esc = Math.min(areaW / lt, areaH / ce);
-    var fw = lt * esc, fh = ce * esc;
-    var ox = PAD + (areaW - fw) / 2, oy = PAD + ROLL_H + 6;
-
-    var dpr2 = window.devicePixelRatio || 1;
-    cv.width = W * dpr2; cv.height = H * dpr2;
-    cv.style.width = W + 'px'; cv.style.height = H + 'px';
-    var ctx = cv.getContext('2d');
-    ctx.scale(dpr2, dpr2);
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
-
-    // Rolo
-    var rx = ox, ry = PAD, rw = fw, rh = ROLL_H, er = rh * 0.38;
-    ctx.fillStyle = '#E8DDD0';
-    ctx.beginPath();
-    ctx.moveTo(rx + er, ry); ctx.lineTo(rx + rw - er, ry);
-    ctx.ellipse(rx + rw - er, ry + rh/2, er*0.55, rh/2, 0, -Math.PI/2, Math.PI/2);
-    ctx.lineTo(rx + er, ry + rh);
-    ctx.ellipse(rx + er, ry + rh/2, er*0.55, rh/2, 0, Math.PI/2, -Math.PI/2);
-    ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#8B6347'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillStyle = '#D5C5B0';
-    ctx.beginPath(); ctx.ellipse(rx+er, ry+rh/2, er*0.55, rh/2, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#C4A882';
-    ctx.beginPath(); ctx.ellipse(rx+er, ry+rh/2, er*0.22, rh*0.2, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = '#C4A882'; ctx.lineWidth = 0.5;
-    for (var i=1;i<4;i++){var lx2=rx+er+(rw-er*2)*(i/4);ctx.beginPath();ctx.moveTo(lx2,ry+2);ctx.lineTo(lx2,ry+rh-2);ctx.stroke();}
-    ctx.fillStyle = '#5C442C'; ctx.font = 'bold 8px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('ROLO DE TECIDO — ' + lt + ' cm largura', rx + rw/2 + er/2, ry + rh/2);
-    ctx.strokeStyle = '#8B6347'; ctx.lineWidth = 0.8;
-    ctx.beginPath(); ctx.moveTo(ox+fw/2, ry+rh); ctx.lineTo(ox+fw/2, oy-2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(ox+fw/2-4,oy-6); ctx.lineTo(ox+fw/2,oy-1); ctx.lineTo(ox+fw/2+4,oy-6); ctx.stroke();
-
-    // Grade
-    ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1.5; ctx.strokeRect(ox, oy, fw, fh);
-
-    var mT2 = 2 * esc, mL2 = 1 * esc, ESQ2 = '#006994';
-    var gx2=ox+mL2, gy2=oy+mT2;
-    var pw = lc*esc, ph = cc*esc, cores = ['#F0EBE5','#EDE4DB'];
-    var cols = Math.floor(lt/lc), rows = Math.floor(ce/cc);
-    for (var r=0;r<rows;r++) for (var c=0;c<cols;c++) {
-      var px=gx2+c*pw, py=gy2+r*ph;
-      ctx.fillStyle=cores[(r+c)%2];
-      if (isRedondoS) {
-        var radS=pw/2-1, cxS=px+pw/2, cyS=py+ph/2;
-        ctx.beginPath(); ctx.arc(cxS,cyS,radS,0,Math.PI*2); ctx.fill();
-        ctx.strokeStyle='#8B6347'; ctx.lineWidth=0.8; ctx.stroke();
-        if (pw>24) {
-          var fsS=Math.min(9,pw/5);
-          ctx.fillStyle='#5C3D1E'; ctx.font='bold '+fsS+'px Arial';
-          ctx.textAlign='center'; ctx.textBaseline='middle';
-          ctx.fillText('⌀ '+diamS+' cm',cxS,cyS);
-        }
-      } else {
-        ctx.fillRect(px+1,py+1,pw-2,ph-2);
-        ctx.strokeStyle='#8B6347'; ctx.lineWidth=0.8; ctx.strokeRect(px+1,py+1,pw-2,ph-2);
-        if (pw>24&&ph>14) {
-          var fs=Math.min(9,pw/5); ctx.fillStyle='#5C3D1E';
-          ctx.font='bold '+fs+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='top';
-          ctx.fillText(lc+' cm',px+pw/2,py+4);
-          ctx.save(); ctx.translate(px+10,py+ph/2); ctx.rotate(-Math.PI/2);
-          ctx.font='bold '+fs+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
-          ctx.fillText(cc+' cm',0,0); ctx.restore();
-        }
-      }
-    }
-    if (dob && !isRedondoS) {
-      ctx.setLineDash([3,3]); ctx.strokeStyle='#AF4005'; ctx.lineWidth=1;
-      for (var r2=0;r2<rows;r2++){var ly=gy2+r2*ph+ph/2;ctx.beginPath();ctx.moveTo(gx2,ly);ctx.lineTo(gx2+cols*pw,ly);ctx.stroke();}
-      ctx.setLineDash([]); ctx.fillStyle='#AF4005'; ctx.font='bold 7px Arial'; ctx.textAlign='left'; ctx.textBaseline='top';
-      ctx.fillText('DOBRA',gx2+pw*0.18,gy2+ph/2+12);
-    }
-    // Área de sobra inferior (comprimento)
-    var sobraY2=gy2+rows*ph, sobraH2=(oy+fh)-sobraY2;
-    var sobraCompCm2=ce-rows*cc, faltaCompCm2=cc-sobraCompCm2;
-    if (sobraH2>2) {
-      ctx.save();
-      ctx.beginPath();ctx.rect(ox,sobraY2,fw,sobraH2);ctx.clip();
-      ctx.fillStyle='rgba(255,200,0,0.18)';ctx.fillRect(ox,sobraY2,fw,sobraH2);
-      ctx.strokeStyle='#B8860B';ctx.lineWidth=0.7;
-      for(var siA=-sobraH2;siA<fw;siA+=8){ctx.beginPath();ctx.moveTo(ox+siA,sobraY2);ctx.lineTo(ox+siA+sobraH2,sobraY2+sobraH2);ctx.stroke();}
-      ctx.restore();
-      ctx.strokeStyle='#B8860B';ctx.lineWidth=1;ctx.setLineDash([3,2]);
-      ctx.beginPath();ctx.moveTo(ox,sobraY2);ctx.lineTo(ox+fw,sobraY2);ctx.stroke();ctx.setLineDash([]);
-      if (sobraH2>10) {
-        var sl2='⚠ Sobra '+sobraCompCm2.toFixed(1)+' cm — faltam '+faltaCompCm2.toFixed(1)+' cm p/ + 1 fileira';
-        ctx.font='bold 7.5px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
-        var slW2=ctx.measureText(sl2).width, slX2=ox+fw/2, slY2=sobraY2+sobraH2/2;
-        ctx.fillStyle='rgba(255,255,255,0.85)';ctx.fillRect(slX2-slW2/2-4,slY2-7,slW2+8,14);
-        ctx.fillStyle='#8B6000';ctx.fillText(sl2,slX2,slY2);
-      }
-    }
-    // Área de sobra lateral direita (largura)
-    var sobraX2=gx2+cols*pw, sobraW2=(ox+fw)-sobraX2;
-    var sobraLargCm2=lt-cols*lc, faltaLargCm2=lc-sobraLargCm2;
-    if (sobraW2>2) {
-      ctx.save();
-      ctx.beginPath();ctx.rect(sobraX2,gy2,sobraW2,rows*ph);ctx.clip();
-      ctx.fillStyle='rgba(255,200,0,0.18)';ctx.fillRect(sobraX2,gy2,sobraW2,rows*ph);
-      ctx.strokeStyle='#B8860B';ctx.lineWidth=0.7;
-      for(var siB=-(rows*ph);siB<sobraW2;siB+=8){ctx.beginPath();ctx.moveTo(sobraX2+siB,gy2);ctx.lineTo(sobraX2+siB+rows*ph,gy2+rows*ph);ctx.stroke();}
-      ctx.restore();
-      ctx.strokeStyle='#B8860B';ctx.lineWidth=1;ctx.setLineDash([3,2]);
-      ctx.beginPath();ctx.moveTo(sobraX2,gy2);ctx.lineTo(sobraX2,gy2+rows*ph);ctx.stroke();ctx.setLineDash([]);
-      if (sobraW2>10) {
-        var slbl2='⚠ Sobra '+sobraLargCm2.toFixed(1)+' cm na largura';
-        ctx.save();
-        ctx.translate(sobraX2+sobraW2/2,gy2+rows*ph/2);ctx.rotate(-Math.PI/2);
-        ctx.font='bold 7.5px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
-        var slWL=ctx.measureText(slbl2).width;
-        ctx.fillStyle='rgba(255,255,255,0.85)';ctx.fillRect(-slWL/2-4,-7,slWL+8,14);
-        ctx.fillStyle='#8B6000';ctx.fillText(slbl2,0,0);
-        ctx.restore();
-      }
-    }
-
-    // Margens de esquadro — por cima das peças
-    ctx.setLineDash([4,3]); ctx.strokeStyle=ESQ2; ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.moveTo(ox,oy+mT2);ctx.lineTo(ox+fw,oy+mT2);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(ox+mL2,oy);ctx.lineTo(ox+mL2,oy+fh);ctx.stroke();
-    ctx.setLineDash([]);
-    var lbl2s='2 cm (esquadro)';
-    ctx.font='bold 8px Arial';ctx.textAlign='left';ctx.textBaseline='bottom';
-    var tw2s=ctx.measureText(lbl2s).width;
-    ctx.fillStyle='#fff';ctx.fillRect(ox+4,oy+mT2-11,tw2s+4,10);
-    ctx.fillStyle=ESQ2;ctx.fillText(lbl2s,ox+6,oy+mT2-2);
-    ctx.save();
-    ctx.translate(ox+mL2+2,oy+fh/2);ctx.rotate(-Math.PI/2);
-    ctx.font='bold 8px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';
-    var tw1s=ctx.measureText('1 cm (esquadro)').width;
-    ctx.fillStyle='#fff';ctx.fillRect(-tw1s/2-2,-11,tw1s+4,10);
-    ctx.fillStyle=ESQ2;ctx.fillText('1 cm (esquadro)',0,-2);
-    ctx.restore();
-
-    // Cotas
-    var cotaY=oy+fh+4;
-    ctx.strokeStyle='#888';ctx.lineWidth=0.7;ctx.setLineDash([]);
-    ctx.beginPath();ctx.moveTo(ox,cotaY);ctx.lineTo(ox+fw,cotaY);ctx.stroke();
-    ctx.fillStyle='#666';ctx.font='7px Arial';ctx.textAlign='center';ctx.textBaseline='top';
-    ctx.fillText(lt+' cm',ox+fw/2,cotaY+2);
-    var cotaX=ox-5;
-    ctx.beginPath();ctx.moveTo(cotaX,oy);ctx.lineTo(cotaX,oy+fh);ctx.stroke();
-    ctx.save();ctx.translate(cotaX-4,oy+fh/2);ctx.rotate(-Math.PI/2);ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(ce+' cm',0,0);ctx.restore();
-    // Ilustração dobra
-    if (dob) {
-      var fy2=oy+fh+COTA_H+4, fIlW=Math.min(fw*0.7,120), fIlH=FOLD_H-10, fIlX=ox+(fw-fIlW)/2;
-      var midX2=fIlX+fIlW/2, arrowY2=fy2+fIlH*0.72;
-      ctx.fillStyle='#F0EBE5';ctx.fillRect(fIlX,fy2,fIlW,fIlH);
-      ctx.strokeStyle='#8B6347';ctx.lineWidth=0.8;ctx.strokeRect(fIlX,fy2,fIlW,fIlH);
-      ctx.setLineDash([3,3]);ctx.strokeStyle='#AF4005';ctx.lineWidth=1.2;
-      ctx.beginPath();ctx.moveTo(midX2,fy2);ctx.lineTo(midX2,fy2+fIlH);ctx.stroke();ctx.setLineDash([]);
-      // Labels no terço superior
-      ctx.fillStyle='#5C3D1E';ctx.font='7px Arial';ctx.textBaseline='middle';ctx.textAlign='center';
-      ctx.fillText(lc+' cm',fIlX+fIlW*0.25,fy2+fIlH*0.3);
-      ctx.fillText(lc+' cm',fIlX+fIlW*0.75,fy2+fIlH*0.3);
-      // Setas no terço inferior
-      ctx.strokeStyle='#AF4005';ctx.lineWidth=1;
-      ctx.beginPath();ctx.moveTo(fIlX+8,arrowY2);ctx.lineTo(midX2-4,arrowY2);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(midX2-8,arrowY2-3);ctx.lineTo(midX2-4,arrowY2);ctx.lineTo(midX2-8,arrowY2+3);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(fIlX+fIlW-8,arrowY2);ctx.lineTo(midX2+4,arrowY2);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(midX2+8,arrowY2-3);ctx.lineTo(midX2+4,arrowY2);ctx.lineTo(midX2+8,arrowY2+3);ctx.stroke();
-      ctx.fillStyle='#AF4005';ctx.font='bold 7px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';
-      ctx.fillText('DOBRA AO MEIO PARA COSTURAR',fIlX+fIlW/2,fy2-1);
-    }
+    var W = wrap.offsetWidth || 340, H = wrap.offsetHeight || 760;
+    desenharDiagrama(cv, W, H, _lt, _ce, _lc, _cc, _dob, _fmt, _diam, _ff,
+      _lc_frt, _cc_frt, _lc_fnd, _cc_fnd, _lc_fnd_mn, _cc_fnd_mn, _tipoZiper, null);
   }
 
   // Desenhar ao carregar (para pré-visualização na tela)
