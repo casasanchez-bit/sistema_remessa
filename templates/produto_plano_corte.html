@@ -126,25 +126,80 @@
         </select>
       </div>
     </div>
-    <div id="campos_retangular" class="grid" style="margin-bottom:12px;">
-      <div>
-        <label>Largura do Corte (cm)</label>
-        <input type="number" name="largura_corte_cm" step="0.1" min="0"
-               value="{{ plano.largura_corte_cm|smart_num if plano and plano.largura_corte_cm else '' }}"
-               placeholder="Ex: 46">
+    <div id="campos_retangular" style="margin-bottom:12px;">
+      <div class="grid" style="margin-bottom:10px;">
+        <div>
+          <label>Frente e Fundo com medidas diferentes?</label>
+          <select name="tem_frente_fundo" id="tem_frente_fundo" onchange="toggleFrenteFundo()">
+            <option value="0" {% if not plano or not plano.tem_frente_fundo %}selected{% endif %}>NÃO — Medida única de corte</option>
+            <option value="1" {% if plano and plano.tem_frente_fundo %}selected{% endif %}>SIM — Frente e Fundo com tamanhos diferentes</option>
+          </select>
+        </div>
+        <div>
+          <label>Tecido VAI DOBRAR para costurar?</label>
+          <select name="tecido_dobrado">
+            <option value="0" {% if not plano or not plano.tecido_dobrado %}selected{% endif %}>NÃO</option>
+            <option value="1" {% if plano and plano.tecido_dobrado %}selected{% endif %}>SIM</option>
+          </select>
+        </div>
       </div>
-      <div>
-        <label>Comprimento do Corte (cm)</label>
-        <input type="number" name="comprimento_corte_cm" step="0.1" min="0"
-               value="{{ plano.comprimento_corte_cm|smart_num if plano and plano.comprimento_corte_cm else '' }}"
-               placeholder="Ex: 92">
+      <div id="campos_um_tamanho" class="grid" style="margin-bottom:4px;">
+        <div>
+          <label>Largura do Corte (cm)</label>
+          <input type="number" name="largura_corte_cm" step="0.1" min="0"
+                 value="{{ plano.largura_corte_cm|smart_num if plano and plano.largura_corte_cm else '' }}"
+                 placeholder="Ex: 46">
+        </div>
+        <div>
+          <label>Comprimento do Corte (cm)</label>
+          <input type="number" name="comprimento_corte_cm" step="0.1" min="0"
+                 value="{{ plano.comprimento_corte_cm|smart_num if plano and plano.comprimento_corte_cm else '' }}"
+                 placeholder="Ex: 92">
+        </div>
       </div>
-      <div>
-        <label>Tecido VAI DOBRAR para costurar?</label>
-        <select name="tecido_dobrado">
-          <option value="0" {% if not plano or not plano.tecido_dobrado %}selected{% endif %}>NÃO</option>
-          <option value="1" {% if plano and plano.tecido_dobrado %}selected{% endif %}>SIM</option>
-        </select>
+      <div id="campos_frente_fundo" style="display:none;">
+        <div class="grid" style="margin-bottom:6px;">
+          <div>
+            <label style="color:#2a6a1a;font-weight:700;">▶ FRENTE — Largura (cm)</label>
+            <input type="number" name="largura_frente_cm" step="0.1" min="0"
+                   value="{{ plano.largura_frente_cm|smart_num if plano and plano.largura_frente_cm else '' }}"
+                   placeholder="Ex: 46">
+          </div>
+          <div>
+            <label style="color:#2a6a1a;font-weight:700;">▶ FRENTE — Comprimento (cm)</label>
+            <input type="number" name="comprimento_frente_cm" step="0.1" min="0"
+                   value="{{ plano.comprimento_frente_cm|smart_num if plano and plano.comprimento_frente_cm else '' }}"
+                   placeholder="Ex: 63">
+          </div>
+        </div>
+        <div class="grid" style="margin-bottom:6px;">
+          <div>
+            <label style="color:#1a3d7a;font-weight:700;">▶ FUNDO MAIOR — Largura (cm)</label>
+            <input type="number" name="largura_fundo_cm" step="0.1" min="0"
+                   value="{{ plano.largura_fundo_cm|smart_num if plano and plano.largura_fundo_cm else '' }}"
+                   placeholder="Ex: 46">
+          </div>
+          <div>
+            <label style="color:#1a3d7a;font-weight:700;">▶ FUNDO MAIOR — Comprimento (cm)</label>
+            <input type="number" name="comprimento_fundo_cm" step="0.1" min="0"
+                   value="{{ plano.comprimento_fundo_cm|smart_num if plano and plano.comprimento_fundo_cm else '' }}"
+                   placeholder="Ex: 45">
+          </div>
+        </div>
+        <div class="grid" style="margin-bottom:4px;">
+          <div>
+            <label style="color:#8B5A00;font-weight:700;">▶ FUNDO MENOR — Largura (cm)</label>
+            <input type="number" name="largura_fundo_menor_cm" step="0.1" min="0"
+                   value="{{ plano.largura_fundo_menor_cm|smart_num if plano and plano.largura_fundo_menor_cm else '' }}"
+                   placeholder="Ex: 46">
+          </div>
+          <div>
+            <label style="color:#8B5A00;font-weight:700;">▶ FUNDO MENOR — Comprimento (cm)</label>
+            <input type="number" name="comprimento_fundo_menor_cm" step="0.1" min="0"
+                   value="{{ plano.comprimento_fundo_menor_cm|smart_num if plano and plano.comprimento_fundo_menor_cm else '' }}"
+                   placeholder="Ex: 20">
+          </div>
+        </div>
       </div>
     </div>
     <div id="campos_redondo" class="grid" style="margin-bottom:12px;display:none;">
@@ -215,11 +270,17 @@
       <ul class="params-lista">
         <li><b>Largura do tecido:</b> <span>{{ ('%.1f'|format(plano.largura_tecido)) ~ ' cm' if plano.largura_tecido else '—' }}</span></li>
         <li><b>Comprimento do enfesto total:</b> <span>{{ ('%.1f'|format(plano.comprimento_enfesto)) ~ ' cm' if plano.comprimento_enfesto else '—' }}</span></li>
+        {% if plano.tem_frente_fundo %}
+        <li><b>Medida FRENTE (L × C):</b> <span>{% if plano.largura_frente_cm and plano.comprimento_frente_cm %}{{ '%.1f'|format(plano.largura_frente_cm) }} × {{ '%.1f'|format(plano.comprimento_frente_cm) }} cm{% else %}—{% endif %}</span></li>
+        <li><b>Medida FUNDO MAIOR (L × C):</b> <span>{% if plano.largura_fundo_cm and plano.comprimento_fundo_cm %}{{ '%.1f'|format(plano.largura_fundo_cm) }} × {{ '%.1f'|format(plano.comprimento_fundo_cm) }} cm{% else %}—{% endif %}</span></li>
+        <li><b>Medida FUNDO MENOR (L × C):</b> <span>{% if plano.largura_fundo_menor_cm and plano.comprimento_fundo_menor_cm %}{{ '%.1f'|format(plano.largura_fundo_menor_cm) }} × {{ '%.1f'|format(plano.comprimento_fundo_menor_cm) }} cm{% else %}—{% endif %}</span></li>
+        {% else %}
         <li><b>Medida do corte (L × C):</b> <span>
           {% if plano.largura_corte_cm and plano.comprimento_corte_cm %}
             {{ '%.1f'|format(plano.largura_corte_cm) }} × {{ '%.1f'|format(plano.comprimento_corte_cm) }} cm
           {% else %}—{% endif %}
         </span></li>
+        {% endif %}
         <li><b>Tecido dobrado:</b> <span>{{ 'SIM' if plano.tecido_dobrado else 'NÃO' }}</span></li>
         <li><b>Tipo de zíper:</b> <span>{{ plano.tipo_ziper or '—' }}</span></li>
         <li><b>Nº mín. de puxadas no enfesto:</b> <span>{{ plano.puxadas_min or '—' }}</span></li>
@@ -797,10 +858,19 @@
   searchableSelect(document.getElementById('selectTipoTecido'));
   [1,2,3,4,5].forEach(function(n){ searchableSelect(document.getElementById('selForn'+n)); });
 
+  function toggleFrenteFundo() {
+    var el = document.getElementById('tem_frente_fundo');
+    if (!el) return;
+    var ff = el.value === '1';
+    document.getElementById('campos_um_tamanho').style.display = ff ? 'none' : '';
+    document.getElementById('campos_frente_fundo').style.display = ff ? '' : 'none';
+  }
+
   function toggleFormato() {
     var fmt = document.getElementById('formato_produto').value;
     document.getElementById('campos_retangular').style.display = fmt === 'redondo' ? 'none' : '';
     document.getElementById('campos_redondo').style.display = fmt === 'redondo' ? '' : 'none';
+    if (fmt !== 'redondo') toggleFrenteFundo();
   }
   toggleFormato();
 
