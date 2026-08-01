@@ -3658,7 +3658,21 @@ def produto_plano_corte(produto_id):
         db.commit()
         flash("Plano de corte salvo.", "ok")
         return redirect(url_for("produto_plano_corte", produto_id=produto_id))
-    plano = db.execute("SELECT * FROM planos_corte WHERE produto_id = ?", (produto_id,)).fetchone()
+    plano = db.execute("""
+        SELECT pc.*,
+               COALESCE(f1.nome_razao_social, pc.fornecedor1) AS forn1_label,
+               COALESCE(f2.nome_razao_social, pc.fornecedor2) AS forn2_label,
+               COALESCE(f3.nome_razao_social, pc.fornecedor3) AS forn3_label,
+               f4.nome_razao_social AS forn4_label,
+               f5.nome_razao_social AS forn5_label
+        FROM planos_corte pc
+        LEFT JOIN fornecedores f1 ON f1.id = pc.fornecedor1_id
+        LEFT JOIN fornecedores f2 ON f2.id = pc.fornecedor2_id
+        LEFT JOIN fornecedores f3 ON f3.id = pc.fornecedor3_id
+        LEFT JOIN fornecedores f4 ON f4.id = pc.fornecedor4_id
+        LEFT JOIN fornecedores f5 ON f5.id = pc.fornecedor5_id
+        WHERE pc.produto_id = ?
+    """, (produto_id,)).fetchone()
     materias_primas = db.execute("SELECT codigo, descricao FROM materias_primas ORDER BY codigo").fetchall()
     fornecedores = db.execute("SELECT * FROM fornecedores ORDER BY codigo").fetchall()
     composicao = db.execute("""

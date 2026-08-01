@@ -251,9 +251,11 @@
           <span style="white-space:nowrap;"><b>Tamanho final:</b> {{ plano.tamanho_final or '—' }} cm</span>
         </div>
         <div class="bloco-linha-3">
-          <span><b>Fornecedor Tecido 1:</b> {{ plano.fornecedor1 or '—' }}</span>
-          <span><b>Fornecedor Tecido 2:</b> {{ plano.fornecedor2 or '—' }}</span>
-          <span><b>Fornecedor Tecido 3:</b> {{ plano.fornecedor3 or '—' }}</span>
+          {% if plano.forn1_label %}<span><b>Fornecedor Tecido 1:</b> {{ plano.forn1_label }}</span>{% endif %}
+          {% if plano.forn2_label %}<span><b>Fornecedor Tecido 2:</b> {{ plano.forn2_label }}</span>{% endif %}
+          {% if plano.forn3_label %}<span><b>Fornecedor Tecido 3:</b> {{ plano.forn3_label }}</span>{% endif %}
+          {% if plano.forn4_label %}<span><b>Fornecedor Tecido 4:</b> {{ plano.forn4_label }}</span>{% endif %}
+          {% if plano.forn5_label %}<span><b>Fornecedor Tecido 5:</b> {{ plano.forn5_label }}</span>{% endif %}
         </div>
       </div>
       {% if plano.foto_produto %}
@@ -392,9 +394,11 @@
           <div style="font-size:9px;font-weight:600;">{{ plano.tipo_tecido or '—' }}</div>
         </div>
         <div style="display:grid;grid-template-columns:1fr;gap:2px;">
-          <div><span style="font-size:7px;color:#888;text-transform:uppercase;">Fornecedor Tecido 1: </span><span style="font-size:9px;">{{ plano.fornecedor1 or '—' }}</span></div>
-          <div><span style="font-size:7px;color:#888;text-transform:uppercase;">Fornecedor Tecido 2: </span><span style="font-size:9px;">{{ plano.fornecedor2 or '—' }}</span></div>
-          <div><span style="font-size:7px;color:#888;text-transform:uppercase;">Fornecedor Tecido 3: </span><span style="font-size:9px;">{{ plano.fornecedor3 or '—' }}</span></div>
+          {% if plano.forn1_label %}<div><span style="font-size:7px;color:#888;text-transform:uppercase;">Fornecedor Tecido 1: </span><span style="font-size:9px;">{{ plano.forn1_label }}</span></div>{% endif %}
+          {% if plano.forn2_label %}<div><span style="font-size:7px;color:#888;text-transform:uppercase;">Fornecedor Tecido 2: </span><span style="font-size:9px;">{{ plano.forn2_label }}</span></div>{% endif %}
+          {% if plano.forn3_label %}<div><span style="font-size:7px;color:#888;text-transform:uppercase;">Fornecedor Tecido 3: </span><span style="font-size:9px;">{{ plano.forn3_label }}</span></div>{% endif %}
+          {% if plano.forn4_label %}<div><span style="font-size:7px;color:#888;text-transform:uppercase;">Fornecedor Tecido 4: </span><span style="font-size:9px;">{{ plano.forn4_label }}</span></div>{% endif %}
+          {% if plano.forn5_label %}<div><span style="font-size:7px;color:#888;text-transform:uppercase;">Fornecedor Tecido 5: </span><span style="font-size:9px;">{{ plano.forn5_label }}</span></div>{% endif %}
         </div>
       </div>
       {% if plano.foto_produto %}
