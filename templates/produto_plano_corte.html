@@ -310,7 +310,7 @@
           <tr>
             <td>{{ mp.codigo }}</td>
             <td>{{ mp.descricao }}</td>
-            <td>{{ '%.3f'|format(mp.quantidade) }}</td>
+            <td>{{ '%.3f'|format(mp.quantidade or 0) }}</td>
           </tr>
           {% endfor %}
         </table>
