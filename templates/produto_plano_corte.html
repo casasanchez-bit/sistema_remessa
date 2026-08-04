@@ -566,6 +566,20 @@ var _cc_fnd  = {{ plano.comprimento_fundo_cm or 0 if plano else 0 }};
 var _lc_fnd_mn = {{ plano.largura_fundo_menor_cm or 0 if plano else 0 }};
 var _cc_fnd_mn = {{ plano.comprimento_fundo_menor_cm or 0 if plano else 0 }};
 var _tipoZiper = "{{ plano.tipo_ziper or '' if plano else '' }}";
+var _ziperImgEl = null;
+var _ziperImgMap = {
+  'Invisível Colorido':      "{{ url_for('static', filename='ziper/invisivel_colorido.jpg') }}",
+  'Zíper Branco N5':         "{{ url_for('static', filename='ziper/ziper_branco_n5.jpg') }}",
+  'Semi-Invisível Colorido': "{{ url_for('static', filename='ziper/semi_invisivel.jpg') }}"
+};
+function _carregarZiperImg(tipo, callback) {
+  var src = _ziperImgMap[tipo] || null;
+  if (!src) { _ziperImgEl = null; if (callback) callback(); return; }
+  var img = new Image();
+  img.onload  = function() { _ziperImgEl = img; if (callback) callback(); };
+  img.onerror = function() { _ziperImgEl = null; if (callback) callback(); };
+  img.src = src;
+}
 
 function atualizarFormZiper() {
   var sel = document.getElementById('selectTipoZiper');
@@ -574,15 +588,11 @@ function atualizarFormZiper() {
   var lbl = document.getElementById('lblPrevZiperForm');
   if (!sel || !prv || !img) return;
   var tipo = sel.value;
-  var src = '';
-  if (tipo === 'Zíper Branco N5')
-    src = "{{ url_for('static', filename='ziper/ziper_branco_n5.jpg') }}";
-  else if (tipo === 'Invisível Colorido' || tipo === 'Semi-Invisível Colorido')
-    src = "{{ url_for('static', filename='ziper/invisivel_colorido.jpg') }}";
+  var src = _ziperImgMap[tipo] || '';
   if (src) { img.src = src; if (lbl) lbl.textContent = tipo; prv.style.display = 'block'; }
   else { prv.style.display = 'none'; }
   _tipoZiper = tipo;
-  atualizarPreview();
+  _carregarZiperImg(tipo, atualizarPreview);
 }
 
 /* ── Função central de desenho do diagrama ───────────────────────────── */
@@ -602,7 +612,7 @@ function desenharDiagrama(cv, W, H, lt, ce, lcIn, ccIn, dob, fmt, diametro, ff, 
   var FOLD_H = dob ? 44 : 0;
   var PAD    = 14;
   var COTA_H = 18;
-  var ZIPER_H = (tipoZiper && ziperImg) ? 76 : 0;
+  var ZIPER_H = (tipoZiper && ziperImg) ? 145 : 0;
 
   var areaW = W - PAD * 2;
   var areaH = H - PAD - ROLL_H - 6 - COTA_H - FOLD_H - ZIPER_H - PAD;
@@ -930,10 +940,7 @@ function desenharDiagrama(cv, W, H, lt, ce, lcIn, ccIn, dob, fmt, diametro, ff, 
     ctx.font = 'bold 7.5px Arial'; ctx.fillStyle = '#5C442C';
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.fillText('TIPO DE ZÍPER: ' + tipoZiper.toUpperCase(), ox + fw / 2, zy + 3);
-    var availH = ZIPER_H - 16, availW = fw * 0.65;
-    var iAR = ziperImg.naturalWidth / ziperImg.naturalHeight;
-    var drawW = Math.min(availW, availH * iAR), drawH = drawW / iAR;
-    ctx.drawImage(ziperImg, ox + (fw - drawW) / 2, zy + 13, drawW, drawH);
+    ctx.drawImage(ziperImg, ox + (fw - 120) / 2, zy + 13, 120, 120);
   }
 
   // ── Cotas ────────────────────────────────────────────────────────────
@@ -978,7 +985,7 @@ function atualizarPreview() {
   if (!wrap || !cv) return;
   var W = wrap.offsetWidth || 230, H = wrap.offsetHeight || 560;
   var res = desenharDiagrama(cv, W, H, _lt, _ce, _lc, _cc, _dob, _fmt, _diam, _ff,
-    _lc_frt, _cc_frt, _lc_fnd, _cc_fnd, _lc_fnd_mn, _cc_fnd_mn, _tipoZiper, null);
+    _lc_frt, _cc_frt, _lc_fnd, _cc_fnd, _lc_fnd_mn, _cc_fnd_mn, _tipoZiper, _ziperImgEl);
   if (res) {
     var colTxt = _ff ? res.cols+' col.(F/FM/Fn)' : res.cols+' coluna(s)';
     var rowTxt = _ff ? res.rows+' fil.(F/FM/Fn)' : res.rows+' fileira(s)';
@@ -993,7 +1000,7 @@ function atualizarPreview() {
     var p1a=document.getElementById('p1Aprov'); if(p1a) p1a.textContent=res.aprov.toFixed(1)+' %';
   }
 }
-atualizarPreview();
+_carregarZiperImg(_tipoZiper, atualizarPreview);
 </script>
 
 <script>
@@ -1036,7 +1043,7 @@ atualizarPreview();
     var wrap = cv.parentElement;
     var W = wrap.offsetWidth || 340, H = wrap.offsetHeight || 760;
     desenharDiagrama(cv, W, H, _lt, _ce, _lc, _cc, _dob, _fmt, _diam, _ff,
-      _lc_frt, _cc_frt, _lc_fnd, _cc_fnd, _lc_fnd_mn, _cc_fnd_mn, _tipoZiper, null);
+      _lc_frt, _cc_frt, _lc_fnd, _cc_fnd, _lc_fnd_mn, _cc_fnd_mn, _tipoZiper, _ziperImgEl);
   }
 
   // Desenhar ao carregar (para pré-visualização na tela)
