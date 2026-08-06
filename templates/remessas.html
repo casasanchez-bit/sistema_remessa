@@ -174,7 +174,8 @@
     <table>
       <tr><th>Prioridade</th><th>Produto</th><th>Cor/Estampa</th><th>Serviço</th><th>Enviado</th><th>Retornado</th><th>Pendente</th><th>Prev. Entrega</th><th>Status</th></tr>
       {% for item in r.itens %}
-      <tr>
+      {% set prazo_vencido = item.previsao_entrega and item.pendente > 0 and item.previsao_entrega < hoje %}
+      <tr {% if prazo_vencido %}style="background:#fde8e4;"{% endif %}>
         <td>{{ item.prioridade ~ "º" if item.prioridade else "—" }}</td>
         <td><b>{{ item.produto_codigo }}</b> - {{ item.produto_descricao }}</td>
         <td>
@@ -187,7 +188,9 @@
         <td>{{ item.qtd_enviada }}</td>
         <td>{{ item.qtd_retornada }}</td>
         <td>{{ item.pendente }}</td>
-        <td>{{ item.previsao_entrega|brdate if item.previsao_entrega else "—" }}</td>
+        <td {% if prazo_vencido %}style="color:#c4501a;font-weight:700;"{% endif %}>
+          {{ item.previsao_entrega|brdate if item.previsao_entrega else "—" }}{% if prazo_vencido %} ⚠{% endif %}
+        </td>
         <td>
           {% if item.qtd_retornada == 0 %}<span class="badge b-pendente">Pendente</span>
           {% elif item.pendente > 0 %}<span class="badge b-parcial">Parcial</span>

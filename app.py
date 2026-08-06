@@ -726,11 +726,18 @@ def dashboard():
     filtro_data_fim = request.args.get("filtro_data_fim", "").strip()
 
     query = """SELECT itens_remessa.id, itens_remessa.remessa_id, itens_remessa.produto_id, itens_remessa.qtd_enviada,
+                  itens_remessa.previsao_entrega,
                   remessas.terceirizado_id AS terceirizado_id,
-                  produtos.codigo AS produto_codigo, produtos.descricao AS produto_descricao
+                  produtos.codigo AS produto_codigo, produtos.descricao AS produto_descricao,
+                  COALESCE(SUM(CASE WHEN terceirizados.registrado = 1
+                                    THEN servicos.valor_com_registro
+                                    ELSE servicos.valor_sem_registro END), 0) AS valor_unitario
            FROM itens_remessa
            JOIN remessas ON remessas.id = itens_remessa.remessa_id
            JOIN produtos ON produtos.id = itens_remessa.produto_id
+           JOIN terceirizados ON terceirizados.id = remessas.terceirizado_id
+           LEFT JOIN item_servicos_remessa ON item_servicos_remessa.item_remessa_id = itens_remessa.id
+           LEFT JOIN servicos ON servicos.id = item_servicos_remessa.servico_id
            WHERE 1=1"""
     params = []
     if filtro_data_inicio:
@@ -739,6 +746,7 @@ def dashboard():
     if filtro_data_fim:
         query += " AND remessas.data_envio <= ?"
         params.append(filtro_data_fim)
+    query += " GROUP BY itens_remessa.id"
     itens = db.execute(query, params).fetchall()
 
     remessas_ativas_ids = set()
@@ -747,10 +755,17 @@ def dashboard():
     enviado_por_terceirizado = {}
     enviado_por_produto = {}
     produto_info = {}
+    hoje_str = hoje_date.isoformat()
+    itens_prazo_vencido = 0
+    valor_total_a_pagar = 0.0
     for i in itens:
         retornado = qtd_retornada(db, i["id"])
-        if retornado < i["qtd_enviada"]:
+        pendente_item = i["qtd_enviada"] - retornado
+        if pendente_item > 0:
             remessas_ativas_ids.add(i["remessa_id"])
+            valor_total_a_pagar += pendente_item * (i["valor_unitario"] or 0)
+            if i["previsao_entrega"] and i["previsao_entrega"] < hoje_str:
+                itens_prazo_vencido += 1
         retornado_por_terceirizado[i["terceirizado_id"]] = retornado_por_terceirizado.get(i["terceirizado_id"], 0) + retornado
         retornado_por_produto[i["produto_id"]] = retornado_por_produto.get(i["produto_id"], 0) + retornado
         enviado_por_terceirizado[i["terceirizado_id"]] = enviado_por_terceirizado.get(i["terceirizado_id"], 0) + i["qtd_enviada"]
@@ -812,6 +827,8 @@ def dashboard():
         "dashboard.html",
         remessas_ativas=remessas_ativas,
         terceirizados_com_pendencia=terceirizados_com_pendencia,
+        itens_prazo_vencido=itens_prazo_vencido,
+        valor_total_a_pagar=valor_total_a_pagar,
         saldo_por_terceirizado=saldo_por_terceirizado,
         saldo_por_produto=saldo_por_produto,
         remessas_alerta=remessas_alerta,
