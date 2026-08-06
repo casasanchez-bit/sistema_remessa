@@ -724,6 +724,7 @@ def dashboard():
     db = get_db()
     filtro_data_inicio = request.args.get("filtro_data_inicio", "").strip()
     filtro_data_fim = request.args.get("filtro_data_fim", "").strip()
+    hoje_date = date.today()
 
     query = """SELECT itens_remessa.id, itens_remessa.remessa_id, itens_remessa.produto_id, itens_remessa.qtd_enviada,
                   itens_remessa.previsao_entrega,
@@ -774,7 +775,6 @@ def dashboard():
     remessas_ativas = len(remessas_ativas_ids)
 
     # Alerta: remessas com itens pendentes há mais de 30 dias
-    hoje_date = date.today()
     todas_remessas = db.execute(
         """SELECT remessas.id, remessas.numero, remessas.data_envio, terceirizados.nome AS terceirizado_nome
            FROM remessas JOIN terceirizados ON terceirizados.id = remessas.terceirizado_id
