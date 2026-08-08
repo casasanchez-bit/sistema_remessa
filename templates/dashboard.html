@@ -23,7 +23,6 @@
     <div class="small">Itens com Prazo Vencido</div>
     <div class="num" style="{% if itens_prazo_vencido > 0 %}color:#c4501a;{% endif %}">{{ itens_prazo_vencido }}</div>
   </div>
-  <div class="card"><div class="small">Valor Total a Pagar</div><div class="num" style="font-size:1.4rem;">R$ {{ valor_total_a_pagar|brl }}</div></div>
 </div>
 
 {% if remessas_alerta %}
