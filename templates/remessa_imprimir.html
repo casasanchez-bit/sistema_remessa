@@ -64,7 +64,6 @@
           <th>Serviço</th>
           <th style="text-align:center;">Prev. Entrega</th>
           <th style="text-align:right;">Vlr. Unit.</th>
-          <th style="text-align:right;">Subtotal</th>
         </tr>
         {% for item in itens %}
         {% set ns = item.servicos|length if item.servicos else 1 %}
@@ -86,7 +85,6 @@
           <td rowspan="{{ ns }}" style="text-align:center;vertical-align:middle;">{{ item.previsao_entrega|brdate if item.previsao_entrega else "—" }}</td>
           {% endif %}
           <td style="text-align:right;">R$ {{ svc.servico_valor|brl }}</td>
-          <td style="text-align:right;">R$ {{ svc.subtotal_servico|brl }}</td>
         </tr>
         {% else %}
         <tr>
@@ -100,11 +98,8 @@
         {% endfor %}
         {% endfor %}
       </table>
-      <div style="text-align:right;font-size:11.5px;font-weight:700;margin-top:6px;">
-        Valor total da remessa: R$ {{ itens|sum(attribute="subtotal")|brl }}
-      </div>
       {% if remessa.observacao %}
-      <div style="font-size:10.5px;margin-top:6px;border-top:1px solid #ddd;padding-top:4px;color:#333;">
+      <div style="font-size:10.5px;margin-top:6px;border-top:1px solid #ddd;padding-top:4px;color:#333;white-space:pre-wrap;">
         <b>Observação:</b> {{ remessa.observacao }}
       </div>
       {% endif %}
