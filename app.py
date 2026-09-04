@@ -881,6 +881,7 @@ def ver_terceirizado(terceirizado_id):
         return redirect(url_for("cadastros_terceirizados"))
     remessas_do = db.execute(
         """SELECT itens_remessa.*, remessas.numero AS numero, remessas.data_envio AS data_envio,
+                  remessas.observacao AS observacao,
                   produtos.descricao AS produto_descricao, cores_estampas.descricao AS cor_descricao
            FROM itens_remessa
            JOIN remessas ON remessas.id = itens_remessa.remessa_id

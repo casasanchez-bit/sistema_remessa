@@ -16,8 +16,17 @@
 <div class="card">
   <h2>Remessas deste terceirizado</h2>
   <table>
-    <tr><th>Nº</th><th>Produto</th><th>Cor/Estampa</th><th>Enviado</th><th>Retornado</th><th>Pendente</th><th>Status</th><th>Data</th></tr>
+    <tr><th>Nº</th><th>Produto</th><th>Cor/Estampa</th><th>Enviado</th><th>Retornado</th><th>Pendente</th><th>Status</th><th>Data</th><th>Prev. Entrega</th></tr>
+    {% set ns = namespace(ultimo_numero=None) %}
     {% for r in remessas %}
+    {% if r.numero != ns.ultimo_numero and r.observacao %}
+    <tr>
+      <td colspan="9" style="font-size:10.5px;color:#666;font-style:italic;padding:4px 8px;background:#fdf6f0;white-space:pre-wrap;">
+        <b style="color:#5C442C;">Obs. Remessa Nº {{ r.numero }}:</b> {{ r.observacao }}
+      </td>
+    </tr>
+    {% endif %}
+    {% set ns.ultimo_numero = r.numero %}
     <tr>
       <td>{{ r.numero }}</td>
       <td>{{ r.produto_descricao }}</td>
@@ -31,9 +40,10 @@
         {% else %}<span class="badge b-concluida">Concluída</span>{% endif %}
       </td>
       <td>{{ r.data_envio|brdate }}</td>
+      <td>{{ r.previsao_entrega|brdate if r.previsao_entrega else "—" }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="8" class="small">Nenhuma remessa registrada.</td></tr>
+    <tr><td colspan="9" class="small">Nenhuma remessa registrada.</td></tr>
     {% endfor %}
   </table>
 </div>
