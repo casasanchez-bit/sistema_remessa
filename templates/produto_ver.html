@@ -5,38 +5,7 @@
   <p class="small">Código: {{ produto.codigo }}</p>
   <div class="actions" style="margin-top:10px;">
     <a href="/cadastros/produtos" class="btn secondary">Voltar</a>
-    <a class="btn-mini editar" href="/produtos/{{ produto.id }}/editar">EDITAR</a>
-    <a class="btn-mini ver" href="{{ url_for('produto_composicao', produto_id=produto.id) }}" title="Ficha técnica de matéria-prima">FICHA MP</a>
-    <a class="btn-mini ver" href="{{ url_for('produto_plano_corte', produto_id=produto.id) }}" title="Plano de corte do produto">PLANO DE CORTE</a>
-    <a class="btn-mini ver" href="{{ url_for('produto_cronometragem', produto_id=produto.id) }}" title="Cronometragem de corte">CRONOMETRAGEM</a>
-    <form method="post" action="/produtos/{{ produto.id }}/excluir" onsubmit="return confirm('Excluir este produto?');">
-      <button class="btn-mini excluir" type="submit">EXCLUIR</button>
-    </form>
   </div>
-</div>
-{% if (tem_plano and not tem_composicao) or (tem_composicao and not tem_plano) %}
-<div class="card" style="border-left:4px solid #e0a800;background:#fffdf0;padding:10px 16px;">
-  <b style="color:#8a6800;">&#9888; Atenção — dados incompletos:</b>
-  <ul style="margin:6px 0 0 18px;font-size:13px;color:#6a5200;">
-    {% if tem_plano and not tem_composicao %}
-    <li>Este produto tem <b>Plano de Corte</b> cadastrado, mas <b>não tem Composição (Ficha MP)</b>.</li>
-    {% endif %}
-    {% if tem_composicao and not tem_plano %}
-    <li>Este produto tem <b>Composição (Ficha MP)</b> cadastrada, mas <b>não tem Plano de Corte</b>.</li>
-    {% endif %}
-  </ul>
-</div>
-{% endif %}
-<div class="card">
-  <h2>Serviços vinculados</h2>
-  <table>
-    <tr><th>Código</th><th>Serviço</th><th>Valor</th></tr>
-    {% for s in servicos %}
-    <tr><td>{{ s.codigo }}</td><td>{{ s.descricao }}</td><td>R$ {{ s.valor_com_registro|brl }}</td></tr>
-    {% else %}
-    <tr><td colspan="3" class="small">Nenhum serviço vinculado.</td></tr>
-    {% endfor %}
-  </table>
 </div>
 
 <div class="card">
