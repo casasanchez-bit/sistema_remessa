@@ -1,0 +1,43 @@
+{% extends "mobile/base.html" %}
+{% block title %}{{ terceirizado.nome }} — Casa Sanchez{% endblock %}
+{% block content %}
+
+<button class="btn-voltar" onclick="history.back()">Voltar</button>
+
+<div class="card">
+  <div class="card-header">{{ terceirizado.nome }}</div>
+</div>
+
+<div class="card">
+  <div class="card-header">Remessas</div>
+  {% for remessa in remessas_agrupadas %}
+  <div class="remessa-card">
+    <div class="remessa-titulo">
+      <span>Remessa N&ordm; {{ remessa.numero }}</span>
+      <span style="font-weight:400;color:#888;font-size:12px;">{{ remessa.data_envio|brdate }}</span>
+    </div>
+    {% if remessa.observacao %}
+    <div class="remessa-obs"><b>Obs:</b> {{ remessa.observacao }}</div>
+    {% endif %}
+    {% for item in remessa.itens %}
+    <div class="item-row">
+      <div class="item-produto">{{ item.produto_descricao }}</div>
+      <div class="item-meta">
+        <span>{{ item.cor_descricao }}</span>
+        <span class="item-pend">Pend: {{ item.pendente }}</span>
+        {% if item.previsao_entrega %}
+        <span>Entrega: {{ item.previsao_entrega|brdate }}</span>
+        {% endif %}
+        {% if item.qtd_retornada == 0 %}<span class="badge b-pendente">Pendente</span>
+        {% elif item.pendente > 0 %}<span class="badge b-parcial">Parcial</span>
+        {% else %}<span class="badge b-concluida">Concluída</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">Nenhuma remessa registrada.</div>
+  {% endfor %}
+</div>
+
+{% endblock %}

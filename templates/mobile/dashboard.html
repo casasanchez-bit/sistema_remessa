@@ -1,0 +1,42 @@
+{% extends "mobile/base.html" %}
+{% block title %}Dashboard — Casa Sanchez{% endblock %}
+{% block content %}
+
+<div class="card">
+  <div class="card-header">Saldo pendente por terceirizado</div>
+  {% for t in saldo_por_terceirizado %}
+  <a class="row-item" href="/m/terceirizado/{{ t.id }}">
+    <span class="row-name">{{ t.nome }}</span>
+    <span class="row-badge">{{ t.pendente }}</span>
+  </a>
+  {% else %}
+  <div class="empty">Nenhum terceirizado com pendência.</div>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <div class="card-header">Saldo pendente por produto</div>
+  <div class="search-wrap">
+    <input type="search" id="busca" placeholder="Buscar produto..." oninput="filtrar()">
+  </div>
+  <div id="lista-produtos">
+    {% for p in saldo_por_produto %}
+    <a class="row-item" href="/m/produto/{{ p.id }}" data-busca="{{ p.codigo }} {{ p.descricao }}">
+      <span class="row-name"><b>{{ p.codigo }}</b> — {{ p.descricao }}</span>
+      <span class="row-badge">{{ p.pendente }}</span>
+    </a>
+    {% else %}
+    <div class="empty">Nenhum produto com pendência.</div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+function filtrar() {
+  var termo = document.getElementById('busca').value.toLowerCase();
+  document.querySelectorAll('#lista-produtos a.row-item').forEach(function(el) {
+    el.style.display = el.dataset.busca.toLowerCase().includes(termo) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

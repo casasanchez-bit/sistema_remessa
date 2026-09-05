@@ -838,6 +838,123 @@ def dashboard():
 
 
 # ---------------------------------------------------------------------------
+# Mobile — rotas /m/
+# ---------------------------------------------------------------------------
+
+@app.route("/m/")
+def mobile_dashboard():
+    db = get_db()
+    itens = db.execute(
+        """SELECT itens_remessa.id, itens_remessa.produto_id, itens_remessa.qtd_enviada,
+                  remessas.terceirizado_id,
+                  produtos.codigo AS produto_codigo, produtos.descricao AS produto_descricao
+           FROM itens_remessa
+           JOIN remessas ON remessas.id = itens_remessa.remessa_id
+           JOIN produtos ON produtos.id = itens_remessa.produto_id"""
+    ).fetchall()
+    enviado_por_terceirizado = {}
+    retornado_por_terceirizado = {}
+    enviado_por_produto = {}
+    retornado_por_produto = {}
+    produto_info = {}
+    for i in itens:
+        r = qtd_retornada(db, i["id"])
+        tid = i["terceirizado_id"]
+        pid = i["produto_id"]
+        enviado_por_terceirizado[tid] = enviado_por_terceirizado.get(tid, 0) + i["qtd_enviada"]
+        retornado_por_terceirizado[tid] = retornado_por_terceirizado.get(tid, 0) + r
+        enviado_por_produto[pid] = enviado_por_produto.get(pid, 0) + i["qtd_enviada"]
+        retornado_por_produto[pid] = retornado_por_produto.get(pid, 0) + r
+        produto_info[pid] = (i["produto_codigo"], i["produto_descricao"])
+    terceirizados = db.execute("SELECT * FROM terceirizados ORDER BY nome").fetchall()
+    saldo_por_terceirizado = []
+    for t in terceirizados:
+        pendente = enviado_por_terceirizado.get(t["id"], 0) - retornado_por_terceirizado.get(t["id"], 0)
+        if pendente <= 0:
+            continue
+        saldo_por_terceirizado.append({"id": t["id"], "nome": t["nome"], "pendente": pendente})
+    saldo_por_produto = []
+    for pid, (codigo, descricao) in produto_info.items():
+        pendente = enviado_por_produto.get(pid, 0) - retornado_por_produto.get(pid, 0)
+        if pendente <= 0:
+            continue
+        saldo_por_produto.append({"id": pid, "codigo": codigo, "descricao": descricao, "pendente": pendente})
+    saldo_por_produto.sort(key=lambda s: s["codigo"])
+    return render_template("mobile/dashboard.html",
+                           saldo_por_terceirizado=saldo_por_terceirizado,
+                           saldo_por_produto=saldo_por_produto)
+
+
+@app.route("/m/produto/<int:produto_id>")
+def mobile_produto_ver(produto_id):
+    db = get_db()
+    produto = db.execute("SELECT * FROM produtos WHERE id = ?", (produto_id,)).fetchone()
+    if produto is None:
+        return redirect(url_for("mobile_dashboard"))
+    itens = db.execute(
+        """SELECT itens_remessa.id, itens_remessa.qtd_enviada,
+                  remessas.terceirizado_id AS terceirizado_id, terceirizados.nome AS terceirizado_nome
+           FROM itens_remessa
+           JOIN remessas ON remessas.id = itens_remessa.remessa_id
+           JOIN terceirizados ON terceirizados.id = remessas.terceirizado_id
+           WHERE itens_remessa.produto_id = ?""",
+        (produto_id,),
+    ).fetchall()
+    enviado_por_terceirizado = {}
+    retornado_por_terceirizado = {}
+    nome_por_terceirizado = {}
+    for i in itens:
+        tid = i["terceirizado_id"]
+        r = qtd_retornada(db, i["id"])
+        enviado_por_terceirizado[tid] = enviado_por_terceirizado.get(tid, 0) + i["qtd_enviada"]
+        retornado_por_terceirizado[tid] = retornado_por_terceirizado.get(tid, 0) + r
+        nome_por_terceirizado[tid] = i["terceirizado_nome"]
+    pendente_por_terceirizado = []
+    for tid, nome in nome_por_terceirizado.items():
+        pendente = enviado_por_terceirizado.get(tid, 0) - retornado_por_terceirizado.get(tid, 0)
+        if pendente <= 0:
+            continue
+        pendente_por_terceirizado.append({"id": tid, "nome": nome,
+                                          "enviado": enviado_por_terceirizado[tid],
+                                          "retornado": retornado_por_terceirizado[tid],
+                                          "pendente": pendente})
+    pendente_por_terceirizado.sort(key=lambda x: x["nome"])
+    return render_template("mobile/produto_ver.html", produto=produto,
+                           pendente_por_terceirizado=pendente_por_terceirizado)
+
+
+@app.route("/m/terceirizado/<int:terceirizado_id>")
+def mobile_terceirizado_ver(terceirizado_id):
+    db = get_db()
+    terceirizado = db.execute("SELECT * FROM terceirizados WHERE id = ?", (terceirizado_id,)).fetchone()
+    if terceirizado is None:
+        return redirect(url_for("mobile_dashboard"))
+    rows = db.execute(
+        """SELECT itens_remessa.*, remessas.numero AS numero, remessas.data_envio AS data_envio,
+                  remessas.observacao AS observacao,
+                  produtos.descricao AS produto_descricao, cores_estampas.descricao AS cor_descricao
+           FROM itens_remessa
+           JOIN remessas ON remessas.id = itens_remessa.remessa_id
+           JOIN produtos ON produtos.id = itens_remessa.produto_id
+           JOIN cores_estampas ON cores_estampas.id = itens_remessa.cor_estampa_id
+           WHERE remessas.terceirizado_id = ? ORDER BY remessas.numero DESC, itens_remessa.id""",
+        (terceirizado_id,),
+    ).fetchall()
+    remessas_map = {}
+    for row in rows:
+        num = row["numero"]
+        if num not in remessas_map:
+            remessas_map[num] = {"numero": num, "data_envio": row["data_envio"],
+                                 "observacao": row["observacao"], "itens": []}
+        retornado = qtd_retornada(db, row["id"])
+        remessas_map[num]["itens"].append({**dict(row), "qtd_retornada": retornado,
+                                           "pendente": row["qtd_enviada"] - retornado})
+    return render_template("mobile/terceirizado_ver.html",
+                           terceirizado=terceirizado,
+                           remessas_agrupadas=list(remessas_map.values()))
+
+
+# ---------------------------------------------------------------------------
 # Cadastros — Terceirizados
 # ---------------------------------------------------------------------------
 
