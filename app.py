@@ -994,6 +994,7 @@ def add_terceirizado():
 @app.route("/terceirizados/<int:terceirizado_id>")
 def ver_terceirizado(terceirizado_id):
     db = get_db()
+    destaque_id = request.args.get("destaque", type=int)
     terceirizado = db.execute("SELECT * FROM terceirizados WHERE id = ?", (terceirizado_id,)).fetchone()
     if terceirizado is None:
         flash("Terceirizado não encontrado.", "erro")
@@ -1014,7 +1015,8 @@ def ver_terceirizado(terceirizado_id):
         retornado = qtd_retornada(db, item["id"])
         pendente = item["qtd_enviada"] - retornado
         remessas_view.append({**dict(item), "qtd_retornada": retornado, "pendente": pendente})
-    return render_template("terceirizado_ver.html", terceirizado=terceirizado, remessas=remessas_view)
+    return render_template("terceirizado_ver.html", terceirizado=terceirizado, remessas=remessas_view,
+                           destaque_id=destaque_id)
 
 
 @app.route("/terceirizados/<int:terceirizado_id>/editar", methods=["GET", "POST"])

@@ -14,7 +14,7 @@
     <tr><th>Terceirizado</th><th>Enviado</th><th>Retornado</th><th>Pendente</th></tr>
     {% for p in pendente_por_terceirizado %}
     <tr>
-      <td><a href="/terceirizados/{{ p.id }}" class="link-celula" title="Ver ficha de {{ p.nome }}">{{ p.nome }}</a></td>
+      <td><a href="/terceirizados/{{ p.id }}?destaque={{ produto.id }}" class="link-celula" title="Ver ficha de {{ p.nome }}">{{ p.nome }}</a></td>
       <td><a href="/remessas?filtro_terceirizado_id={{ p.id }}" class="link-celula" title="Ver remessas enviadas">{{ p.enviado }}</a></td>
       <td><a href="/retornos?filtro_terceirizado_id={{ p.id }}" class="link-celula" title="Ver retornos lançados">{{ p.retornado }}</a></td>
       <td><b>{{ p.pendente }}</b></td>

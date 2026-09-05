@@ -27,7 +27,7 @@
     </tr>
     {% endif %}
     {% set ns.ultimo_numero = r.numero %}
-    <tr>
+    <tr{% if destaque_id and r.produto_id == destaque_id %} style="background:#fffbea;border-left:3px solid #AF4005;"{% endif %}>
       <td>{{ r.numero }}</td>
       <td>{{ r.produto_descricao }}</td>
       <td>{{ r.cor_descricao }}</td>
