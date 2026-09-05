@@ -24,6 +24,8 @@
       <div class="item-produto">{{ item.produto_descricao }}</div>
       <div class="item-meta">
         <span>{{ item.cor_descricao }}</span>
+        <span>Env: {{ item.qtd_enviada }}</span>
+        <span>Ret: {{ item.qtd_retornada }}</span>
         <span class="item-pend">Pend: {{ item.pendente }}</span>
         {% if item.previsao_entrega %}
         <span>Entrega: {{ item.previsao_entrega|brdate }}</span>
