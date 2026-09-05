@@ -20,7 +20,7 @@
     <div class="remessa-obs"><b>Obs:</b> {{ remessa.observacao }}</div>
     {% endif %}
     {% for item in remessa.itens %}
-    <div class="item-row">
+    <div class="item-row{% if destaque_id and item.produto_id == destaque_id %} item-destaque{% endif %}">
       <div class="item-produto">{{ item.produto_descricao }}</div>
       <div class="item-meta">
         <span>{{ item.cor_descricao }}</span>

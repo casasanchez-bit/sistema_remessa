@@ -926,6 +926,7 @@ def mobile_produto_ver(produto_id):
 @app.route("/m/terceirizado/<int:terceirizado_id>")
 def mobile_terceirizado_ver(terceirizado_id):
     db = get_db()
+    destaque_id = request.args.get("destaque", type=int)
     terceirizado = db.execute("SELECT * FROM terceirizados WHERE id = ?", (terceirizado_id,)).fetchone()
     if terceirizado is None:
         return redirect(url_for("mobile_dashboard"))
@@ -951,7 +952,8 @@ def mobile_terceirizado_ver(terceirizado_id):
                                            "pendente": row["qtd_enviada"] - retornado})
     return render_template("mobile/terceirizado_ver.html",
                            terceirizado=terceirizado,
-                           remessas_agrupadas=list(remessas_map.values()))
+                           remessas_agrupadas=list(remessas_map.values()),
+                           destaque_id=destaque_id)
 
 
 # ---------------------------------------------------------------------------
