@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Casa Sanchez">
+  <meta name="theme-color" content="#AF4005">
+  <title>Login — Casa Sanchez</title>
+  <style>
+    :root { --laranja:#AF4005; --linen:#F9E9DC; --marrom:#5C442C; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:Segoe UI,Arial,sans-serif; background:var(--linen); color:var(--marrom); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .card { background:#fff; border:1px solid #e7d7c4; border-radius:14px; padding:32px 24px; width:100%; max-width:360px; box-shadow:0 8px 24px rgba(0,0,0,.1); }
+    h1 { font-size:20px; text-align:center; margin-bottom:4px; }
+    p.sub { font-size:13px; text-align:center; opacity:.65; margin-bottom:24px; }
+    label { font-size:12px; font-weight:600; display:block; margin-bottom:4px; opacity:.75; }
+    input { width:100%; padding:12px 14px; border:1px solid #d9c6b3; border-radius:8px; font-size:16px; margin-bottom:14px; outline:none; }
+    input:focus { border-color:var(--laranja); }
+    .btn { width:100%; background:var(--laranja); color:#fff; border:none; padding:13px; border-radius:8px; font-size:16px; font-weight:700; cursor:pointer; }
+    .btn:active { opacity:.9; }
+    .flash { padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; background:#f3d9d6; color:var(--laranja); border:1px solid var(--laranja); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Casa Sanchez</h1>
+    <p class="sub">Controle de Remessa</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for _, msg in messages %}
+        <div class="flash">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="proximo" value="{{ proximo }}">
+      <label>Usuário</label>
+      <input type="text" name="usuario" autofocus autocomplete="username" required>
+      <label>Senha</label>
+      <input type="password" name="senha" autocomplete="current-password" required>
+      <button class="btn" type="submit">Entrar</button>
+    </form>
+  </div>
+</body>
+</html>

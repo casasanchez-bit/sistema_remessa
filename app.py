@@ -274,7 +274,7 @@ def _backup_automatico():
 
 _backup_automatico()
 
-ENDPOINTS_PUBLICOS = {"login", "logout", "primeiro_acesso", "static"}
+ENDPOINTS_PUBLICOS = {"login", "logout", "primeiro_acesso", "static", "mobile_login"}
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "casa-sanchez-dev-only")
@@ -390,6 +390,8 @@ def exigir_login():
     if not existe_usuario:
         return redirect(url_for("primeiro_acesso"))
     if "usuario_id" not in session:
+        if request.path.startswith("/m/"):
+            return redirect(url_for("mobile_login", proximo=request.path))
         return redirect(url_for("login", proximo=request.path))
     return None
 
@@ -840,6 +842,27 @@ def dashboard():
 # ---------------------------------------------------------------------------
 # Mobile — rotas /m/
 # ---------------------------------------------------------------------------
+
+@app.route("/m/login", methods=["GET", "POST"])
+def mobile_login():
+    db = get_db()
+    if db.execute("SELECT 1 FROM usuarios LIMIT 1").fetchone() is None:
+        return redirect(url_for("primeiro_acesso"))
+    if request.method == "POST":
+        usuario = request.form.get("usuario", "").strip()
+        senha = request.form.get("senha", "")
+        row = db.execute("SELECT * FROM usuarios WHERE usuario = ?", (usuario,)).fetchone()
+        if row is None or not check_password_hash(row["senha_hash"], senha):
+            flash("Usuário ou senha inválidos.", "erro")
+        else:
+            session.clear()
+            session["usuario_id"] = row["id"]
+            session["usuario_nome"] = row["usuario"]
+            proximo = request.form.get("proximo", "")
+            destino = proximo if proximo.startswith("/m/") else url_for("mobile_dashboard")
+            return redirect(destino)
+    return render_template("mobile/login.html", proximo=request.args.get("proximo", ""))
+
 
 @app.route("/m/")
 def mobile_dashboard():
