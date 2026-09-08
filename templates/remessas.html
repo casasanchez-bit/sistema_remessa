@@ -45,7 +45,7 @@
   .erp-terceirizado .combo-input { width:100%; box-sizing:border-box; }
 </style>
 
-<form method="post" action="/remessas/nova" id="formRemessa">
+<form method="post" action="{% if remessa_editando %}/remessas/{{ remessa_editando.id }}/salvar{% else %}/remessas/nova{% endif %}" id="formRemessa">
 <div class="erp-wrap">
   {# ── Painel principal ── #}
   <div class="erp-main">
@@ -92,7 +92,7 @@
     {# Observação #}
     <div class="erp-obs">
       <label>Observação (opcional)</label>
-      <textarea name="observacao" rows="2" placeholder="Instruções especiais, referências, etc."></textarea>
+      <textarea name="observacao" rows="2" placeholder="Instruções especiais, referências, etc.">{{ remessa_editando.observacao if remessa_editando else '' }}</textarea>
     </div>
 
     {# Botões de item #}
@@ -105,15 +105,16 @@
 
   {# ── Painel de ações (direita) ── #}
   <div class="erp-painel">
-    <div class="erp-painel-title">FECHAMENTO</div>
-    <button type="submit" id="btnConfirmarRemessa" class="erp-painel-btn confirmar" disabled title="Preencha todos os itens com serviço e quantidade">✓ Confirmar<br>Remessa</button>
+    <div class="erp-painel-title">{% if remessa_editando %}EDITAR REMESSA{% else %}FECHAMENTO{% endif %}</div>
+    <button type="submit" id="btnConfirmarRemessa" class="erp-painel-btn confirmar" {% if not remessa_editando %}disabled title="Preencha todos os itens com serviço e quantidade"{% endif %}>{% if remessa_editando %}✓ Salvar<br>Alterações{% else %}✓ Confirmar<br>Remessa{% endif %}</button>
     <div style="flex:1;"></div>
-    <a href="/remessas" class="erp-painel-btn cancelar" style="text-align:center;">✕ Cancelar<br>Remessa</a>
+    <a href="/remessas" class="erp-painel-btn cancelar" style="text-align:center;">✕ {% if remessa_editando %}Descartar<br>Alterações{% else %}Cancelar<br>Remessa{% endif %}</a>
   </div>
 </div>
 </form>
 
 {# ── Histórico de Remessas ── #}
+{% if not remessa_editando %}
 <div class="card">
   <h2>Histórico de Remessas</h2>
   <form method="get" action="/remessas" style="display:flex;gap:8px;align-items:end;margin-bottom:14px;flex-wrap:wrap;">
@@ -205,6 +206,7 @@
   {% endfor %}
   {% endif %}
 </div>
+{% endif %}{# fim do bloco histórico (oculto em modo edição) #}
 
 <script>
   const todosServicos = [
@@ -274,7 +276,7 @@
   }
 
   var contadorItens = 0;
-  function addItemRow() {
+  function addItemRow(prefill) {
     contadorItens++;
     const row = document.createElement('div');
     row.className = 'erp-item-row col-erp';
@@ -439,8 +441,8 @@
       travarCampo(svcList); travarCampo(qtdInput); travarCampo(prioSelect);
     }
 
-    // Estado inicial: só produto habilitado
-    resetFluxo();
+    // Estado inicial: só produto habilitado (pular se pré-preenchendo)
+    if (!prefill) { resetFluxo(); }
 
     // Produto → desbloqueia Cor/Estampa
     produtoSelect.addEventListener('change', function() {
@@ -478,11 +480,39 @@
     prioSelect.addEventListener('change', function() {
       setTimeout(function() {
         var btn = document.getElementById('btnAddItem');
-        btn.style.outline = '3px solid #c4501a';
-        btn.style.outlineOffset = '2px';
-        setTimeout(function() { btn.style.outline = ''; btn.style.outlineOffset = ''; }, 1200);
+        if (btn) { btn.style.outline = '3px solid #c4501a'; btn.style.outlineOffset = '2px';
+          setTimeout(function() { btn.style.outline = ''; btn.style.outlineOffset = ''; }, 1200); }
       }, 120);
     });
+
+    // Pré-preenchimento para modo edição
+    if (prefill) {
+      row.dataset.existingItemId = prefill.id || '';
+      produtoSelect.value = prefill.produto_id;
+      atualizarDependentes();
+      corSelect.value = prefill.cor_estampa_id;
+      atualizarFotoPreview();
+      corSelect.dispatchEvent(new Event('comboRefresh'));
+      produtoSelect.dispatchEvent(new Event('comboRefresh'));
+      atualizarOpcoesPrioridade();
+      prefill.servico_ids.forEach(function(svcId) {
+        var cb = svcList.querySelector('.svcCheckbox[value="' + svcId + '"]');
+        if (cb) cb.checked = true;
+      });
+      if (qtdInput) { qtdInput.value = prefill.qtd_enviada; }
+      var prevInput = row.querySelector('input[name="previsao_entrega"]');
+      if (prevInput) prevInput.value = prefill.previsao_entrega || '';
+      if (prioSelect) prioSelect.value = prefill.prioridade || '';
+      liberar(corSelect);
+      liberarCampo(svcList);
+      liberarCampo(qtdInput);
+      liberarCampo(prioSelect);
+      if (prefill.qtd_retornada > 0) {
+        row.title = 'Item com retorno — quantidade mínima: ' + prefill.qtd_retornada;
+        row.style.background = '#fffdf5';
+      }
+      verificarFormCompleto();
+    }
   }
 
   document.getElementById('btnRemoverItem').addEventListener('click', function() {
@@ -542,8 +572,21 @@
   searchableSelect(document.getElementById('terceirizadoSelect'));
   searchableSelect(document.getElementById('filtroTerceirizadoSelect'));
   document.getElementById('terceirizadoSelect').addEventListener('change', atualizarLabelsServicos);
-  document.getElementById('addItem').addEventListener('click', addItemRow);
+  document.getElementById('addItem').addEventListener('click', function() { addItemRow(); });
+
+  {% if remessa_editando %}
+  // Modo edição: pré-selecionar terceirizado e pré-popular itens
+  var itensEditando = {{ itens_editando | tojson }};
+  var tercSel = document.getElementById('terceirizadoSelect');
+  if (tercSel) {
+    tercSel.value = '{{ remessa_editando.terceirizado_id }}';
+    tercSel.dispatchEvent(new Event('comboRefresh'));
+    atualizarLabelsServicos();
+  }
+  itensEditando.forEach(function(item) { addItemRow(item); });
+  {% else %}
   addItemRow();
+  {% endif %}
 
   // Validação antes de gravar
   document.getElementById('formRemessa').addEventListener('submit', function(e) {
@@ -553,6 +596,14 @@
       if (!prod || !prod.value) linha.remove();
     });
     atualizarOpcoesPrioridade();
+    // Injeta existing_item_id_N por posição para o backend saber quais itens atualizar
+    document.querySelectorAll('#itens .erp-item-row').forEach(function(linha, idx) {
+      var h = document.createElement('input');
+      h.type = 'hidden';
+      h.name = 'existing_item_id_' + idx;
+      h.value = linha.dataset.existingItemId || '';
+      linha.appendChild(h);
+    });
 
     var linhas = document.querySelectorAll('#itens .erp-item-row');
     if (linhas.length === 0) {

@@ -1779,7 +1779,7 @@ def confirmacao_remessa(remessa_id):
     return render_template("remessa_confirmacao.html", remessa=remessa)
 
 
-@app.route("/remessas/<int:remessa_id>/editar", methods=["GET", "POST"])
+@app.route("/remessas/<int:remessa_id>/editar")
 def editar_remessa(remessa_id):
     db = get_db()
     remessa = db.execute(
@@ -1791,18 +1791,125 @@ def editar_remessa(remessa_id):
     if remessa is None:
         flash("Remessa não encontrada.", "erro")
         return redirect(url_for("remessas"))
+
+    itens_editando = []
+    for item in itens_da_remessa(db, remessa_id):
+        itens_editando.append({
+            "id": item["id"],
+            "produto_id": item["produto_id"],
+            "cor_estampa_id": item["cor_estampa_id"],
+            "qtd_enviada": item["qtd_enviada"],
+            "qtd_retornada": item["qtd_retornada"],
+            "prioridade": item["prioridade"] or "",
+            "previsao_entrega": item["previsao_entrega"] or "",
+            "servico_ids": [s["servico_id"] for s in item["servicos"]],
+        })
+
+    terceirizados = db.execute("SELECT * FROM terceirizados ORDER BY nome").fetchall()
     produtos = db.execute("SELECT * FROM produtos ORDER BY descricao").fetchall()
     cores_estampas = db.execute("SELECT * FROM cores_estampas ORDER BY descricao").fetchall()
-    servicos = db.execute(
-        """SELECT servicos.*, produtos.codigo AS produto_codigo
-           FROM servicos JOIN produtos ON produtos.id = servicos.produto_id
-           ORDER BY produtos.descricao, servicos.descricao"""
-    ).fetchall()
+    servicos = db.execute("SELECT * FROM servicos ORDER BY descricao").fetchall()
+
     return render_template(
-        "remessa_editar.html", remessa=remessa,
-        itens=itens_da_remessa(db, remessa_id),
-        produtos=produtos, cores_estampas=cores_estampas, servicos=servicos
+        "remessas.html",
+        remessa_editando=remessa,
+        itens_editando=itens_editando,
+        terceirizados=terceirizados,
+        produtos=produtos,
+        cores_estampas=cores_estampas,
+        servicos=servicos,
+        proximo_numero=remessa["numero"],
+        hoje=remessa["data_envio"],
+        remessas=[],
+        buscou=False,
+        filtro_terceirizado_id="",
+        filtro_data_inicio="",
+        filtro_data_fim="",
     )
+
+
+@app.route("/remessas/<int:remessa_id>/salvar", methods=["POST"])
+def salvar_remessa(remessa_id):
+    db = get_db()
+    remessa = db.execute("SELECT * FROM remessas WHERE id = ?", (remessa_id,)).fetchone()
+    if remessa is None:
+        flash("Remessa não encontrada.", "erro")
+        return redirect(url_for("remessas"))
+
+    produto_ids = request.form.getlist("produto_id")
+    cor_ids = request.form.getlist("cor_estampa_id")
+    quantidades = request.form.getlist("qtd_enviada")
+    prioridades = request.form.getlist("prioridade")
+    previsoes_entrega = request.form.getlist("previsao_entrega")
+
+    itens_validos = []
+    for idx, (produto_id, cor_id, qtd, prioridade) in enumerate(
+            zip(produto_ids, cor_ids, quantidades, prioridades)):
+        if not produto_id or not cor_id or not qtd:
+            continue
+        try:
+            qtd_int = int(qtd)
+        except ValueError:
+            continue
+        if qtd_int <= 0:
+            continue
+        svc_ids = [s for s in request.form.getlist(f"svc_id_{idx}") if s]
+        if not svc_ids:
+            continue
+        previsao = previsoes_entrega[idx].strip() if idx < len(previsoes_entrega) else ""
+        existing_id_raw = request.form.get(f"existing_item_id_{idx}", "").strip()
+        itens_validos.append({
+            "produto_id": produto_id, "cor_id": cor_id, "qtd": qtd_int,
+            "prioridade": int(prioridade) if prioridade else None,
+            "svc_ids": svc_ids, "previsao": previsao or None,
+            "existing_item_id": int(existing_id_raw) if existing_id_raw else None,
+        })
+
+    data_envio = request.form.get("data_envio", "").strip()
+    observacao = request.form.get("observacao", "").strip()
+    terceirizado_id = request.form.get("terceirizado_id", "").strip() or remessa["terceirizado_id"]
+
+    db.execute(
+        "UPDATE remessas SET data_envio = ?, observacao = ?, terceirizado_id = ? WHERE id = ?",
+        (data_envio, observacao, terceirizado_id, remessa_id)
+    )
+
+    submitted_existing_ids = set()
+    for item in itens_validos:
+        if item["existing_item_id"]:
+            eid = item["existing_item_id"]
+            submitted_existing_ids.add(eid)
+            db.execute(
+                "UPDATE itens_remessa SET qtd_enviada=?, prioridade=?, previsao_entrega=? WHERE id=? AND remessa_id=?",
+                (item["qtd"], item["prioridade"], item["previsao"], eid, remessa_id)
+            )
+            db.execute("DELETE FROM item_servicos_remessa WHERE item_remessa_id=?", (eid,))
+            for svc_id in item["svc_ids"]:
+                db.execute(
+                    "INSERT OR IGNORE INTO item_servicos_remessa (item_remessa_id, servico_id) VALUES (?,?)",
+                    (eid, svc_id)
+                )
+        else:
+            cur = db.execute(
+                "INSERT INTO itens_remessa (remessa_id, produto_id, cor_estampa_id, qtd_enviada, prioridade, previsao_entrega) VALUES (?,?,?,?,?,?)",
+                (remessa_id, item["produto_id"], item["cor_id"], item["qtd"], item["prioridade"], item["previsao"])
+            )
+            new_id = cur.lastrowid
+            for svc_id in item["svc_ids"]:
+                db.execute(
+                    "INSERT OR IGNORE INTO item_servicos_remessa (item_remessa_id, servico_id) VALUES (?,?)",
+                    (new_id, svc_id)
+                )
+
+    for row in db.execute("SELECT id FROM itens_remessa WHERE remessa_id=?", (remessa_id,)).fetchall():
+        if row["id"] not in submitted_existing_ids and qtd_retornada(db, row["id"]) == 0:
+            db.execute("DELETE FROM item_servicos_remessa WHERE item_remessa_id=?", (row["id"],))
+            db.execute("DELETE FROM itens_remessa WHERE id=?", (row["id"],))
+
+    registrar_historico(db, "remessas", remessa_id, f"Remessa Nº {remessa['numero']} editada")
+    db.commit()
+    flash("Remessa atualizada com sucesso.", "sucesso")
+    return redirect(url_for("editar_remessa", remessa_id=remessa_id))
 
 
 @app.route("/remessas/<int:remessa_id>/atualizar-observacao", methods=["POST"])
