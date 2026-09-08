@@ -1,68 +1,122 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="card">
-  <h2>Remessa Nº {{ remessa.numero }}</h2>
-  <div class="grid" style="margin-bottom:14px;">
-    <div>
-      <label>Terceirizado</label>
-      <p style="margin:4px 0;font-weight:600;">{{ remessa.terceirizado_nome if remessa.terceirizado_nome else "-" }}</p>
-    </div>
-    <div>
-      <label>Data de envio</label>
-      <p style="margin:4px 0;font-weight:600;">{{ remessa.data_envio|brdate }}</p>
-    </div>
-  </div>
-  <form method="post" action="/remessas/{{ remessa.id }}/atualizar-observacao" style="margin-bottom:12px;">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Observação</label>
-    <textarea name="observacao" rows="3" style="width:100%;border:1px solid #d9c6b3;border-radius:6px;padding:8px;font-size:13px;font-family:inherit;resize:vertical;">{{ remessa.observacao or '' }}</textarea>
-    <button class="btn-mini ver" type="submit" style="margin-top:6px;">Salvar Observação</button>
-  </form>
-  <a href="/remessas" class="btn secondary">Voltar</a>
-  <a class="btn-mini ver" href="{{ url_for('remessa_materias_primas', remessa_id=remessa.id) }}" style="margin-left:8px;">MP NECESSÁRIAS</a>
-  <form method="post" action="/remessas/{{ remessa.id }}/excluir" style="display:inline;margin-left:8px;"
-        onsubmit="return confirm('Cancelar a remessa Nº {{ remessa.numero }}? Esta ação não pode ser desfeita.');">
-    <button class="btn-mini excluir" type="submit">CANCELAR REMESSA</button>
-  </form>
-</div>
+<style>
+  .erp-wrap { display:grid; grid-template-columns:1fr 200px; gap:0; border:1px solid #c8b49a; border-radius:10px; overflow:hidden; background:#fff; margin-bottom:18px; }
+  .erp-main { padding:0; min-width:0; }
+  .erp-header { background:#5a3e2b; color:#fff; padding:8px 16px; font-size:13px; font-weight:700; letter-spacing:.5px; }
+  .erp-cabecalho { display:flex; border-bottom:2px solid #e7d7c4; }
+  .erp-field { padding:8px 14px; border-right:1px solid #e7d7c4; display:flex; align-items:center; gap:8px; font-size:13px; }
+  .erp-field:last-child { border-right:none; flex:1; }
+  .erp-field label { font-size:11px; color:#888; font-weight:700; text-transform:uppercase; white-space:nowrap; margin:0; display:inline; opacity:1; }
+  .erp-field .ctrl-num { font-size:18px; font-weight:800; color:var(--laranja); }
+  .erp-obs { padding:8px 14px; border-top:1px solid #e7d7c4; }
+  .erp-obs label { font-size:11px; color:#888; font-weight:700; text-transform:uppercase; margin:0 0 4px; display:block; opacity:1; }
+  .erp-obs textarea { width:100%; font-size:13px; padding:5px 8px; border:1px solid #d9c6b3; border-radius:5px; resize:vertical; font-family:inherit; }
+  .erp-painel { background:#f5ede4; border-left:2px solid #d9c6b3; display:flex; flex-direction:column; }
+  .erp-painel-title { background:#5a3e2b; color:#fff; padding:8px 12px; font-size:12px; font-weight:700; text-align:center; letter-spacing:.5px; }
+  .erp-painel-btn { margin:8px 10px 0; padding:10px 8px; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer; border:none; text-align:center; text-decoration:none; display:block; line-height:1.3; }
+  .erp-painel-btn.acao { background:var(--linen); color:var(--marrom); border:1px solid #d9c6b3; }
+  .erp-painel-btn.cancelar { background:#f3d9d6; color:var(--terracota); border:1px solid #e0b0aa; margin-top:auto; margin-bottom:10px; }
 
-<div class="card">
-  <h2>Itens desta remessa</h2>
-  <style>
-    .svc-tag { display:inline-flex; align-items:center; gap:3px; background:#f5ede4; border:1px solid #d9c6b3; border-radius:4px; padding:2px 5px; font-size:11px; margin:2px 2px 2px 0; }
-    .svc-tag button { background:none; border:none; cursor:pointer; color:#c0392b; font-size:10px; padding:0 1px; line-height:1; }
-    .add-svc-form { display:flex; gap:4px; align-items:center; margin-top:4px; flex-wrap:wrap; }
-    .add-svc-form select { font-size:11px; padding:2px 4px; border:1px solid #d9c6b3; border-radius:4px; max-width:180px; }
-    .add-svc-form button { font-size:10px; padding:2px 6px; }
-  </style>
-  {% for item in itens %}
-  <div style="border:1px solid #e7d7c4;border-radius:8px;margin-bottom:10px;overflow:hidden;">
-    {# Cabeçalho do item #}
-    <div style="background:#f5ede4;padding:7px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid #e7d7c4;">
-      <span style="font-size:12px;font-weight:700;color:#5a3e2b;">
-        {% if item.prioridade %}<span style="background:#c4501a;color:#fff;border-radius:3px;padding:1px 5px;font-size:10px;">{{ item.prioridade }}º</span> {% endif %}
-        <b>{{ item.produto_completo }}</b> — {{ item.cor_descricao }}
-      </span>
-      <span style="margin-left:auto;font-size:12px;color:#666;">
-        {% if item.previsao_entrega %}<span style="margin-right:10px;">Prev. Entrega: <b>{{ item.previsao_entrega|brdate }}</b></span>{% endif %}
-        Env: <b>{{ item.qtd_enviada }}</b> | Ret: <b>{{ item.qtd_retornada }}</b> | Pend: <b>{{ item.pendente }}</b>
-      </span>
-      <a class="btn-mini editar" href="/itens-remessa/{{ item.id }}/editar" style="font-size:10px;padding:2px 7px;">EDITAR</a>
-      <form method="post" action="/itens-remessa/{{ item.id }}/excluir" style="display:inline;"
-            onsubmit="return confirm('Excluir este item da remessa?');">
-        <button class="btn-mini excluir" type="submit" style="font-size:10px;padding:2px 7px;">EXCLUIR</button>
-      </form>
+  /* Grid de itens */
+  .cols-item { grid-template-columns: 32px 2.2fr 1.4fr 52px 52px 60px 108px 84px 108px; }
+  .item-grid-header { display:grid; background:#f5ede4; border-top:1px solid #e7d7c4; border-bottom:2px solid #d9c6b3; font-size:11px; font-weight:700; color:#5a3e2b; text-transform:uppercase; }
+  .item-grid-header span { padding:6px 8px; border-right:1px solid #e7d7c4; }
+  .item-grid-header span:last-child { border-right:none; }
+  .item-bloco { border-bottom:1px solid #e7d7c4; }
+  .item-bloco:last-child { border-bottom:none; }
+  .item-principal { display:grid; align-items:center; }
+  .item-principal > * { padding:7px 8px; border-right:1px solid #f0e4d8; font-size:13px; }
+  .item-principal > *:last-child { border-right:none; }
+  .item-servicos { padding:5px 8px 8px 40px; background:#fafaf8; border-top:1px dashed #e7d7c4; }
+  .svc-tag { display:inline-flex; align-items:center; gap:3px; background:#f5ede4; border:1px solid #d9c6b3; border-radius:4px; padding:2px 5px; font-size:11px; margin:2px 2px 2px 0; }
+  .svc-tag button { background:none; border:none; cursor:pointer; color:#c0392b; font-size:10px; padding:0 1px; line-height:1; }
+  .add-svc-form { display:flex; gap:4px; align-items:center; margin-top:4px; flex-wrap:wrap; }
+  .add-svc-form select { font-size:11px; padding:2px 4px; border:1px solid #d9c6b3; border-radius:4px; max-width:200px; }
+
+  /* Adicionar item */
+  .add-item-section { border-top:2px solid #e7d7c4; padding:10px 14px; background:#fffaf7; }
+  .add-item-section h3 { font-size:12px; font-weight:700; text-transform:uppercase; color:#5a3e2b; margin:0 0 8px; letter-spacing:.5px; }
+  .add-item-grid { display:grid; grid-template-columns:1.8fr 1.4fr 2fr 90px 90px auto; gap:8px; align-items:end; }
+  .add-item-grid label { font-size:11px; font-weight:700; color:#888; text-transform:uppercase; display:block; margin-bottom:3px; opacity:1; }
+  .add-item-grid select, .add-item-grid input { width:100%; border:1px solid #d9c6b3; border-radius:5px; padding:5px 7px; font-size:13px; }
+</style>
+
+<div class="erp-wrap">
+  <div class="erp-main">
+    <div class="erp-header">REMESSA DE TRANSFERÊNCIA PARA PRODUÇÃO</div>
+
+    <div class="erp-cabecalho">
+      <div class="erp-field">
+        <label>Remessa</label>
+        <span class="ctrl-num">{{ remessa.numero }}</span>
+      </div>
+      <div class="erp-field">
+        <label>Data de Envio</label>
+        <span style="font-weight:600;">{{ remessa.data_envio|brdate }}</span>
+      </div>
+      <div class="erp-field">
+        <label>Prestador de Serviço</label>
+        <span style="font-weight:600;">{{ remessa.terceirizado_nome or "—" }}</span>
+      </div>
     </div>
-    {# Serviços do item #}
-    <div style="padding:8px 12px;">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:4px;">Serviços</div>
-      <div>
+
+    {# Tabela de itens #}
+    <div class="item-grid-header cols-item">
+      <span style="text-align:center;">#</span>
+      <span>Produto</span>
+      <span>Cor / Estampa</span>
+      <span style="text-align:center;">Env</span>
+      <span style="text-align:center;">Ret</span>
+      <span style="text-align:center;">Pend</span>
+      <span style="text-align:center;">Prev. Entrega</span>
+      <span style="text-align:center;">Status</span>
+      <span style="text-align:center;">Ações</span>
+    </div>
+
+    {% for item in itens %}
+    <div class="item-bloco">
+      <div class="item-principal cols-item">
+        <div style="text-align:center;font-weight:700;color:{% if item.prioridade %}var(--laranja){% else %}#bbb{% endif %};">
+          {{ item.prioridade ~ "º" if item.prioridade else "—" }}
+        </div>
+        <div>
+          <div style="font-weight:600;font-size:12px;color:#888;">{{ item.produto_codigo }}</div>
+          <div>{{ item.produto_descricao }}</div>
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;gap:5px;">
+            {% if item.cor_foto %}<img src="/static/fotos_estampas/{{ item.cor_foto }}" alt="" style="width:32px;height:32px;object-fit:cover;border-radius:4px;border:1px solid #ccc;flex-shrink:0;">{% endif %}
+            <span>{{ item.cor_descricao }}</span>
+          </div>
+        </div>
+        <div style="text-align:center;">{{ item.qtd_enviada }}</div>
+        <div style="text-align:center;">{{ item.qtd_retornada }}</div>
+        <div style="text-align:center;font-weight:700;">{{ item.pendente }}</div>
+        <div style="text-align:center;font-size:12px;">{{ item.previsao_entrega|brdate if item.previsao_entrega else "—" }}</div>
+        <div style="text-align:center;">
+          {% if item.qtd_retornada == 0 %}<span class="badge b-pendente">Pendente</span>
+          {% elif item.pendente > 0 %}<span class="badge b-parcial">Parcial</span>
+          {% else %}<span class="badge b-concluida">Concluída</span>{% endif %}
+        </div>
+        <div style="text-align:center;display:flex;gap:4px;justify-content:center;align-items:center;">
+          <a class="btn-mini editar" href="/itens-remessa/{{ item.id }}/editar" style="font-size:10px;padding:2px 6px;">EDITAR</a>
+          <form method="post" action="/itens-remessa/{{ item.id }}/excluir" style="display:inline;"
+                onsubmit="return confirm('Excluir este item da remessa?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn-mini excluir" type="submit" style="font-size:10px;padding:2px 6px;">EXCLUIR</button>
+          </form>
+        </div>
+      </div>
+      <div class="item-servicos">
+        <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#888;">Serviços: </span>
         {% for svc in item.servicos %}
         <span class="svc-tag">
           {{ svc.servico_descricao }} — R$ {{ svc.servico_valor|brl }}
           {% if item.servicos|length > 1 %}
           <form method="post" action="/item-servico/{{ svc.id }}/excluir" style="display:inline;"
                 onsubmit="return confirm('Remover serviço \'{{ svc.servico_descricao }}\'?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" title="Remover serviço">✕</button>
           </form>
           {% endif %}
@@ -70,65 +124,90 @@
         {% else %}
         <span style="font-size:12px;color:#aaa;">Nenhum serviço — adicione abaixo.</span>
         {% endfor %}
+        <form method="post" action="/itens-remessa/{{ item.id }}/servicos/adicionar" class="add-svc-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <select name="servico_id" required>
+            <option value="">+ Selecionar serviço...</option>
+            {% for s in servicos if s.produto_id == item.produto_id %}
+            <option value="{{ s.id }}">{{ s.descricao }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn-mini ver" type="submit">Adicionar</button>
+        </form>
       </div>
-      {# Mini-form para adicionar serviço ao item #}
-      <form method="post" action="/itens-remessa/{{ item.id }}/servicos/adicionar" class="add-svc-form">
-        <select name="servico_id" required>
-          <option value="">+ Selecionar serviço...</option>
-          {% for s in servicos if s.produto_id == item.produto_id %}
-          <option value="{{ s.id }}">{{ s.descricao }}</option>
-          {% endfor %}
-        </select>
-        <button class="btn-mini ver" type="submit">Adicionar Serviço</button>
+    </div>
+    {% else %}
+    <div style="padding:16px 14px;color:#aaa;font-size:13px;">Nenhum item nesta remessa.</div>
+    {% endfor %}
+
+    {# Observação #}
+    <form method="post" action="/remessas/{{ remessa.id }}/atualizar-observacao">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="erp-obs">
+        <label>Observação (opcional)</label>
+        <textarea name="observacao" rows="2" placeholder="Instruções especiais, referências, etc.">{{ remessa.observacao or '' }}</textarea>
+        <button class="btn-mini ver" type="submit" style="margin-top:6px;">Salvar Observação</button>
+      </div>
+    </form>
+
+    {# Adicionar item #}
+    <div class="add-item-section">
+      <h3>＋ Adicionar Item</h3>
+      <form method="post" action="/remessas/{{ remessa.id }}/adicionar-item">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="add-item-grid">
+          <div>
+            <label>Produto</label>
+            <select name="produto_id" id="addProdutoSelect" data-placeholder="Buscar por nome ou código..." data-search="contains" required>
+              <option value=""></option>
+              {% for p in produtos %}
+              <option value="{{ p.id }}">{{ p.codigo }} - {{ p.descricao }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label>Cor / Estampa</label>
+            <select name="cor_estampa_id" id="addCorSelect" data-placeholder="Buscar cor..." data-search="contains" required>
+              <option value="">Selecione o produto primeiro</option>
+            </select>
+          </div>
+          <div>
+            <label>Serviço(s) <span style="font-size:10px;color:#bbb;">(Ctrl = múltiplos)</span></label>
+            <select name="servico_id" id="addServicoSelect" multiple size="3" required
+                    style="border:1px solid #d9c6b3;border-radius:5px;padding:3px;font-size:13px;width:100%;">
+              <option value="">Selecione o produto primeiro</option>
+            </select>
+          </div>
+          <div>
+            <label>Quantidade</label>
+            <input type="number" name="qtd_enviada" min="1" required>
+          </div>
+          <div>
+            <label>Prioridade</label>
+            <input type="number" name="prioridade" min="1" placeholder="Ex: 1">
+          </div>
+          <div>
+            <button class="btn" type="submit" style="white-space:nowrap;">Adicionar Item</button>
+          </div>
+        </div>
       </form>
     </div>
   </div>
-  {% else %}
-  <p class="small">Nenhum item nesta remessa.</p>
-  {% endfor %}
-</div>
 
-<div class="card">
-  <h2>Adicionar item</h2>
-  <form method="post" action="/remessas/{{ remessa.id }}/adicionar-item">
-    <div class="grid" style="margin-bottom:10px;">
-      <div>
-        <label>Produto</label>
-        <select name="produto_id" id="addProdutoSelect" data-placeholder="Buscar por nome ou código..." data-search="contains" required>
-          <option value=""></option>
-          {% for p in produtos %}
-          <option value="{{ p.id }}">{{ p.codigo }} - {{ p.descricao }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div>
-        <label>Cor / Estampa</label>
-        <select name="cor_estampa_id" id="addCorSelect" data-placeholder="Buscar cor ou estampa..." data-search="contains" required>
-          <option value="">Selecione o produto primeiro</option>
-        </select>
-      </div>
-      <div>
-        <label>Serviço(s) <span style="font-size:10px;color:#888;">(segure Ctrl para selecionar mais de um)</span></label>
-        <select name="servico_id" id="addServicoSelect" multiple size="3" required
-                style="border:1px solid #d9c6b3;border-radius:5px;padding:3px;font-size:13px;width:100%;">
-          <option value="">Selecione o produto primeiro</option>
-        </select>
-      </div>
-    </div>
-    <div class="grid" style="margin-bottom:10px;">
-      <div>
-        <label>Quantidade</label>
-        <input type="number" name="qtd_enviada" min="1" required>
-      </div>
-      <div>
-        <label>Prioridade</label>
-        <input type="number" name="prioridade" min="1" placeholder="Ex: 1">
-      </div>
-      <div style="display:flex;align-items:flex-end;">
-        <button class="btn" type="submit">Adicionar Item</button>
-      </div>
-    </div>
-  </form>
+  {# Painel lateral #}
+  <div class="erp-painel">
+    <div class="erp-painel-title">AÇÕES</div>
+    <a href="/remessas" class="erp-painel-btn acao">← Voltar</a>
+    <a href="/remessas/{{ remessa.id }}/imprimir" target="_blank" class="erp-painel-btn acao">🖨 Imprimir</a>
+    <a href="{{ url_for('remessa_materias_primas', remessa_id=remessa.id) }}" class="erp-painel-btn acao">MP Necessárias</a>
+    <div style="flex:1;"></div>
+    <form method="post" action="/remessas/{{ remessa.id }}/excluir"
+          onsubmit="return confirm('Cancelar a remessa Nº {{ remessa.numero }}? Esta ação não pode ser desfeita.');"
+          style="margin:0 10px 10px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="erp-painel-btn cancelar" type="submit" style="width:100%;">✕ Cancelar<br>Remessa</button>
+    </form>
+  </div>
 </div>
 
 <script>
