@@ -12,11 +12,12 @@
       <p style="margin:4px 0;font-weight:600;">{{ remessa.data_envio|brdate }}</p>
     </div>
   </div>
-  {% if remessa.observacao %}
-  <div style="margin-bottom:10px;padding:8px 10px;background:#fffaf7;border:1px solid #e7d7c4;border-radius:6px;font-size:13px;">
-    <b>Observação:</b> {{ remessa.observacao }}
-  </div>
-  {% endif %}
+  <form method="post" action="/remessas/{{ remessa.id }}/atualizar-observacao" style="margin-bottom:12px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Observação</label>
+    <textarea name="observacao" rows="3" style="width:100%;border:1px solid #d9c6b3;border-radius:6px;padding:8px;font-size:13px;font-family:inherit;resize:vertical;">{{ remessa.observacao or '' }}</textarea>
+    <button class="btn-mini ver" type="submit" style="margin-top:6px;">Salvar Observação</button>
+  </form>
   <a href="/remessas" class="btn secondary">Voltar</a>
   <a class="btn-mini ver" href="{{ url_for('remessa_materias_primas', remessa_id=remessa.id) }}" style="margin-left:8px;">MP NECESSÁRIAS</a>
   <form method="post" action="/remessas/{{ remessa.id }}/excluir" style="display:inline;margin-left:8px;"

@@ -42,11 +42,10 @@
   </div>
 
   <div class="page">
-    {% for via in [1, 2] %}
     <div class="via">
       <div class="cabecalho">
         <h1>RETORNO DA PRODUÇÃO — Casa Sanchez</h1>
-        <div class="numero">Nº Retorno: {{ retorno.numero }}<br>Via {{ via }}/2</div>
+        <div class="numero">Nº Retorno: {{ retorno.numero }}</div>
       </div>
       <div class="info">
         <div><b>Prestador de Serviço</b>{{ retorno.terceirizado_codigo }} - {{ retorno.terceirizado_nome }}</div>
@@ -83,7 +82,6 @@
       {% endif %}
       <div class="rodape">Casa Sanchez · Controle de Remessa e Retorno — Emitido em <span class="data-emissao"></span></div>
     </div>
-    {% endfor %}
   </div>
 <script>
   var hoje = new Date();

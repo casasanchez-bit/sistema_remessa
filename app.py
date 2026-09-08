@@ -1805,6 +1805,16 @@ def editar_remessa(remessa_id):
     )
 
 
+@app.route("/remessas/<int:remessa_id>/atualizar-observacao", methods=["POST"])
+def atualizar_observacao_remessa(remessa_id):
+    db = get_db()
+    observacao = request.form.get("observacao", "").strip()
+    db.execute("UPDATE remessas SET observacao = ? WHERE id = ?", (observacao, remessa_id))
+    db.commit()
+    flash("Observação atualizada.", "sucesso")
+    return redirect(url_for("editar_remessa", remessa_id=remessa_id))
+
+
 @app.route("/remessas/<int:remessa_id>/adicionar-item", methods=["POST"])
 def adicionar_item_remessa(remessa_id):
     db = get_db()
