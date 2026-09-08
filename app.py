@@ -1909,8 +1909,12 @@ def salvar_remessa(remessa_id):
 
     registrar_historico(db, "remessas", remessa_id, f"Remessa Nº {remessa['numero']} editada")
     db.commit()
-    flash("Remessa atualizada com sucesso.", "sucesso")
-    return redirect(url_for("remessas"))
+    remessa_conf = db.execute(
+        """SELECT remessas.*, terceirizados.nome AS terceirizado_nome
+           FROM remessas JOIN terceirizados ON terceirizados.id = remessas.terceirizado_id
+           WHERE remessas.id = ?""", (remessa_id,)
+    ).fetchone()
+    return render_template("remessa_confirmacao.html", remessa=remessa_conf, acao="atualizada")
 
 
 @app.route("/remessas/<int:remessa_id>/atualizar-observacao", methods=["POST"])
