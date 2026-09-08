@@ -1874,11 +1874,11 @@ def salvar_remessa(remessa_id):
         (data_envio, observacao, terceirizado_id, remessa_id)
     )
 
-    submitted_existing_ids = set()
+    keep_ids = set()
     for item in itens_validos:
         if item["existing_item_id"]:
             eid = item["existing_item_id"]
-            submitted_existing_ids.add(eid)
+            keep_ids.add(eid)
             db.execute(
                 "UPDATE itens_remessa SET qtd_enviada=?, prioridade=?, previsao_entrega=? WHERE id=? AND remessa_id=?",
                 (item["qtd"], item["prioridade"], item["previsao"], eid, remessa_id)
@@ -1895,6 +1895,7 @@ def salvar_remessa(remessa_id):
                 (remessa_id, item["produto_id"], item["cor_id"], item["qtd"], item["prioridade"], item["previsao"])
             )
             new_id = cur.lastrowid
+            keep_ids.add(new_id)
             for svc_id in item["svc_ids"]:
                 db.execute(
                     "INSERT OR IGNORE INTO item_servicos_remessa (item_remessa_id, servico_id) VALUES (?,?)",
@@ -1902,7 +1903,7 @@ def salvar_remessa(remessa_id):
                 )
 
     for row in db.execute("SELECT id FROM itens_remessa WHERE remessa_id=?", (remessa_id,)).fetchall():
-        if row["id"] not in submitted_existing_ids and qtd_retornada(db, row["id"]) == 0:
+        if row["id"] not in keep_ids and qtd_retornada(db, row["id"]) == 0:
             db.execute("DELETE FROM item_servicos_remessa WHERE item_remessa_id=?", (row["id"],))
             db.execute("DELETE FROM itens_remessa WHERE id=?", (row["id"],))
 
