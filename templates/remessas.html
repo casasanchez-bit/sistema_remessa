@@ -108,7 +108,7 @@
     <div class="erp-painel-title">{% if remessa_editando %}EDITAR REMESSA{% else %}FECHAMENTO{% endif %}</div>
     <button type="submit" id="btnConfirmarRemessa" class="erp-painel-btn confirmar" {% if not remessa_editando %}disabled title="Preencha todos os itens com serviço e quantidade"{% endif %}>{% if remessa_editando %}✓ Salvar<br>Alterações{% else %}✓ Confirmar<br>Remessa{% endif %}</button>
     {% if remessa_editando %}
-    <a href="/remessas/{{ remessa_editando.id }}/imprimir" target="_blank" class="erp-painel-btn imprimir">🖨 Imprimir</a>
+    <button type="button" class="erp-painel-btn imprimir" onclick="window.open('/remessas/{{ remessa_editando.id }}/imprimir', '_blank'); window.location.href='/remessas';">🖨 Imprimir</button>
     {% endif %}
     <div style="flex:1;"></div>
     <a href="/remessas" class="erp-painel-btn cancelar" style="text-align:center;">✕ {% if remessa_editando %}Voltar<br>sem Salvar{% else %}Cancelar<br>Remessa{% endif %}</a>

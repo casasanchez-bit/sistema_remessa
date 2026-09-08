@@ -1910,7 +1910,7 @@ def salvar_remessa(remessa_id):
     registrar_historico(db, "remessas", remessa_id, f"Remessa Nº {remessa['numero']} editada")
     db.commit()
     flash("Remessa atualizada com sucesso.", "sucesso")
-    return redirect(url_for("editar_remessa", remessa_id=remessa_id))
+    return redirect(url_for("remessas"))
 
 
 @app.route("/remessas/<int:remessa_id>/atualizar-observacao", methods=["POST"])
