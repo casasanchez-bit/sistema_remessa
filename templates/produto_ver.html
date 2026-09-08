@@ -5,6 +5,15 @@
   <p class="small">Código: {{ produto.codigo }}</p>
   <div class="actions" style="margin-top:10px;">
     <a href="/cadastros/produtos" class="btn secondary">Voltar</a>
+    {% if tem_permissao('gerenciar_usuarios') %}
+    <a class="btn-mini editar" href="/produtos/{{ produto.id }}/editar">EDITAR</a>
+    <a class="btn-mini" href="/produtos/{{ produto.id }}/plano-corte" style="background:#5C442C;color:#fff;">{% if tem_plano %}VER PLANO DE CORTE{% else %}CRIAR PLANO DE CORTE{% endif %}</a>
+    <a class="btn-mini" href="/produtos/{{ produto.id }}/composicao" style="background:#5C442C;color:#fff;">{% if tem_composicao %}VER FICHA TÉCNICA{% else %}CRIAR FICHA TÉCNICA{% endif %}</a>
+    <form method="post" action="/produtos/{{ produto.id }}/excluir" onsubmit="return confirm('Excluir este produto?');" style="display:inline;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn-mini excluir" type="submit">EXCLUIR</button>
+    </form>
+    {% endif %}
   </div>
 </div>
 
