@@ -98,6 +98,9 @@
         {% endfor %}
         {% endfor %}
       </table>
+      <div style="font-size:10.5px;margin-top:5px;text-align:right;font-weight:700;color:#333;">
+        Total de peças enviadas: {{ itens | sum(attribute='qtd_enviada') }}
+      </div>
       {% if remessa.observacao %}
       <div style="font-size:10.5px;margin-top:6px;border-top:1px solid #ddd;padding-top:4px;color:#333;white-space:pre-wrap;">
         <b>Observação:</b> {{ remessa.observacao }}
