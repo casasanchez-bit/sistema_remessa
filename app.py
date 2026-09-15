@@ -3229,7 +3229,9 @@ def importar_cadastros():
 def cadastros_materias_primas():
     db = get_db()
     mps = db.execute("SELECT * FROM materias_primas ORDER BY codigo").fetchall()
-    return render_template("cadastro_materias_primas.html", mps=mps)
+    codigos_cmp = [int(m['codigo'][3:]) for m in mps if m['codigo'].upper().startswith('CMP') and m['codigo'][3:].isdigit()]
+    proximo_cmp = f"CMP{max(codigos_cmp) + 1}" if codigos_cmp else "CMP1"
+    return render_template("cadastro_materias_primas.html", mps=mps, proximo_cmp=proximo_cmp)
 
 
 @app.route("/cadastros/materia-prima/adicionar", methods=["POST"])
