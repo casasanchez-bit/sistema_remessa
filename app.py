@@ -3805,45 +3805,16 @@ def remessa_materias_primas(remessa_id):
     if not remessa:
         flash("Remessa não encontrada.", "erro")
         return redirect(url_for("remessas"))
-    # Itens com produto e serviços para cálculo de MPs com regras especiais
-    itens_raw = db.execute("""
-        SELECT ir.id, ir.produto_id, ir.qtd_enviada,
-               p.codigo AS produto_codigo,
-               GROUP_CONCAT(s.descricao, '||') AS servicos
+    mps = db.execute("""
+        SELECT mp.codigo, mp.descricao, mp.unidade,
+               SUM(pc.quantidade * ir.qtd_enviada) AS total
         FROM itens_remessa ir
-        JOIN produtos p ON p.id = ir.produto_id
-        LEFT JOIN item_servicos_remessa isr ON isr.item_remessa_id = ir.id
-        LEFT JOIN servicos s ON s.id = isr.servico_id
+        JOIN produto_composicao pc ON pc.produto_id = ir.produto_id
+        JOIN materias_primas mp ON mp.id = pc.materia_prima_id
         WHERE ir.remessa_id = ?
-        GROUP BY ir.id
+        GROUP BY mp.id
+        ORDER BY mp.codigo
     """, (remessa_id,)).fetchall()
-
-    # Regra especial: produto 12377 + serviço PREGAR BOTÃO N3 ALMOFADA → só estas MPs
-    PRODUTO_ESPECIAL = '12377'
-    SERVICO_ESPECIAL = 'PREGAR BOTÃO N3 ALMOFADA'
-    MPs_FILTRO = {'12114', 'CMP13', 'CMPLIVRE1'}
-
-    totais = {}
-    for item in itens_raw:
-        servicos_item = set((item['servicos'] or '').split('||'))
-        is_especial = (item['produto_codigo'] == PRODUTO_ESPECIAL and
-                       SERVICO_ESPECIAL in servicos_item)
-        composicao = db.execute("""
-            SELECT mp.codigo, mp.descricao, mp.unidade, pc.quantidade
-            FROM produto_composicao pc
-            JOIN materias_primas mp ON mp.id = pc.materia_prima_id
-            WHERE pc.produto_id = ?
-        """, (item['produto_id'],)).fetchall()
-        for mp in composicao:
-            if is_especial and mp['codigo'] not in MPs_FILTRO:
-                continue
-            cod = mp['codigo']
-            if cod not in totais:
-                totais[cod] = {'codigo': cod, 'descricao': mp['descricao'],
-                               'unidade': mp['unidade'], 'total': 0}
-            totais[cod]['total'] += (mp['quantidade'] or 0) * item['qtd_enviada']
-
-    mps = sorted(totais.values(), key=lambda x: x['codigo'])
     # Itens da remessa para contexto
     itens = db.execute("""
         SELECT p.codigo AS produto_codigo, p.descricao AS produto_descricao,
