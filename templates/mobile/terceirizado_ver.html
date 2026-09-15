@@ -28,7 +28,7 @@
         <span>Ret: {{ item.qtd_retornada }}</span>
         <span class="item-pend">Pend: {{ item.pendente }}</span>
         {% if item.previsao_entrega %}
-        <span style="color:#cc0000;font-weight:700;">Entrega: {{ item.previsao_entrega|brdate }}</span>
+        <span style="color:#cc0000;font-weight:700;">Prev. Entrega: {{ item.previsao_entrega|brdate }}</span>
         {% endif %}
         {% if item.qtd_retornada == 0 %}<span class="badge b-pendente">Pendente</span>
         {% elif item.pendente > 0 %}<span class="badge b-parcial">Parcial</span>
