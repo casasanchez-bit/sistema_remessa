@@ -192,7 +192,7 @@
         <td>{{ item.qtd_enviada }}</td>
         <td>{{ item.qtd_retornada }}</td>
         <td>{{ item.pendente }}</td>
-        <td style="color:#c4501a;font-weight:700;">
+        <td style="color:#cc0000;font-weight:700;">
           {{ item.previsao_entrega|brdate if item.previsao_entrega else "—" }}{% if prazo_vencido %} ⚠{% endif %}
         </td>
         <td>
