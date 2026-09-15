@@ -3785,10 +3785,10 @@ def produto_composicao(produto_id):
         FROM produto_composicao pc
         JOIN materias_primas mp ON pc.materia_prima_id = mp.id
         WHERE pc.produto_id = ?
-        ORDER BY mp.codigo
+        ORDER BY mp.descricao
     """, (produto_id,)).fetchall()
     todas_mps = db.execute(
-        "SELECT id, codigo, descricao, unidade FROM materias_primas ORDER BY codigo"
+        "SELECT id, codigo, descricao, unidade FROM materias_primas ORDER BY descricao"
     ).fetchall()
     return render_template("produto_composicao.html", produto=produto,
                            itens=itens, todas_mps=todas_mps)
@@ -3964,7 +3964,7 @@ def produto_plano_corte(produto_id):
         FROM produto_composicao pc
         JOIN materias_primas mp ON mp.id = pc.materia_prima_id
         WHERE pc.produto_id = ?
-        ORDER BY mp.codigo
+        ORDER BY mp.descricao
     """, (produto_id,)).fetchall()
     cron_rows = {r["numero"]: r for r in db.execute(
         "SELECT * FROM cronometragem_corte WHERE produto_id = ? ORDER BY numero", (produto_id,)
