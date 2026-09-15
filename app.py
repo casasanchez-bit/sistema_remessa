@@ -2138,9 +2138,10 @@ def imprimir_remessa(remessa_id):
         JOIN materias_primas mp ON mp.id = pc.materia_prima_id
         WHERE ir.remessa_id = ?
         GROUP BY mp.id
-        ORDER BY mp.codigo
+        ORDER BY mp.descricao
     """, (remessa_id,)).fetchall()
-    return render_template("remessa_imprimir.html", remessa=remessa, itens=itens_da_remessa(db, remessa_id), mps=mps)
+    itens_impressao = sorted(itens_da_remessa(db, remessa_id), key=lambda x: x['produto_descricao'] or '')
+    return render_template("remessa_imprimir.html", remessa=remessa, itens=itens_impressao, mps=mps)
 
 
 # ---------------------------------------------------------------------------
