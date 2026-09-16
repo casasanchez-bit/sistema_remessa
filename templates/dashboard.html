@@ -61,7 +61,9 @@
 
   <div class="card" style="margin-bottom:0;">
     <h2>Saldo pendente por produto</h2>
-    <table style="font-size:12px;">
+    <input type="search" id="busca-produto" placeholder="Buscar por código ou nome..." oninput="filtrarProdutos()"
+           style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #d9c6b3;border-radius:6px;font-size:12px;margin-bottom:10px;">
+    <table style="font-size:12px;" id="tabela-produto">
       <tr><th>Produto</th><th>Env.</th><th>Ret.</th><th>Pend.</th></tr>
       {% for s in saldo_por_produto %}
       <tr>
@@ -75,5 +77,14 @@
       {% endfor %}
     </table>
   </div>
+<script>
+function filtrarProdutos() {
+  var termo = document.getElementById('busca-produto').value.toLowerCase();
+  var linhas = document.querySelectorAll('#tabela-produto tr:not(:first-child)');
+  linhas.forEach(function(tr) {
+    tr.style.display = tr.textContent.toLowerCase().includes(termo) ? '' : 'none';
+  });
+}
+</script>
 </div>
 {% endblock %}

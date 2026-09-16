@@ -953,17 +953,34 @@ def mobile_terceirizado_ver(terceirizado_id):
     terceirizado = db.execute("SELECT * FROM terceirizados WHERE id = ?", (terceirizado_id,)).fetchone()
     if terceirizado is None:
         return redirect(url_for("mobile_dashboard"))
-    rows = db.execute(
-        """SELECT itens_remessa.*, remessas.numero AS numero, remessas.data_envio AS data_envio,
-                  remessas.observacao AS observacao,
-                  produtos.descricao AS produto_descricao, cores_estampas.descricao AS cor_descricao
-           FROM itens_remessa
-           JOIN remessas ON remessas.id = itens_remessa.remessa_id
-           JOIN produtos ON produtos.id = itens_remessa.produto_id
-           JOIN cores_estampas ON cores_estampas.id = itens_remessa.cor_estampa_id
-           WHERE remessas.terceirizado_id = ? ORDER BY remessas.numero DESC, itens_remessa.id""",
-        (terceirizado_id,),
-    ).fetchall()
+    if destaque_id:
+        rows = db.execute(
+            """SELECT itens_remessa.*, remessas.numero AS numero, remessas.data_envio AS data_envio,
+                      remessas.observacao AS observacao,
+                      produtos.descricao AS produto_descricao, cores_estampas.descricao AS cor_descricao
+               FROM itens_remessa
+               JOIN remessas ON remessas.id = itens_remessa.remessa_id
+               JOIN produtos ON produtos.id = itens_remessa.produto_id
+               JOIN cores_estampas ON cores_estampas.id = itens_remessa.cor_estampa_id
+               WHERE remessas.terceirizado_id = ?
+                 AND remessas.id IN (
+                     SELECT remessa_id FROM itens_remessa WHERE produto_id = ?
+                 )
+               ORDER BY remessas.numero DESC, itens_remessa.id""",
+            (terceirizado_id, destaque_id),
+        ).fetchall()
+    else:
+        rows = db.execute(
+            """SELECT itens_remessa.*, remessas.numero AS numero, remessas.data_envio AS data_envio,
+                      remessas.observacao AS observacao,
+                      produtos.descricao AS produto_descricao, cores_estampas.descricao AS cor_descricao
+               FROM itens_remessa
+               JOIN remessas ON remessas.id = itens_remessa.remessa_id
+               JOIN produtos ON produtos.id = itens_remessa.produto_id
+               JOIN cores_estampas ON cores_estampas.id = itens_remessa.cor_estampa_id
+               WHERE remessas.terceirizado_id = ? ORDER BY remessas.numero DESC, itens_remessa.id""",
+            (terceirizado_id,),
+        ).fetchall()
     remessas_map = {}
     for row in rows:
         num = row["numero"]
