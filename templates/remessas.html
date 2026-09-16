@@ -138,8 +138,30 @@
       <label>Até</label>
       <input type="date" name="filtro_data_fim" value="{{ filtro_data_fim }}">
     </div>
+    <div>
+      <label>Nº Remessa</label>
+      <input type="number" name="filtro_numero" value="{{ filtro_numero }}" placeholder="Ex: 32" style="width:90px;">
+    </div>
+    <div>
+      <label>Produto (código ou nome)</label>
+      <input type="text" name="filtro_produto" value="{{ filtro_produto }}" placeholder="Buscar produto..." style="width:180px;">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:3px;">
+      <label>Status</label>
+      <div style="display:flex;gap:10px;align-items:center;padding:6px 0;">
+        <label style="font-weight:normal;display:flex;align-items:center;gap:4px;cursor:pointer;">
+          <input type="checkbox" name="filtro_status" value="pendente" {{ "checked" if "pendente" in filtro_status }}> Pendente
+        </label>
+        <label style="font-weight:normal;display:flex;align-items:center;gap:4px;cursor:pointer;">
+          <input type="checkbox" name="filtro_status" value="parcial" {{ "checked" if "parcial" in filtro_status }}> Parcial
+        </label>
+        <label style="font-weight:normal;display:flex;align-items:center;gap:4px;cursor:pointer;">
+          <input type="checkbox" name="filtro_status" value="concluido" {{ "checked" if "concluido" in filtro_status }}> Concluído
+        </label>
+      </div>
+    </div>
     <button class="btn" type="submit">Filtrar</button>
-    {% if filtro_terceirizado_id or filtro_data_inicio or filtro_data_fim %}
+    {% if filtro_terceirizado_id or filtro_data_inicio or filtro_data_fim or filtro_numero or filtro_produto or filtro_status %}
     <a class="btn secondary" href="/remessas">Limpar filtro</a>
     {% endif %}
     <a id="excelRemessasLink" class="btn secondary" href="/remessas/exportar-excel" style="margin-left:auto;">⬇ Exportar Excel</a>

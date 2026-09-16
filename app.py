@@ -1651,6 +1651,9 @@ def remessas():
     filtro_terceirizado_id = request.args.get("filtro_terceirizado_id", "").strip()
     filtro_data_inicio = request.args.get("filtro_data_inicio", "").strip()
     filtro_data_fim = request.args.get("filtro_data_fim", "").strip()
+    filtro_numero = request.args.get("filtro_numero", "").strip()
+    filtro_produto = request.args.get("filtro_produto", "").strip()
+    filtro_status = request.args.getlist("filtro_status")
     buscou = bool(request.args)
 
     remessas_view = []
@@ -1668,11 +1671,20 @@ def remessas():
         if filtro_data_fim:
             query += " AND remessas.data_envio <= ?"
             params.append(filtro_data_fim)
+        if filtro_numero:
+            query += " AND remessas.numero = ?"
+            params.append(filtro_numero)
+        if filtro_produto:
+            termo = f"%{filtro_produto}%"
+            query += """ AND remessas.id IN (
+                SELECT ir.remessa_id FROM itens_remessa ir
+                JOIN produtos p ON p.id = ir.produto_id
+                WHERE p.codigo LIKE ? OR p.descricao LIKE ?)"""
+            params.extend([termo, termo])
         query += " ORDER BY remessas.numero DESC"
 
         cabecalhos = db.execute(query, params).fetchall()
         hoje = date.today()
-        remessas_view = []
         for r in cabecalhos:
             itens = itens_da_remessa(db, r["id"])
             tem_pendente = any(i["pendente"] > 0 for i in itens)
@@ -1685,6 +1697,14 @@ def remessas():
             total_ret = sum(i["qtd_retornada"] for i in itens)
             pct = round(total_ret * 100 / total_env) if total_env else 0
             pago = remessa_paga(db, r["id"])
+            if total_ret == 0:
+                status_remessa = "pendente"
+            elif total_ret >= total_env:
+                status_remessa = "concluido"
+            else:
+                status_remessa = "parcial"
+            if filtro_status and status_remessa not in filtro_status:
+                continue
             remessas_view.append({
                 **dict(r),
                 "itens": itens,
@@ -1709,6 +1729,9 @@ def remessas():
         filtro_terceirizado_id=filtro_terceirizado_id,
         filtro_data_inicio=filtro_data_inicio,
         filtro_data_fim=filtro_data_fim,
+        filtro_numero=filtro_numero,
+        filtro_produto=filtro_produto,
+        filtro_status=filtro_status,
     )
 
 
