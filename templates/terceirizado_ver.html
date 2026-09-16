@@ -19,6 +19,9 @@
     <tr><th>Nº</th><th>Produto</th><th>Cor/Estampa</th><th>Enviado</th><th>Retornado</th><th>Pendente</th><th>Status</th><th>Data</th><th>Prev. Entrega</th></tr>
     {% set ns = namespace(ultimo_numero=None) %}
     {% for r in remessas %}
+    {% if ns.ultimo_numero is not none and r.numero != ns.ultimo_numero %}
+    <tr><td colspan="9" style="padding:4px 0;border:none;background:transparent;"></td></tr>
+    {% endif %}
     {% if r.numero != ns.ultimo_numero and r.observacao %}
     <tr>
       <td colspan="9" style="font-size:10.5px;color:#666;font-style:italic;padding:4px 8px;background:#fdf6f0;white-space:pre-wrap;">
