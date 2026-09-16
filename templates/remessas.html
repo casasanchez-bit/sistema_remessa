@@ -186,7 +186,7 @@
        data-print="/remessas/{{ r.id }}/imprimir"
        data-cancel="/remessas/{{ r.id }}/excluir"
        data-confirm="Cancelar a remessa Nº {{ r.numero }}? Esta ação não pode ser desfeita."
-       style="border:1px solid #eee;border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer;transition:border-color .15s,background .15s;">
+       style="border:2px solid #999;border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer;transition:border-color .15s,background .15s;">
     <div class="small" style="display:flex;justify-content:space-between;align-items:center;">
       <span><b>Remessa Nº {{ r.numero }}</b> — {{ r.terceirizado_nome }} — {{ r.data_envio|brdate }} —
         {% if r.pago %}<span class="badge b-pago">PAGO</span>{% elif r.tem_pagamento_parcial %}<span class="badge b-parcial">PAG. PARCIAL</span>{% else %}<span class="badge b-pendente">NÃO PAGO</span>{% endif %}

@@ -15,39 +15,47 @@
 </div>
 <div class="card">
   <h2>Remessas deste terceirizado</h2>
-  <table>
-    <tr><th>Nº</th><th>Produto</th><th>Cor/Estampa</th><th>Enviado</th><th>Retornado</th><th>Pendente</th><th>Status</th><th>Data</th><th>Prev. Entrega</th></tr>
-    {% set ns = namespace(ultimo_numero=None) %}
-    {% for r in remessas %}
-    {% if ns.ultimo_numero is not none and r.numero != ns.ultimo_numero %}
-    <tr><td colspan="9" style="padding:4px 0;border:none;background:transparent;"></td></tr>
-    {% endif %}
-    {% if r.numero != ns.ultimo_numero and r.observacao %}
-    <tr>
-      <td colspan="9" style="font-size:10.5px;color:#666;font-style:italic;padding:4px 8px;background:#fdf6f0;white-space:pre-wrap;">
-        <b style="color:#5C442C;">Obs. Remessa Nº {{ r.numero }}:</b> {{ r.observacao }}
-      </td>
-    </tr>
-    {% endif %}
-    {% set ns.ultimo_numero = r.numero %}
-    <tr{% if destaque_id and r.produto_id == destaque_id %} style="background:#fffbea;border-left:3px solid #AF4005;"{% endif %}>
-      <td>{{ r.numero }}</td>
-      <td>{{ r.produto_descricao }}</td>
-      <td>{{ r.cor_descricao }}</td>
-      <td>{{ r.qtd_enviada }}</td>
-      <td>{{ r.qtd_retornada }}</td>
-      <td>{{ r.pendente }}</td>
-      <td>
-        {% if r.qtd_retornada == 0 %}<span class="badge b-pendente">Pendente</span>
-        {% elif r.pendente > 0 %}<span class="badge b-parcial">Parcial</span>
-        {% else %}<span class="badge b-concluida">Concluída</span>{% endif %}
-      </td>
-      <td>{{ r.data_envio|brdate }}</td>
-      <td>{{ r.previsao_entrega|brdate if r.previsao_entrega else "—" }}</td>
-    </tr>
-    {% else %}
-    <tr><td colspan="9" class="small">Nenhuma remessa registrada.</td></tr>
-    {% endfor %}
-  </table>
+  {% set ns = namespace(ultimo_numero=None) %}
+  {% for r in remessas %}
+  {% if r.numero != ns.ultimo_numero %}
+  {% if ns.ultimo_numero is not none %}
+      </table>
+    </div>
+  {% endif %}
+    <div style="border:2px solid #999;border-radius:8px;margin-bottom:10px;overflow:hidden;">
+      <div style="background:#f2f2f2;padding:9px 14px;font-size:13px;font-weight:700;display:flex;gap:16px;align-items:center;border-bottom:1px solid #ccc;">
+        <span>Remessa Nº {{ r.numero }}</span>
+        <span style="font-weight:normal;color:#666;">{{ r.data_envio|brdate }}</span>
+      </div>
+      {% if r.observacao %}
+      <div style="font-size:10.5px;color:#666;font-style:italic;padding:5px 14px;background:#fdf6f0;white-space:pre-wrap;border-bottom:1px solid #e7d7c4;">
+        <b style="color:#5C442C;font-style:normal;">Obs:</b> {{ r.observacao }}
+      </div>
+      {% endif %}
+      <table>
+        <tr><th>Produto</th><th>Cor/Estampa</th><th>Enviado</th><th>Retornado</th><th>Pendente</th><th>Status</th><th>Data</th><th>Prev. Entrega</th></tr>
+  {% set ns.ultimo_numero = r.numero %}
+  {% endif %}
+      <tr{% if destaque_id and r.produto_id == destaque_id %} style="background:#fffbea;border-left:3px solid #AF4005;"{% endif %}>
+        <td>{{ r.produto_descricao }}</td>
+        <td>{{ r.cor_descricao }}</td>
+        <td>{{ r.qtd_enviada }}</td>
+        <td>{{ r.qtd_retornada }}</td>
+        <td>{{ r.pendente }}</td>
+        <td>
+          {% if r.qtd_retornada == 0 %}<span class="badge b-pendente">Pendente</span>
+          {% elif r.pendente > 0 %}<span class="badge b-parcial">Parcial</span>
+          {% else %}<span class="badge b-concluida">Concluída</span>{% endif %}
+        </td>
+        <td>{{ r.data_envio|brdate }}</td>
+        <td style="color:#cc0000;font-weight:700;">{{ r.previsao_entrega|brdate if r.previsao_entrega else "—" }}</td>
+      </tr>
+  {% else %}
+  <p class="small">Nenhuma remessa registrada.</p>
+  {% endfor %}
+  {% if ns.ultimo_numero is not none %}
+      </table>
+    </div>
+  {% endif %}
 </div>
 {% endblock %}
