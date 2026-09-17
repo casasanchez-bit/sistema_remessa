@@ -41,14 +41,16 @@
           {{ item.quantidade|qty }}
         </td>
         <td class="v" style="text-align:center;">
-          <button type="button" class="btn-mini ver" onclick="abrirEdit({{ item.mp_id }})">Editar</button>
-          <form method="post" action="/produtos/{{ produto.id }}/composicao"
-                style="display:inline;"
-                onsubmit="return confirm('Remover {{ item.descricao }} desta composição?')">
-            <input type="hidden" name="acao" value="remover">
-            <input type="hidden" name="mp_id" value="{{ item.mp_id }}">
-            <button type="submit" class="btn-mini excluir">Excluir</button>
-          </form>
+          <div style="display:flex;gap:3mm;justify-content:center;align-items:center;">
+            <button type="button" class="btn-mini ver" onclick="abrirEdit({{ item.mp_id }})">Editar</button>
+            <form method="post" action="/produtos/{{ produto.id }}/composicao"
+                  style="display:contents;"
+                  onsubmit="return confirm('Remover {{ item.descricao }} desta composição?')">
+              <input type="hidden" name="acao" value="remover">
+              <input type="hidden" name="mp_id" value="{{ item.mp_id }}">
+              <button type="submit" class="btn-mini excluir">Excluir</button>
+            </form>
+          </div>
         </td>
 
         {# Modo edição #}
