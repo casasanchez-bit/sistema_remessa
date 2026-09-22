@@ -2740,7 +2740,7 @@ def imprimir_retorno(retorno_id):
 # Fechamento mensal
 # ---------------------------------------------------------------------------
 
-def calcular_fechamento(db, mes, terceirizado_id):
+def calcular_fechamento(db, data_inicio, data_fim, terceirizado_id):
     """O fechamento cruza Produto + Cor/Estampa + Serviço + Lote de Pagamento.
     Linhas do mesmo produto pagas em lotes diferentes aparecem separadas para
     permitir visualização financeira por evento de pagamento."""
@@ -2763,8 +2763,8 @@ def calcular_fechamento(db, mes, terceirizado_id):
                JOIN cores_estampas ON cores_estampas.id = itens_remessa.cor_estampa_id
                LEFT JOIN pagamentos_fechamento_retornos pfr ON pfr.retorno_id = retornos.id
                LEFT JOIN pagamentos_fechamento pf ON pf.id = pfr.pagamento_id
-               WHERE strftime('%Y-%m', retornos.data_retorno) = ?"""
-    params = [mes]
+               WHERE retornos.data_retorno >= ? AND retornos.data_retorno <= ?"""
+    params = [data_inicio, data_fim]
     if terceirizado_id:
         query += " AND terceirizados.id = ?"
         params.append(terceirizado_id)
@@ -2814,23 +2814,25 @@ def calcular_fechamento(db, mes, terceirizado_id):
 @app.route("/fechamento")
 def fechamento():
     db = get_db()
-    mes = request.args.get("mes", date.today().strftime("%Y-%m"))
+    hoje = date.today()
+    data_inicio = request.args.get("data_inicio", hoje.replace(day=1).isoformat())
+    data_fim = request.args.get("data_fim", hoje.isoformat())
     terceirizado_id = request.args.get("terceirizado_id", "").strip()
     buscou = bool(request.args)
     terceirizados = db.execute("""
         SELECT DISTINCT terceirizados.id, terceirizados.codigo, terceirizados.nome, terceirizados.registrado
         FROM terceirizados
         JOIN retornos ON retornos.terceirizado_id = terceirizados.id
-        WHERE strftime('%Y-%m', retornos.data_retorno) = ?
+        WHERE retornos.data_retorno >= ? AND retornos.data_retorno <= ?
         ORDER BY terceirizados.nome
-    """, (mes,)).fetchall()
+    """, (data_inicio, data_fim)).fetchall()
 
     fechamento_linhas, total_geral = [], 0
     total_pago = total_pendente = 0
     tem_pendentes = False
     lotes_pagamento = []
     if buscou:
-        fechamento_linhas, total_geral = calcular_fechamento(db, mes, terceirizado_id)
+        fechamento_linhas, total_geral = calcular_fechamento(db, data_inicio, data_fim, terceirizado_id)
         total_pago = sum(l["total"] for l in fechamento_linhas if l["pago"])
         total_pendente = sum(l["total"] for l in fechamento_linhas if not l["pago"])
         tem_pendentes = any(not l["pago"] for l in fechamento_linhas)
@@ -2846,7 +2848,8 @@ def fechamento():
 
     return render_template(
         "fechamento.html",
-        mes=mes,
+        data_inicio=data_inicio,
+        data_fim=data_fim,
         terceirizado_id=terceirizado_id,
         terceirizados=terceirizados,
         linhas=fechamento_linhas,
@@ -2866,14 +2869,15 @@ def marcar_pagamento():
         return redirect(url_for("fechamento"))
     db = get_db()
     terceirizado_id = request.form.get("terceirizado_id", "").strip()
-    mes = request.form.get("mes", "").strip()
-    if not terceirizado_id or not mes:
-        flash("Selecione um terceirizado e o mês para marcar o pagamento.", "erro")
-        return redirect(url_for("fechamento", mes=mes))
+    data_inicio = request.form.get("data_inicio", "").strip()
+    data_fim = request.form.get("data_fim", "").strip()
+    if not terceirizado_id or not data_inicio or not data_fim:
+        flash("Selecione um terceirizado e o período para marcar o pagamento.", "erro")
+        return redirect(url_for("fechamento", data_inicio=data_inicio, data_fim=data_fim))
     # Sempre cria um novo lote (sem INSERT OR IGNORE)
     cur = db.execute(
         "INSERT INTO pagamentos_fechamento (terceirizado_id, mes, data_pagamento) VALUES (?, ?, ?)",
-        (terceirizado_id, mes, date.today().isoformat()),
+        (terceirizado_id, data_inicio, date.today().isoformat()),
     )
     pagamento_id = cur.lastrowid
     # Inclui apenas retornos ainda não vinculados a nenhum lote
@@ -2881,9 +2885,9 @@ def marcar_pagamento():
         r["id"]
         for r in db.execute(
             """SELECT id FROM retornos
-               WHERE terceirizado_id = ? AND strftime('%Y-%m', data_retorno) = ?
+               WHERE terceirizado_id = ? AND data_retorno >= ? AND data_retorno <= ?
                AND id NOT IN (SELECT retorno_id FROM pagamentos_fechamento_retornos)""",
-            (terceirizado_id, mes),
+            (terceirizado_id, data_inicio, data_fim),
         ).fetchall()
     ]
     for retorno_id in retorno_ids:
@@ -2896,7 +2900,7 @@ def marcar_pagamento():
     ).fetchone()["nome"]
     registrar_historico(
         db, "fechamento", pagamento_id,
-        f"Fechamento pago: {terceirizado_nome} — {mes} ({len(retorno_ids)} retorno(s))"
+        f"Fechamento pago: {terceirizado_nome} — {data_inicio} a {data_fim} ({len(retorno_ids)} retorno(s))"
     )
     db.commit()
     flash(
@@ -2904,7 +2908,7 @@ def marcar_pagamento():
         "Retornos lançados depois desta confirmação não entram automaticamente.",
         "sucesso",
     )
-    return redirect(url_for("fechamento", mes=mes, terceirizado_id=terceirizado_id))
+    return redirect(url_for("fechamento", data_inicio=data_inicio, data_fim=data_fim, terceirizado_id=terceirizado_id))
 
 
 @app.route("/fechamento/desfazer-pagamento", methods=["POST"])
@@ -2915,27 +2919,30 @@ def desfazer_pagamento():
     db = get_db()
     pagamento_id = request.form.get("pagamento_id", "").strip()
     terceirizado_id = request.form.get("terceirizado_id", "").strip()
-    mes = request.form.get("mes", "").strip()
+    data_inicio = request.form.get("data_inicio", "").strip()
+    data_fim = request.form.get("data_fim", "").strip()
     if pagamento_id:
         terc = db.execute("SELECT nome FROM terceirizados WHERE id = ?", (terceirizado_id,)).fetchone()
         db.execute("DELETE FROM pagamentos_fechamento_retornos WHERE pagamento_id = ?", (pagamento_id,))
         db.execute("DELETE FROM pagamentos_fechamento WHERE id = ?", (pagamento_id,))
         registrar_historico(
             db, "fechamento", pagamento_id,
-            f"Fechamento desfeito: {terc['nome'] if terc else terceirizado_id} — {mes}"
+            f"Fechamento desfeito: {terc['nome'] if terc else terceirizado_id} — {data_inicio} a {data_fim}"
         )
     db.commit()
     flash("Lote de pagamento desfeito. Os retornos deste lote foram liberados novamente.", "sucesso")
-    return redirect(url_for("fechamento", mes=mes, terceirizado_id=terceirizado_id))
+    return redirect(url_for("fechamento", data_inicio=data_inicio, data_fim=data_fim, terceirizado_id=terceirizado_id))
 
 
 @app.route("/fechamento/imprimir")
 def imprimir_fechamento():
     db = get_db()
-    mes = request.args.get("mes", date.today().strftime("%Y-%m"))
+    hoje = date.today()
+    data_inicio = request.args.get("data_inicio", hoje.replace(day=1).isoformat())
+    data_fim = request.args.get("data_fim", hoje.isoformat())
     terceirizado_id = request.args.get("terceirizado_id", "").strip()
 
-    fechamento_linhas, total_geral = calcular_fechamento(db, mes, terceirizado_id)
+    fechamento_linhas, total_geral = calcular_fechamento(db, data_inicio, data_fim, terceirizado_id)
     terceirizado_nome = None
     lotes_pagamento = []
     if terceirizado_id:
@@ -2952,7 +2959,8 @@ def imprimir_fechamento():
 
     return render_template(
         "fechamento_imprimir.html",
-        mes=mes,
+        data_inicio=data_inicio,
+        data_fim=data_fim,
         terceirizado_nome=terceirizado_nome,
         linhas=fechamento_linhas,
         total_geral=total_geral,
@@ -2967,13 +2975,15 @@ def exportar_fechamento_excel():
     from openpyxl.styles import Font, PatternFill, Alignment
 
     db = get_db()
-    mes = request.args.get("mes", date.today().strftime("%Y-%m"))
+    hoje = date.today()
+    data_inicio = request.args.get("data_inicio", hoje.replace(day=1).isoformat())
+    data_fim = request.args.get("data_fim", hoje.isoformat())
     terceirizado_id = request.args.get("terceirizado_id", "").strip()
-    linhas, total_geral = calcular_fechamento(db, mes, terceirizado_id)
+    linhas, total_geral = calcular_fechamento(db, data_inicio, data_fim, terceirizado_id)
     total_pago = sum(l["total"] for l in linhas if l["pago"])
     total_pendente = sum(l["total"] for l in linhas if not l["pago"])
 
-    mes_label = brdate(mes)
+    periodo_label = f"{brdate(data_inicio)} a {brdate(data_fim)}"
     terceirizado_nome = ""
     if terceirizado_id:
         t = db.execute("SELECT nome FROM terceirizados WHERE id = ?", (terceirizado_id,)).fetchone()
@@ -2988,7 +2998,7 @@ def exportar_fechamento_excel():
     bold = Font(bold=True)
     center = Alignment(horizontal="center")
 
-    ws.append([f"FECHAMENTO MENSAL — Casa Sanchez — {mes_label}" + (f" — {terceirizado_nome}" if terceirizado_nome else "")])
+    ws.append([f"FECHAMENTO — Casa Sanchez — {periodo_label}" + (f" — {terceirizado_nome}" if terceirizado_nome else "")])
     ws["A1"].font = Font(bold=True, size=12)
     ws.append([])
 
@@ -3023,7 +3033,7 @@ def exportar_fechamento_excel():
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
-    nome_arquivo = f"fechamento_{mes.replace('-', '_')}" + (f"_{terceirizado_nome.replace(' ', '_')}" if terceirizado_nome else "") + ".xlsx"
+    nome_arquivo = f"fechamento_{data_inicio}_a_{data_fim}" + (f"_{terceirizado_nome.replace(' ', '_')}" if terceirizado_nome else "") + ".xlsx"
     return send_file(output, as_attachment=True, download_name=nome_arquivo,
                      mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
@@ -3031,10 +3041,12 @@ def exportar_fechamento_excel():
 @app.route("/fechamento/resumo-por-terceirizado")
 def resumo_fechamento_por_terceirizado():
     db = get_db()
-    mes = request.args.get("mes", date.today().strftime("%Y-%m"))
+    hoje = date.today()
+    data_inicio = request.args.get("data_inicio", hoje.replace(day=1).isoformat())
+    data_fim = request.args.get("data_fim", hoje.isoformat())
     terceirizado_id = request.args.get("terceirizado_id", "").strip()
 
-    fechamento_linhas, _ = calcular_fechamento(db, mes, terceirizado_id)
+    fechamento_linhas, _ = calcular_fechamento(db, data_inicio, data_fim, terceirizado_id)
 
     grupos = {}
     ordem = []
@@ -3046,7 +3058,7 @@ def resumo_fechamento_por_terceirizado():
         grupos[l["terceirizado"]]["total"] += l["total"]
     resumos = [grupos[nome] for nome in ordem]
 
-    return render_template("fechamento_resumo_terceirizado.html", mes=mes, resumos=resumos)
+    return render_template("fechamento_resumo_terceirizado.html", data_inicio=data_inicio, data_fim=data_fim, resumos=resumos)
 
 
 # ---------------------------------------------------------------------------

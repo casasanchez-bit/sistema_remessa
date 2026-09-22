@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Fechamento Mensal {{ mes }} - Impressão</title>
+<title>Fechamento {{ data_inicio }} a {{ data_fim }} - Impressão</title>
 <style>
   * { box-sizing: border-box; }
   body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; margin: 0; background: #f5f5f7; }
@@ -38,7 +38,7 @@
     <div class="cabecalho">
       <h1>FECHAMENTO MENSAL DE PRODUÇÃO — Casa Sanchez</h1>
       <div class="info">
-        Mês de referência: {{ mes|brdate }}<br>
+        Período: {{ data_inicio|brdate }} a {{ data_fim|brdate }}<br>
         {% if terceirizado_nome %}Terceirizado: {{ terceirizado_nome }}{% else %}Todos os terceirizados{% endif %}
         {% for lote in lotes_pagamento %}
         <br><b style="color:#4d6b3a;">Lote {{ loop.index }} — pago em {{ lote.data_pagamento|brdate }} — R$ {{ lote.total|brl }}</b>

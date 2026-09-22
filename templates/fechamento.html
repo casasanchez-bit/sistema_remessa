@@ -4,8 +4,12 @@
   <h2>Fechamento mensal de produção</h2>
   <form method="get" action="/fechamento" style="display:flex;gap:8px;align-items:end;margin-bottom:14px;flex-wrap:wrap;">
     <div>
-      <label>Mês de referência</label>
-      <input type="month" name="mes" value="{{ mes }}">
+      <label>De</label>
+      <input type="date" name="data_inicio" value="{{ data_inicio }}">
+    </div>
+    <div>
+      <label>Até</label>
+      <input type="date" name="data_fim" value="{{ data_fim }}">
     </div>
     <div>
       <label>Terceirizado</label>
@@ -37,7 +41,8 @@
             onsubmit="return confirm('Desfazer o Lote {{ loop.index }} ({{ lote.data_pagamento|brdate }})? Os retornos deste lote voltarão a poder ser editados.');">
         <input type="hidden" name="pagamento_id" value="{{ lote.id }}">
         <input type="hidden" name="terceirizado_id" value="{{ terceirizado_id }}">
-        <input type="hidden" name="mes" value="{{ mes }}">
+        <input type="hidden" name="data_inicio" value="{{ data_inicio }}">
+        <input type="hidden" name="data_fim" value="{{ data_fim }}">
         <button class="btn-mini excluir" type="submit">Desfazer</button>
       </form>
     </div>
@@ -47,7 +52,8 @@
       <form method="post" action="/fechamento/pagar" style="display:inline;"
             onsubmit="return confirm('Confirmar novo lote de pagamento para os retornos pendentes? Após confirmar, eles não poderão mais ser alterados.');">
         <input type="hidden" name="terceirizado_id" value="{{ terceirizado_id }}">
-        <input type="hidden" name="mes" value="{{ mes }}">
+        <input type="hidden" name="data_inicio" value="{{ data_inicio }}">
+        <input type="hidden" name="data_fim" value="{{ data_fim }}">
         <button class="btn" type="submit">Marcar pagamento como realizado</button>
       </form>
     </div>
@@ -77,7 +83,7 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="9" class="small">Nenhum retorno encontrado neste mês.</td></tr>
+    <tr><td colspan="9" class="small">Nenhum retorno encontrado neste período.</td></tr>
     {% endfor %}
   </table>
   <div style="text-align:right;margin-top:12px;font-size:13px;">
@@ -89,7 +95,7 @@
 </div>
 
 <script>
-  const params = new URLSearchParams({ mes: "{{ mes }}", terceirizado_id: "{{ terceirizado_id }}" });
+  const params = new URLSearchParams({ data_inicio: "{{ data_inicio }}", data_fim: "{{ data_fim }}", terceirizado_id: "{{ terceirizado_id }}" });
   document.getElementById('imprimirLink').href = "/fechamento/imprimir?" + params.toString();
   document.getElementById('resumoLink').href = "/fechamento/resumo-por-terceirizado?" + params.toString();
   document.getElementById('excelLink').href = "/fechamento/exportar-excel?" + params.toString();
