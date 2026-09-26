@@ -19,8 +19,11 @@
     {% if remessa.observacao %}
     <div class="remessa-obs"><b>Obs:</b> {{ remessa.observacao }}</div>
     {% endif %}
+    {% if from_dashboard %}
+    <button class="btn-toggle-concluidos-m" onclick="toggleConcluidosMobile(this)" style="display:none;font-size:12px;background:none;border:1px solid #2a7a2a;border-radius:4px;padding:3px 10px;cursor:pointer;color:#2a7a2a;margin:6px 12px 4px;font-weight:normal;">Ver itens concluídos</button>
+    {% endif %}
     {% for item in remessa.itens %}
-    <div class="item-row{% if destaque_id and item.produto_id == destaque_id %} item-destaque{% endif %}">
+    <div class="item-row{% if destaque_id and item.produto_id == destaque_id %} item-destaque{% endif %}{% if from_dashboard and item.pendente == 0 and item.qtd_retornada > 0 %} item-concluido-m{% endif %}">
       <div class="item-produto">{{ item.produto_descricao }}</div>
       <div class="item-meta">
         <span>{{ item.cor_descricao }}</span>
@@ -42,4 +45,27 @@
   {% endfor %}
 </div>
 
+{% if from_dashboard %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.remessa-card').forEach(function(card) {
+    var concluidos = card.querySelectorAll('.item-concluido-m');
+    var btn = card.querySelector('.btn-toggle-concluidos-m');
+    if (concluidos.length === 0 || !btn) return;
+    concluidos.forEach(function(d) { d.style.display = 'none'; });
+    var s = concluidos.length === 1 ? '1 item concluído' : concluidos.length + ' itens concluídos';
+    btn.textContent = 'Ver ' + s;
+    btn.style.display = '';
+  });
+});
+function toggleConcluidosMobile(btn) {
+  var card = btn.closest('.remessa-card');
+  var concluidos = card.querySelectorAll('.item-concluido-m');
+  var hidden = concluidos[0] && concluidos[0].style.display === 'none';
+  concluidos.forEach(function(d) { d.style.display = hidden ? '' : 'none'; });
+  var s = concluidos.length === 1 ? '1 item concluído' : concluidos.length + ' itens concluídos';
+  btn.textContent = hidden ? 'Ocultar ' + s : 'Ver ' + s;
+}
+</script>
+{% endif %}
 {% endblock %}

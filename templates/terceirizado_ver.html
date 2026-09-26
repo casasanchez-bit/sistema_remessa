@@ -29,7 +29,7 @@
         <span>Remessa Nº {{ r.numero }}</span>
         <span style="font-weight:normal;color:#666;">{{ r.data_envio|brdate }}</span>
         {% if from_dashboard %}
-        <button class="btn-toggle-concluidos" onclick="toggleConcluidos(this)" style="display:none;margin-left:auto;font-size:11px;background:none;border:1px solid #aaa;border-radius:4px;padding:2px 9px;cursor:pointer;color:#666;font-weight:normal;">Ver itens concluídos</button>
+        <button class="btn-toggle-concluidos" onclick="toggleConcluidos(this)" style="display:none;margin-left:auto;font-size:11px;background:none;border:1px solid #2a7a2a;border-radius:4px;padding:2px 9px;cursor:pointer;color:#2a7a2a;font-weight:normal;">Ver itens concluídos</button>
         {% endif %}
       </div>
       {% if r.observacao %}
