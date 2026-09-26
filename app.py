@@ -993,11 +993,13 @@ def mobile_terceirizado_ver(terceirizado_id):
     remessas_filtradas = {num: rem for num, rem in remessas_map.items()
                           if any(i["pendente"] > 0 for i in rem["itens"])}
     voltar_url = request.args.get("voltar", "/m/")
+    from_dashboard = voltar_url in ("/", "/m/")
     return render_template("mobile/terceirizado_ver.html",
                            terceirizado=terceirizado,
                            remessas_agrupadas=list(remessas_filtradas.values()),
                            destaque_id=destaque_id,
-                           voltar_url=voltar_url)
+                           voltar_url=voltar_url,
+                           from_dashboard=from_dashboard)
 
 
 # ---------------------------------------------------------------------------
@@ -1062,8 +1064,9 @@ def ver_terceirizado(terceirizado_id):
     numeros_com_pendencia = {i["numero"] for i in remessas_view if i["pendente"] > 0}
     remessas_view = [i for i in remessas_view if i["numero"] in numeros_com_pendencia]
     voltar_url = request.args.get("voltar", "/cadastros/terceirizados")
+    from_dashboard = voltar_url in ("/", "/m/")
     return render_template("terceirizado_ver.html", terceirizado=terceirizado, remessas=remessas_view,
-                           destaque_id=destaque_id, voltar_url=voltar_url)
+                           destaque_id=destaque_id, voltar_url=voltar_url, from_dashboard=from_dashboard)
 
 
 @app.route("/terceirizados/<int:terceirizado_id>/editar", methods=["GET", "POST"])

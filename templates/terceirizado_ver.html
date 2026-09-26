@@ -2,15 +2,17 @@
 {% block content %}
 <div class="card">
   <h2>Terceirizado: {{ terceirizado.nome }}</h2>
-  <p class="small">Código: {{ terceirizado.codigo }} — Telefone: {{ terceirizado.telefone or "-" }} —
+  <p class="small">Código: {{ terceirizado.codigo }} — Telefone: {{ terceirizado.telefone or "-" }}{% if not from_dashboard %} —
     {% if terceirizado.registrado %}<span class="badge b-concluida">Registrado</span>{% else %}<span class="badge b-pendente">Sem Registro</span>{% endif %}
-  </p>
+  {% endif %}</p>
   <div class="actions" style="margin-top:10px;">
     <a href="{{ voltar_url }}" class="btn secondary">Voltar</a>
+    {% if not from_dashboard %}
     <a class="btn-mini editar" href="/terceirizados/{{ terceirizado.id }}/editar">EDITAR</a>
     <form method="post" action="/terceirizados/{{ terceirizado.id }}/excluir" onsubmit="return confirm('Excluir este terceirizado?');">
       <button class="btn-mini excluir" type="submit">EXCLUIR</button>
     </form>
+    {% endif %}
   </div>
 </div>
 <div class="card">
