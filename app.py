@@ -990,10 +990,14 @@ def mobile_terceirizado_ver(terceirizado_id):
         retornado = qtd_retornada(db, row["id"])
         remessas_map[num]["itens"].append({**dict(row), "qtd_retornada": retornado,
                                            "pendente": row["qtd_enviada"] - retornado})
+    remessas_filtradas = {num: rem for num, rem in remessas_map.items()
+                          if any(i["pendente"] > 0 for i in rem["itens"])}
+    voltar_url = request.args.get("voltar", "/m/")
     return render_template("mobile/terceirizado_ver.html",
                            terceirizado=terceirizado,
-                           remessas_agrupadas=list(remessas_map.values()),
-                           destaque_id=destaque_id)
+                           remessas_agrupadas=list(remessas_filtradas.values()),
+                           destaque_id=destaque_id,
+                           voltar_url=voltar_url)
 
 
 # ---------------------------------------------------------------------------
@@ -1055,8 +1059,11 @@ def ver_terceirizado(terceirizado_id):
         retornado = qtd_retornada(db, item["id"])
         pendente = item["qtd_enviada"] - retornado
         remessas_view.append({**dict(item), "qtd_retornada": retornado, "pendente": pendente})
+    numeros_com_pendencia = {i["numero"] for i in remessas_view if i["pendente"] > 0}
+    remessas_view = [i for i in remessas_view if i["numero"] in numeros_com_pendencia]
+    voltar_url = request.args.get("voltar", "/cadastros/terceirizados")
     return render_template("terceirizado_ver.html", terceirizado=terceirizado, remessas=remessas_view,
-                           destaque_id=destaque_id)
+                           destaque_id=destaque_id, voltar_url=voltar_url)
 
 
 @app.route("/terceirizados/<int:terceirizado_id>/editar", methods=["GET", "POST"])

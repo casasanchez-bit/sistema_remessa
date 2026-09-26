@@ -48,7 +48,7 @@
       <tr><th>Terceirizado</th><th>Env.</th><th>Ret.</th><th>Pend.</th></tr>
       {% for s in saldo_por_terceirizado %}
       <tr>
-        <td><a href="/terceirizados/{{ s.id }}" class="link-celula" title="Ver ficha de {{ s.nome }}">{{ s.nome }}</a></td>
+        <td><a href="/terceirizados/{{ s.id }}?voltar=/" class="link-celula" title="Ver ficha de {{ s.nome }}">{{ s.nome }}</a></td>
         <td><a href="/remessas?filtro_terceirizado_id={{ s.id }}" class="link-celula" title="Ver remessas enviadas">{{ s.enviado }}</a></td>
         <td><a href="/retornos?filtro_terceirizado_id={{ s.id }}" class="link-celula" title="Ver retornos lançados">{{ s.retornado }}</a></td>
         <td><a href="/remessas?filtro_terceirizado_id={{ s.id }}" class="link-celula" title="Ver itens pendentes nas remessas"><b>{{ s.pendente }}</b></a></td>

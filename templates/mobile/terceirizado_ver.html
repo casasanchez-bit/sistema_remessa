@@ -2,7 +2,7 @@
 {% block title %}{{ terceirizado.nome }} — Casa Sanchez{% endblock %}
 {% block content %}
 
-<button class="btn-voltar" onclick="history.back()">Voltar</button>
+<button class="btn-voltar" onclick="location.href='{{ voltar_url }}'">Voltar</button>
 
 <div class="card">
   <div class="card-header">{{ terceirizado.nome }}</div>

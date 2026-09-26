@@ -6,7 +6,7 @@
     {% if terceirizado.registrado %}<span class="badge b-concluida">Registrado</span>{% else %}<span class="badge b-pendente">Sem Registro</span>{% endif %}
   </p>
   <div class="actions" style="margin-top:10px;">
-    <a href="/cadastros/terceirizados" class="btn secondary">Voltar</a>
+    <a href="{{ voltar_url }}" class="btn secondary">Voltar</a>
     <a class="btn-mini editar" href="/terceirizados/{{ terceirizado.id }}/editar">EDITAR</a>
     <form method="post" action="/terceirizados/{{ terceirizado.id }}/excluir" onsubmit="return confirm('Excluir este terceirizado?');">
       <button class="btn-mini excluir" type="submit">EXCLUIR</button>
