@@ -24,10 +24,13 @@
       </table>
     </div>
   {% endif %}
-    <div style="border:2px solid #999;border-radius:8px;margin-bottom:10px;overflow:hidden;">
+    <div class="remessa-card" style="border:2px solid #999;border-radius:8px;margin-bottom:10px;overflow:hidden;">
       <div style="background:#f2f2f2;padding:9px 14px;font-size:13px;font-weight:700;display:flex;gap:16px;align-items:center;border-bottom:1px solid #ccc;">
         <span>Remessa Nº {{ r.numero }}</span>
         <span style="font-weight:normal;color:#666;">{{ r.data_envio|brdate }}</span>
+        {% if from_dashboard %}
+        <button class="btn-toggle-concluidos" onclick="toggleConcluidos(this)" style="display:none;margin-left:auto;font-size:11px;background:none;border:1px solid #aaa;border-radius:4px;padding:2px 9px;cursor:pointer;color:#666;font-weight:normal;">Ver itens concluídos</button>
+        {% endif %}
       </div>
       {% if r.observacao %}
       <div style="font-size:10.5px;color:#666;font-style:italic;padding:5px 14px;background:#fdf6f0;white-space:pre-wrap;border-bottom:1px solid #e7d7c4;">
@@ -38,7 +41,7 @@
         <tr><th>Produto</th><th>Cor/Estampa</th><th>Enviado</th><th>Retornado</th><th>Pendente</th><th>Status</th><th>Data</th><th>Prev. Entrega</th></tr>
   {% set ns.ultimo_numero = r.numero %}
   {% endif %}
-      <tr{% if destaque_id and r.produto_id == destaque_id %} style="background:#fffbea;border-left:3px solid #AF4005;"{% endif %}>
+      <tr{% if destaque_id and r.produto_id == destaque_id %} style="background:#fffbea;border-left:3px solid #AF4005;"{% endif %}{% if r.pendente == 0 and r.qtd_retornada > 0 %} class="item-concluido"{% endif %}>
         <td>{{ r.produto_descricao }}</td>
         <td>{{ r.cor_descricao }}</td>
         <td>{{ r.qtd_enviada }}</td>
@@ -60,4 +63,27 @@
     </div>
   {% endif %}
 </div>
+{% if from_dashboard %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.remessa-card').forEach(function(card) {
+    var concluidos = card.querySelectorAll('tr.item-concluido');
+    var btn = card.querySelector('.btn-toggle-concluidos');
+    if (concluidos.length === 0 || !btn) return;
+    concluidos.forEach(function(tr) { tr.style.display = 'none'; });
+    var s = concluidos.length === 1 ? '1 item concluído' : concluidos.length + ' itens concluídos';
+    btn.textContent = 'Ver ' + s;
+    btn.style.display = '';
+  });
+});
+function toggleConcluidos(btn) {
+  var card = btn.closest('.remessa-card');
+  var concluidos = card.querySelectorAll('tr.item-concluido');
+  var hidden = concluidos[0] && concluidos[0].style.display === 'none';
+  concluidos.forEach(function(tr) { tr.style.display = hidden ? '' : 'none'; });
+  var s = concluidos.length === 1 ? '1 item concluído' : concluidos.length + ' itens concluídos';
+  btn.textContent = hidden ? 'Ocultar ' + s : 'Ver ' + s;
+}
+</script>
+{% endif %}
 {% endblock %}
