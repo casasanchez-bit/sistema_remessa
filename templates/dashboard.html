@@ -67,7 +67,7 @@
       <tr><th>Produto</th><th>Env.</th><th>Ret.</th><th>Pend.</th></tr>
       {% for s in saldo_por_produto %}
       <tr>
-        <td><a href="/produtos/{{ s.id }}" class="link-celula" title="Ver ficha do produto"><b>{{ s.codigo }}</b> - {{ s.descricao }}</a></td>
+        <td><a href="/produtos/{{ s.id }}?from=dashboard" class="link-celula" title="Ver ficha do produto"><b>{{ s.codigo }}</b> - {{ s.descricao }}</a></td>
         <td>{{ s.enviado }}</td>
         <td>{{ s.retornado }}</td>
         <td><b>{{ s.pendente }}</b></td>

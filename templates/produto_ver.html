@@ -4,8 +4,8 @@
   <h2>Produto: {{ produto.descricao }}</h2>
   <p class="small">Código: {{ produto.codigo }}</p>
   <div class="actions" style="margin-top:10px;">
-    <a href="/cadastros/produtos" class="btn secondary">Voltar</a>
-    {% if tem_permissao('gerenciar_usuarios') %}
+    <a href="{{ '/' if from_dashboard else '/cadastros/produtos' }}" class="btn secondary">Voltar</a>
+    {% if not from_dashboard and tem_permissao('gerenciar_usuarios') %}
     <a class="btn-mini editar" href="/produtos/{{ produto.id }}/editar">EDITAR</a>
     <a class="btn-mini" href="/produtos/{{ produto.id }}/plano-corte" style="background:#5C442C;color:#fff;">PLANO DE CORTE</a>
     <a class="btn-mini" href="/produtos/{{ produto.id }}/composicao" style="background:#5C442C;color:#fff;">FICHA TÉCNICA</a>
@@ -25,8 +25,8 @@
     {% for p in pendente_por_terceirizado %}
     <tr>
       <td><a href="/terceirizados/{{ p.id }}?destaque={{ produto.id }}&voltar=/" class="link-celula" title="Ver ficha de {{ p.nome }}">{{ p.nome }}</a></td>
-      <td><a href="/remessas?filtro_terceirizado_id={{ p.id }}" class="link-celula" title="Ver remessas enviadas">{{ p.enviado }}</a></td>
-      <td><a href="/retornos?filtro_terceirizado_id={{ p.id }}" class="link-celula" title="Ver retornos lançados">{{ p.retornado }}</a></td>
+      <td>{% if from_dashboard %}{{ p.enviado }}{% else %}<a href="/remessas?filtro_terceirizado_id={{ p.id }}" class="link-celula" title="Ver remessas enviadas">{{ p.enviado }}</a>{% endif %}</td>
+      <td>{% if from_dashboard %}{{ p.retornado }}{% else %}<a href="/retornos?filtro_terceirizado_id={{ p.id }}" class="link-celula" title="Ver retornos lançados">{{ p.retornado }}</a>{% endif %}</td>
       <td><b>{{ p.pendente }}</b></td>
     </tr>
     {% else %}

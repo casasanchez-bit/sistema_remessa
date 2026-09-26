@@ -1179,6 +1179,7 @@ def ver_produto(produto_id):
         "SELECT 1 FROM produto_composicao WHERE produto_id = ? LIMIT 1", (produto_id,)
     ).fetchone() is not None
 
+    from_dashboard = request.args.get("from") == "dashboard"
     return render_template(
         "produto_ver.html",
         produto=produto,
@@ -1186,6 +1187,7 @@ def ver_produto(produto_id):
         pendente_por_terceirizado=pendente_por_terceirizado,
         tem_plano=tem_plano,
         tem_composicao=tem_composicao,
+        from_dashboard=from_dashboard,
     )
 
 
