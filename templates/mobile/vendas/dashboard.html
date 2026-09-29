@@ -1,0 +1,34 @@
+{% extends "mobile/base.html" %}
+{% block title %}Vendas — Casa Sanchez{% endblock %}
+{% block content %}
+
+<a href="/m/vendas/pedidos/novo" style="display:flex;align-items:center;justify-content:center;gap:10px;background:#5C442C;color:#fff;border-radius:12px;padding:18px;font-size:18px;font-weight:700;text-decoration:none;margin-bottom:16px;box-shadow:0 3px 8px rgba(0,0,0,.2);">
+  <span style="font-size:26px;">+</span> Novo Pedido
+</a>
+
+<div class="card">
+  <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+    <span>Meus Pedidos Recentes</span>
+    <a href="/m/vendas/pedidos/" style="font-size:12px;color:#AF4005;">Ver todos</a>
+  </div>
+  {% for p in pedidos %}
+  <a class="row-item" href="/m/vendas/pedidos/{{ p.id }}" style="flex-direction:column;align-items:flex-start;gap:2px;">
+    <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
+      <span style="font-weight:700;font-size:14px;">Nº {{ p.numero }} — {{ p.cliente_nome }}</span>
+      {% if p.status == 'aberto' %}<span class="badge b-pendente">Aberto</span>
+      {% elif p.status == 'confirmado' %}<span class="badge b-concluida">Confirmado</span>
+      {% else %}<span class="badge" style="background:#eee;color:#999;">Cancelado</span>{% endif %}
+    </div>
+    <div style="font-size:12px;color:#888;">{{ p.data|brdate }} — R$ {{ '%.2f'|format(p.total)|replace('.',',') }}</div>
+  </a>
+  {% else %}
+  <div class="empty">Nenhum pedido ainda. Toque em "Novo Pedido" para começar!</div>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <a class="row-item" href="/m/vendas/pedidos/">
+    <span class="row-name">📋 Todos os Pedidos</span>
+  </a>
+</div>
+{% endblock %}

@@ -1,0 +1,284 @@
+{% extends "mobile/base.html" %}
+{% block title %}Pedido Nº {{ pedido.numero }} — Casa Sanchez{% endblock %}
+{% block content %}
+{% set aberto = pedido.status == 'aberto' %}
+
+<style>
+  .prod-btn { display:block;width:100%;text-align:left;background:#fff;border:1px solid #d9c6b3;border-radius:8px;padding:12px 14px;font-size:14px;color:#5C442C;cursor:pointer;margin-bottom:6px; }
+  .prod-btn.sel { background:#5C442C;color:#fff;border-color:#5C442C; }
+  .cor-btn { padding:8px 14px;border:1px solid #d9c6b3;border-radius:20px;font-size:13px;background:#fff;color:#5C442C;cursor:pointer;margin:3px; }
+  .cor-btn.sel { background:#5C442C;color:#fff;border-color:#5C442C; }
+  .qty-btn { width:44px;height:44px;border:1px solid #d9c6b3;border-radius:8px;font-size:22px;background:#fff;color:#5C442C;cursor:pointer; }
+  .qty-num { width:60px;text-align:center;font-size:18px;font-weight:700;border:1px solid #d9c6b3;border-radius:8px;padding:8px 0; }
+  .total-bar { position:fixed;bottom:0;left:0;right:0;background:#5C442C;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;z-index:20;box-shadow:0 -2px 8px rgba(0,0,0,.2); }
+  .total-bar .val { font-size:18px;font-weight:700; }
+  .btn-confirmar { background:#2a7a2a;color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer; }
+  .step { background:#fdf6f0;border-radius:10px;padding:14px;margin-bottom:10px; }
+  .step-title { font-size:12px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px; }
+  #adicionar-panel { padding-bottom:80px; }
+</style>
+
+<!-- Cabeçalho do pedido -->
+<div style="padding:12px 0 4px;">
+  <button class="btn-voltar" onclick="location.href='/m/vendas/'">← Voltar</button>
+  <div style="background:#fdf6f0;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+    <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Pedido Nº {{ pedido.numero }}
+      {% if pedido.status == 'aberto' %}<span class="badge b-pendente" style="margin-left:6px;">Aberto</span>
+      {% elif pedido.status == 'confirmado' %}<span class="badge b-concluida" style="margin-left:6px;">Confirmado</span>
+      {% else %}<span class="badge" style="background:#eee;color:#999;margin-left:6px;">Cancelado</span>{% endif %}
+    </div>
+    <div style="font-size:13px;color:#888;">{{ pedido.data|brdate }} — {{ pedido.cliente_nome }}</div>
+    {% if pedido.representante_nome %}<div style="font-size:12px;color:#aaa;">Rep: {{ pedido.representante_nome }}</div>{% endif %}
+    {% if pedido.tabela_nome %}<div style="font-size:12px;color:#aaa;">Tabela: {{ pedido.tabela_nome }}</div>{% endif %}
+    {% if pedido.observacao %}<div style="font-size:12px;color:#888;margin-top:4px;">Obs: {{ pedido.observacao }}</div>{% endif %}
+  </div>
+</div>
+
+<!-- Itens já no pedido -->
+<div class="card" style="margin-bottom:12px;">
+  <div class="card-header">Itens ({{ itens|length }})</div>
+  {% for item in itens %}
+  <div class="item-row">
+    <div class="item-produto">{{ item.produto_codigo }} — {{ item.produto_descricao }}</div>
+    <div class="item-meta">
+      <span>{{ item.cor_estampa_nome or "Sem cor" }}</span>
+      <span>Qtd: <b>{{ item.quantidade }}</b></span>
+      <span>R$ {{ '%.2f'|format(item.preco_unitario)|replace('.',',') }}</span>
+      <span style="font-weight:700;color:#5C442C;">= R$ {{ '%.2f'|format(item.subtotal)|replace('.',',') }}</span>
+    </div>
+    {% if item.foto_base64 %}
+    <img src="{{ item.foto_base64 }}" style="max-width:60px;max-height:60px;border-radius:6px;margin-top:6px;">
+    {% endif %}
+    {% if item.obs %}<div style="font-size:11px;color:#aaa;margin-top:2px;">{{ item.obs }}</div>{% endif %}
+    {% if aberto %}
+    <form method="post" style="margin-top:6px;" onsubmit="return confirm('Remover item?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="acao" value="excluir_item">
+      <input type="hidden" name="item_id" value="{{ item.id }}">
+      <button type="submit" style="background:none;border:none;color:#c4501a;font-size:12px;cursor:pointer;">✕ Remover</button>
+    </form>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="empty">Nenhum item ainda. Adicione abaixo.</div>
+  {% endfor %}
+</div>
+
+{% if aberto %}
+<!-- Formulário de adicionar item mobile -->
+<div id="adicionar-panel">
+  <div class="step">
+    <div class="step-title">1. Escolha o produto</div>
+    <input type="search" id="busca-prod" placeholder="Código ou nome do produto..."
+           oninput="filtrarProdutos()"
+           style="width:100%;padding:11px;border:1px solid #d9c6b3;border-radius:8px;font-size:15px;margin-bottom:8px;">
+    <div id="lista-produtos" style="max-height:220px;overflow-y:auto;">
+      {% for p in produtos %}
+      <button type="button" class="prod-btn"
+              data-id="{{ p.id }}"
+              data-label="{{ p.codigo }} {{ p.descricao }}"
+              data-preco="{{ precos_tabela.get(p.id, '') }}"
+              onclick="selecionarProduto(this)">
+        <b>{{ p.codigo }}</b> — {{ p.descricao }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="step" id="step-cor" style="display:none;">
+    <div class="step-title">2. Cor / Estampa</div>
+    <div id="cores-wrap"></div>
+    <div id="foto-wrap" style="display:none;margin-top:8px;">
+      <label style="font-size:13px;color:#888;">Sem variante — foto opcional:</label>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+        <input type="file" id="input-foto" accept="image/*" capture="environment"
+               onchange="previsualizarFoto(this)"
+               style="font-size:13px;flex:1;">
+        <img id="prev-foto" style="max-width:60px;max-height:60px;border-radius:6px;display:none;">
+      </div>
+    </div>
+  </div>
+
+  <div class="step" id="step-qtd" style="display:none;">
+    <div class="step-title">3. Quantidade e Preço</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <button type="button" class="qty-btn" onclick="ajustarQtd(-1)">−</button>
+      <input type="number" id="qtd-val" value="1" min="1"
+             class="qty-num" oninput="calcSubtotalM()">
+      <button type="button" class="qty-btn" onclick="ajustarQtd(1)">+</button>
+      <span style="font-size:14px;color:#888;">un.</span>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">
+      <div style="flex:1;">
+        <label style="font-size:12px;color:#888;">Preço Unit. (R$)</label>
+        <input type="number" id="preco-val" step="0.01" min="0"
+               oninput="calcSubtotalM()"
+               style="width:100%;padding:11px;border:1px solid #d9c6b3;border-radius:8px;font-size:16px;font-weight:700;">
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:11px;color:#888;">Subtotal</div>
+        <div id="sub-val" style="font-size:18px;font-weight:700;color:#5C442C;">R$ 0,00</div>
+      </div>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="font-size:12px;color:#888;">Obs. do item (opcional)</label>
+      <input type="text" id="obs-val"
+             style="width:100%;padding:10px;border:1px solid #d9c6b3;border-radius:8px;font-size:14px;">
+    </div>
+    <button type="button" onclick="adicionarItem()"
+            style="width:100%;background:#5C442C;color:#fff;border:none;border-radius:10px;padding:15px;font-size:16px;font-weight:700;cursor:pointer;">
+      + Adicionar ao Pedido
+    </button>
+  </div>
+</div>
+
+<!-- Form oculto para submit -->
+<form method="post" id="form-item" style="display:none;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="acao" value="add_item">
+  <input type="hidden" name="produto_id" id="h-prod">
+  <input type="hidden" name="cor_estampa_id" id="h-cor-id">
+  <input type="hidden" name="cor_estampa_nome" id="h-cor-nome">
+  <input type="hidden" name="quantidade" id="h-qtd">
+  <input type="hidden" name="preco_unitario" id="h-preco">
+  <input type="hidden" name="foto_base64" id="h-foto">
+  <input type="hidden" name="obs_item" id="h-obs">
+</form>
+
+<!-- Ações do pedido -->
+<div style="display:flex;gap:8px;padding-bottom:80px;">
+  <form method="post" style="flex:1;" onsubmit="return confirm('Confirmar o pedido?');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="acao" value="confirmar">
+    <button type="submit"
+            style="width:100%;background:#2a7a2a;color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;">
+      ✓ Confirmar Pedido
+    </button>
+  </form>
+  <form method="post" onsubmit="return confirm('Cancelar o pedido?');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="acao" value="cancelar">
+    <button type="submit"
+            style="background:#eee;color:#c4501a;border:none;border-radius:10px;padding:14px 16px;font-size:15px;cursor:pointer;">
+      ✕
+    </button>
+  </form>
+</div>
+
+{% else %}
+<!-- Pedido não aberto: só visualização + reabrir -->
+<div style="padding-bottom:20px;display:flex;gap:8px;">
+  {% if pedido.status == 'confirmado' %}
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="acao" value="reabrir">
+    <button type="submit"
+            style="background:#eee;color:#5C442C;border:none;border-radius:10px;padding:13px 18px;font-size:14px;cursor:pointer;">
+      Reabrir Pedido
+    </button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Barra de total fixa -->
+<div class="total-bar">
+  <span style="font-size:13px;opacity:.8;">Total do Pedido</span>
+  <span class="val">R$ {{ '%.2f'|format(pedido.total)|replace('.',',') }}</span>
+</div>
+
+<script>
+var precosTabela = {{ precos_tabela|tojson }};
+var prodSel = null;
+var corSel = { id: '', nome: '' };
+
+function filtrarProdutos() {
+  var t = document.getElementById('busca-prod').value.toLowerCase();
+  document.querySelectorAll('.prod-btn').forEach(function(b) {
+    b.style.display = b.dataset.label.toLowerCase().includes(t) ? '' : 'none';
+  });
+}
+
+function selecionarProduto(btn) {
+  document.querySelectorAll('.prod-btn').forEach(function(b) { b.classList.remove('sel'); });
+  btn.classList.add('sel');
+  prodSel = { id: btn.dataset.id, preco: btn.dataset.preco };
+  corSel = { id: '', nome: '' };
+  document.getElementById('h-foto').value = '';
+  document.getElementById('prev-foto').style.display = 'none';
+
+  var preco = precosTabela[btn.dataset.id] || '';
+  if (preco) document.getElementById('preco-val').value = parseFloat(preco).toFixed(2);
+  else document.getElementById('preco-val').value = '';
+  calcSubtotalM();
+
+  // Carrega cores via API
+  fetch('/api/produto/' + btn.dataset.id + '/cores')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var wrap = document.getElementById('cores-wrap');
+      var fotoWrap = document.getElementById('foto-wrap');
+      wrap.innerHTML = '';
+      if (data.cores.length === 0) {
+        wrap.innerHTML = '<p style="font-size:13px;color:#888;margin-bottom:8px;">Sem cores/estampas cadastradas para este produto.</p>';
+        fotoWrap.style.display = '';
+      } else {
+        fotoWrap.style.display = 'none';
+        data.cores.forEach(function(c) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'cor-btn';
+          btn.textContent = c.descricao;
+          btn.onclick = function() {
+            document.querySelectorAll('.cor-btn').forEach(function(b) { b.classList.remove('sel'); });
+            btn.classList.add('sel');
+            corSel = { id: c.id, nome: c.descricao };
+          };
+          wrap.appendChild(btn);
+        });
+      }
+      document.getElementById('step-cor').style.display = '';
+      document.getElementById('step-qtd').style.display = '';
+      document.getElementById('step-cor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+}
+
+function previsualizarFoto(input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('prev-foto').src = e.target.result;
+    document.getElementById('prev-foto').style.display = '';
+    document.getElementById('h-foto').value = e.target.result;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function ajustarQtd(delta) {
+  var el = document.getElementById('qtd-val');
+  var v = parseInt(el.value) + delta;
+  if (v < 1) v = 1;
+  el.value = v;
+  calcSubtotalM();
+}
+
+function calcSubtotalM() {
+  var qtd = parseFloat(document.getElementById('qtd-val').value) || 0;
+  var preco = parseFloat(document.getElementById('preco-val').value) || 0;
+  document.getElementById('sub-val').textContent = 'R$ ' + (qtd * preco).toFixed(2).replace('.', ',');
+}
+
+function adicionarItem() {
+  if (!prodSel) { alert('Selecione um produto.'); return; }
+  var preco = parseFloat(document.getElementById('preco-val').value);
+  if (!preco) { alert('Informe o preço unitário.'); return; }
+  document.getElementById('h-prod').value = prodSel.id;
+  document.getElementById('h-cor-id').value = corSel.id;
+  document.getElementById('h-cor-nome').value = corSel.nome;
+  document.getElementById('h-qtd').value = document.getElementById('qtd-val').value;
+  document.getElementById('h-preco').value = preco;
+  document.getElementById('h-obs').value = document.getElementById('obs-val').value;
+  document.getElementById('form-item').submit();
+}
+</script>
+{% endblock %}
