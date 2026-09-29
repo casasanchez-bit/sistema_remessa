@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="margin-bottom:12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+    <h2 style="margin:0;">Clientes ({{ clientes|length }})</h2>
+    <div style="display:flex;gap:8px;">
+      <a href="/vendas/clientes/importar" class="btn secondary" style="font-size:12px;">Importar Excel</a>
+      <a href="/vendas/" class="btn secondary" style="font-size:12px;">Voltar</a>
+    </div>
+  </div>
+  <form method="get" style="margin-top:10px;display:flex;gap:8px;">
+    <input type="search" name="q" value="{{ q }}" placeholder="Buscar por código ou nome..."
+           style="flex:1;padding:7px 10px;border:1px solid #d9c6b3;border-radius:6px;font-size:13px;">
+    <button class="btn" type="submit">Buscar</button>
+    {% if q %}<a class="btn secondary" href="/vendas/clientes/">Limpar</a>{% endif %}
+  </form>
+</div>
+<div class="card">
+  <table style="font-size:13px;">
+    <tr><th>Código</th><th>Nome</th><th>CPF/CNPJ</th><th>Telefone</th><th>Cidade/UF</th></tr>
+    {% for c in clientes %}
+    <tr>
+      <td>{{ c.codigo }}</td>
+      <td><b>{{ c.nome }}</b></td>
+      <td>{{ c.cpf_cnpj or "—" }}</td>
+      <td>{{ c.telefone or "—" }}</td>
+      <td>{{ (c.cidade ~ "/" ~ c.estado) if c.cidade else "—" }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="small">Nenhum cliente cadastrado. <a href="/vendas/clientes/importar">Importar agora</a>.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

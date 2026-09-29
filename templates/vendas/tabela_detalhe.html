@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="margin-bottom:12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <h2 style="margin:0;">{{ tabela.nome }}</h2>
+    <a href="/vendas/tabelas/" class="btn secondary" style="font-size:12px;">Voltar</a>
+  </div>
+  <p class="small">Validade: {{ tabela.validade_ate|brdate if tabela.validade_ate else "Sem validade" }} —
+    {% if tabela.ativa %}<span class="badge b-concluida">Ativa</span>{% else %}<span class="badge" style="background:#eee;color:#999;">Inativa</span>{% endif %}
+  </p>
+  <details style="margin-top:8px;">
+    <summary style="cursor:pointer;font-size:12px;color:#5C442C;font-weight:600;">Editar dados da tabela</summary>
+    <form method="post" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="acao" value="editar_tabela">
+      <div><label>Nome</label><input type="text" name="nome" value="{{ tabela.nome }}" required style="width:220px;"></div>
+      <div><label>Validade</label><input type="date" name="validade_ate" value="{{ tabela.validade_ate or '' }}" style="width:150px;"></div>
+      <div><label>Ativa</label><br><input type="checkbox" name="ativa" value="1" {% if tabela.ativa %}checked{% endif %}></div>
+      <button class="btn" type="submit">Salvar</button>
+    </form>
+  </details>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 380px;gap:16px;align-items:start;">
+  <div class="card">
+    <h2>Produtos nesta tabela ({{ itens|length }})</h2>
+    <input type="search" id="busca-item" placeholder="Buscar produto..." oninput="filtrarItens()"
+           style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #d9c6b3;border-radius:6px;font-size:12px;margin-bottom:10px;">
+    <table style="font-size:13px;" id="tabela-itens">
+      <tr><th>Código</th><th>Produto</th><th>Preço Unit.</th><th></th></tr>
+      {% for i in itens %}
+      <tr>
+        <td>{{ i.codigo }}</td>
+        <td>{{ i.descricao }}</td>
+        <td>R$ {{ '%.2f'|format(i.preco_unitario)|replace('.',',') }}</td>
+        <td>
+          <form method="post" style="display:inline;" onsubmit="return confirm('Remover este produto da tabela?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="acao" value="excluir_item">
+            <input type="hidden" name="item_id" value="{{ i.id }}">
+            <button class="btn-mini excluir" type="submit">Remover</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="small">Nenhum produto nesta tabela ainda.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Adicionar Produto</h2>
+    <form method="post" id="form-add-item">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="acao" value="add_item">
+      <div style="margin-bottom:8px;">
+        <label>Produto *</label>
+        <input type="search" id="busca-produto-add" placeholder="Buscar por código ou nome..."
+               oninput="filtrarProdutosAdd()"
+               style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid #d9c6b3;border-radius:6px;font-size:12px;margin-bottom:4px;">
+        <select name="produto_id" id="sel-produto" size="6"
+                style="width:100%;font-size:12px;border:1px solid #d9c6b3;border-radius:6px;">
+          {% for p in produtos_disponiveis %}
+          <option value="{{ p.id }}" data-label="{{ p.codigo }} {{ p.descricao }}">{{ p.codigo }} — {{ p.descricao }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label>Preço Unitário (R$) *</label>
+        <input type="number" name="preco_unitario" step="0.01" min="0" required
+               style="width:100%;box-sizing:border-box;">
+      </div>
+      <button class="btn" type="submit">Adicionar</button>
+    </form>
+  </div>
+</div>
+<script>
+function filtrarItens() {
+  var t = document.getElementById('busca-item').value.toLowerCase();
+  document.querySelectorAll('#tabela-itens tr:not(:first-child)').forEach(function(tr) {
+    tr.style.display = tr.textContent.toLowerCase().includes(t) ? '' : 'none';
+  });
+}
+function filtrarProdutosAdd() {
+  var t = document.getElementById('busca-produto-add').value.toLowerCase();
+  document.querySelectorAll('#sel-produto option').forEach(function(op) {
+    op.style.display = op.dataset.label.toLowerCase().includes(t) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

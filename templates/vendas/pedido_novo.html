@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width:680px;">
+  <h2>Novo Pedido de Venda</h2>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div>
+        <label>Data *</label>
+        <input type="date" name="data" value="{{ hoje }}" required style="width:100%;box-sizing:border-box;">
+      </div>
+      <div>
+        <label>Tabela de Preços</label>
+        <select name="tabela_id" style="width:100%;box-sizing:border-box;">
+          <option value="">— Sem tabela —</option>
+          {% for t in tabelas %}
+          <option value="{{ t.id }}">{{ t.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px;">
+      <label>Cliente *</label>
+      <input type="search" id="busca-cliente" placeholder="Digite código ou nome..."
+             oninput="filtrarClientes()"
+             style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #d9c6b3;border-radius:6px;font-size:13px;margin-bottom:4px;">
+      <select name="cliente_id" id="sel-cliente" size="5" required
+              style="width:100%;font-size:13px;border:1px solid #d9c6b3;border-radius:6px;">
+        {% for c in clientes %}
+        <option value="{{ c.id }}" data-label="{{ c.codigo }} {{ c.nome }}">{{ c.codigo }} — {{ c.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div>
+        <label>Representante / Guia</label>
+        <select name="representante_id" style="width:100%;box-sizing:border-box;">
+          <option value="">— Nenhum —</option>
+          {% for r in representantes %}
+          <option value="{{ r.id }}">{{ r.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Observação</label>
+        <input type="text" name="observacao" placeholder="Opcional"
+               style="width:100%;box-sizing:border-box;">
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;">
+      <button class="btn" type="submit">Criar Pedido e Adicionar Produtos</button>
+      <a href="/vendas/" class="btn secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+<script>
+function filtrarClientes() {
+  var t = document.getElementById('busca-cliente').value.toLowerCase();
+  document.querySelectorAll('#sel-cliente option').forEach(function(op) {
+    op.style.display = op.dataset.label.toLowerCase().includes(t) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

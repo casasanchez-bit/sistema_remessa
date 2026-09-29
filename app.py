@@ -33,6 +33,7 @@ PERMISSOES_DISPONIVEIS = [
     ("alterar_excluir_retorno", "Editar/Excluir Retornos"),
     ("alterar_excluir_fechamento", "Pagar/Desfazer Fechamento"),
     ("gerenciar_usuarios", "Gerenciar Usuários do Sistema (ver, criar, senhas e permissões)"),
+    ("vendedor", "Acesso ao Módulo de Pedidos de Venda"),
 ]
 
 
@@ -113,6 +114,66 @@ def _migrar_banco():
         "ALTER TABLE planos_corte ADD COLUMN fornecedor4_id INTEGER REFERENCES fornecedores(id)",
         "ALTER TABLE planos_corte ADD COLUMN fornecedor5_id INTEGER REFERENCES fornecedores(id)",
         "ALTER TABLE itens_remessa ADD COLUMN previsao_entrega DATE",
+        # ── Módulo Pedidos de Venda ────────────────────────────────────────────
+        """CREATE TABLE IF NOT EXISTS clientes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            codigo TEXT NOT NULL UNIQUE,
+            nome TEXT NOT NULL,
+            cpf_cnpj TEXT,
+            telefone TEXT,
+            email TEXT,
+            endereco TEXT,
+            cidade TEXT,
+            estado TEXT,
+            ativo INTEGER NOT NULL DEFAULT 1,
+            criado_em TEXT NOT NULL DEFAULT (date('now','localtime'))
+        )""",
+        """CREATE TABLE IF NOT EXISTS representantes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            codigo TEXT,
+            telefone TEXT,
+            ativo INTEGER NOT NULL DEFAULT 1
+        )""",
+        """CREATE TABLE IF NOT EXISTS tabelas_precos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            validade_ate TEXT,
+            ativa INTEGER NOT NULL DEFAULT 1,
+            criado_em TEXT NOT NULL DEFAULT (date('now','localtime'))
+        )""",
+        """CREATE TABLE IF NOT EXISTS itens_tabela_precos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tabela_id INTEGER NOT NULL REFERENCES tabelas_precos(id) ON DELETE CASCADE,
+            produto_id INTEGER NOT NULL REFERENCES produtos(id),
+            preco_unitario REAL NOT NULL,
+            UNIQUE(tabela_id, produto_id)
+        )""",
+        """CREATE TABLE IF NOT EXISTS pedidos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero INTEGER NOT NULL UNIQUE,
+            data TEXT NOT NULL,
+            cliente_id INTEGER NOT NULL REFERENCES clientes(id),
+            usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+            representante_id INTEGER REFERENCES representantes(id),
+            tabela_id INTEGER REFERENCES tabelas_precos(id),
+            status TEXT NOT NULL DEFAULT 'aberto',
+            total REAL NOT NULL DEFAULT 0,
+            observacao TEXT,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        )""",
+        """CREATE TABLE IF NOT EXISTS itens_pedido (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pedido_id INTEGER NOT NULL REFERENCES pedidos(id) ON DELETE CASCADE,
+            produto_id INTEGER NOT NULL REFERENCES produtos(id),
+            cor_estampa_id INTEGER REFERENCES cores_estampas(id),
+            cor_estampa_nome TEXT,
+            quantidade INTEGER NOT NULL DEFAULT 1,
+            preco_unitario REAL NOT NULL DEFAULT 0,
+            subtotal REAL NOT NULL DEFAULT 0,
+            foto_base64 TEXT,
+            obs TEXT
+        )""",
     ]
     for sql in migrações:
         try:
@@ -352,6 +413,11 @@ def registrar_historico(db, tabela, registro_id, descricao):
     )
 
 
+def is_vendedor_restrito():
+    """True se o usuário tem permissão 'vendedor' mas não é administrador."""
+    return tem_permissao("vendedor") and not tem_permissao("gerenciar_usuarios")
+
+
 def tem_permissao(chave):
     usuario_id = session.get("usuario_id")
     if not usuario_id:
@@ -378,7 +444,7 @@ def tem_permissao(chave):
 
 @app.context_processor
 def injetar_permissoes():
-    return {"tem_permissao": tem_permissao}
+    return {"tem_permissao": tem_permissao, "is_vendedor_restrito": is_vendedor_restrito}
 
 
 @app.before_request
@@ -393,6 +459,16 @@ def exigir_login():
         if request.path.startswith("/m/"):
             return redirect(url_for("mobile_login", proximo=request.path))
         return redirect(url_for("login", proximo=request.path))
+    # Vendedores restritos só acessam rotas de vendas e mobile vendas
+    if is_vendedor_restrito():
+        permitido = (
+            request.path.startswith("/vendas")
+            or request.path.startswith("/m/vendas")
+            or request.path in ("/logout", "/login")
+            or request.endpoint == "static"
+        )
+        if not permitido:
+            return redirect(url_for("vendas_dashboard"))
     return None
 
 
@@ -448,6 +524,8 @@ def login():
             session["usuario_id"] = row["id"]
             session["usuario_nome"] = row["usuario"]
             proximo = request.form.get("proximo", "")
+            if is_vendedor_restrito():
+                return redirect(url_for("vendas_dashboard"))
             destino = proximo if proximo.startswith("/") else url_for("dashboard")
             return redirect(destino)
     return render_template("login.html", proximo=request.args.get("proximo", ""))
@@ -4347,6 +4425,385 @@ def download_planilha_modelo():
 @app.route("/aprendizado-sql")
 def aprendizado_sql():
     return render_template("aprendizado_sql.html")
+
+
+# ===========================================================================
+# MÓDULO PEDIDOS DE VENDA
+# ===========================================================================
+
+def _proximo_numero_pedido(db):
+    row = db.execute("SELECT MAX(numero) AS m FROM pedidos").fetchone()
+    return (row["m"] or 0) + 1
+
+
+def _recalcular_total_pedido(db, pedido_id):
+    row = db.execute(
+        "SELECT COALESCE(SUM(subtotal),0) AS t FROM itens_pedido WHERE pedido_id = ?",
+        (pedido_id,)
+    ).fetchone()
+    db.execute("UPDATE pedidos SET total = ? WHERE id = ?", (row["t"], pedido_id))
+
+
+# ── Dashboard Vendas ─────────────────────────────────────────────────────────
+
+@app.route("/vendas/")
+def vendas_dashboard():
+    db = get_db()
+    pedidos = db.execute("""
+        SELECT p.id, p.numero, p.data, p.status, p.total,
+               c.nome AS cliente_nome, c.codigo AS cliente_codigo,
+               u.usuario AS vendedor_nome
+        FROM pedidos p
+        JOIN clientes c ON c.id = p.cliente_id
+        JOIN usuarios u ON u.id = p.usuario_id
+        ORDER BY p.id DESC LIMIT 50
+    """).fetchall()
+    totais = db.execute("""
+        SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN status='aberto' THEN 1 ELSE 0 END) AS abertos,
+            COALESCE(SUM(CASE WHEN status='aberto' THEN total ELSE 0 END),0) AS valor_aberto
+        FROM pedidos
+    """).fetchone()
+    return render_template("vendas/dashboard.html", pedidos=pedidos, totais=totais)
+
+
+# ── Clientes ─────────────────────────────────────────────────────────────────
+
+@app.route("/vendas/clientes/")
+def vendas_clientes():
+    db = get_db()
+    q = request.args.get("q", "").strip()
+    if q:
+        clientes = db.execute(
+            "SELECT * FROM clientes WHERE ativo=1 AND (nome LIKE ? OR codigo LIKE ?) ORDER BY nome",
+            (f"%{q}%", f"%{q}%")
+        ).fetchall()
+    else:
+        clientes = db.execute("SELECT * FROM clientes WHERE ativo=1 ORDER BY nome").fetchall()
+    return render_template("vendas/clientes_lista.html", clientes=clientes, q=q)
+
+
+@app.route("/vendas/clientes/importar", methods=["GET", "POST"])
+def vendas_importar_clientes():
+    if request.method == "POST":
+        arquivo = request.files.get("arquivo")
+        if not arquivo or not arquivo.filename.endswith((".xlsx", ".xls")):
+            flash("Envie um arquivo Excel (.xlsx).", "erro")
+            return redirect(request.url)
+        import openpyxl
+        wb = openpyxl.load_workbook(arquivo, data_only=True)
+        ws = wb.active
+        headers = [str(c.value or "").strip().lower() for c in next(ws.iter_rows(min_row=1, max_row=1))]
+        db = get_db()
+        importados = atualizados = erros = 0
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            linha = {headers[i]: (str(v).strip() if v is not None else "") for i, v in enumerate(row) if i < len(headers)}
+            codigo = linha.get("codigo") or linha.get("cód") or linha.get("cod") or linha.get("código")
+            nome   = linha.get("nome") or linha.get("razao social") or linha.get("razão social") or linha.get("cliente")
+            if not codigo or not nome:
+                erros += 1
+                continue
+            dados = {
+                "codigo": codigo, "nome": nome,
+                "cpf_cnpj": linha.get("cpf_cnpj") or linha.get("cnpj") or linha.get("cpf") or "",
+                "telefone": linha.get("telefone") or linha.get("fone") or "",
+                "email":    linha.get("email") or "",
+                "endereco": linha.get("endereco") or linha.get("endereço") or "",
+                "cidade":   linha.get("cidade") or "",
+                "estado":   linha.get("estado") or linha.get("uf") or "",
+            }
+            existente = db.execute("SELECT id FROM clientes WHERE codigo = ?", (codigo,)).fetchone()
+            if existente:
+                db.execute("""UPDATE clientes SET nome=?,cpf_cnpj=?,telefone=?,email=?,endereco=?,cidade=?,estado=?
+                              WHERE codigo=?""",
+                           (dados["nome"], dados["cpf_cnpj"], dados["telefone"], dados["email"],
+                            dados["endereco"], dados["cidade"], dados["estado"], codigo))
+                atualizados += 1
+            else:
+                db.execute("""INSERT INTO clientes (codigo,nome,cpf_cnpj,telefone,email,endereco,cidade,estado)
+                              VALUES (:codigo,:nome,:cpf_cnpj,:telefone,:email,:endereco,:cidade,:estado)""", dados)
+                importados += 1
+        db.commit()
+        flash(f"Importação concluída: {importados} inseridos, {atualizados} atualizados, {erros} ignorados (sem código ou nome).", "sucesso")
+        return redirect(url_for("vendas_clientes"))
+    return render_template("vendas/clientes_importar.html")
+
+
+# ── Representantes ───────────────────────────────────────────────────────────
+
+@app.route("/vendas/representantes/", methods=["GET", "POST"])
+def vendas_representantes():
+    db = get_db()
+    if request.method == "POST":
+        nome   = request.form.get("nome", "").strip()
+        codigo = request.form.get("codigo", "").strip()
+        tel    = request.form.get("telefone", "").strip()
+        if not nome:
+            flash("Informe o nome do representante.", "erro")
+        else:
+            db.execute("INSERT INTO representantes (nome,codigo,telefone) VALUES (?,?,?)", (nome, codigo, tel))
+            db.commit()
+            flash("Representante cadastrado.", "sucesso")
+        return redirect(url_for("vendas_representantes"))
+    reps = db.execute("SELECT * FROM representantes WHERE ativo=1 ORDER BY nome").fetchall()
+    return render_template("vendas/representantes_lista.html", representantes=reps)
+
+
+@app.route("/vendas/representantes/<int:rep_id>/editar", methods=["POST"])
+def vendas_editar_representante(rep_id):
+    db = get_db()
+    nome   = request.form.get("nome", "").strip()
+    codigo = request.form.get("codigo", "").strip()
+    tel    = request.form.get("telefone", "").strip()
+    if nome:
+        db.execute("UPDATE representantes SET nome=?,codigo=?,telefone=? WHERE id=?", (nome, codigo, tel, rep_id))
+        db.commit()
+        flash("Representante atualizado.", "sucesso")
+    return redirect(url_for("vendas_representantes"))
+
+
+@app.route("/vendas/representantes/<int:rep_id>/excluir", methods=["POST"])
+def vendas_excluir_representante(rep_id):
+    db = get_db()
+    em_uso = db.execute("SELECT COUNT(*) AS n FROM pedidos WHERE representante_id=?", (rep_id,)).fetchone()["n"]
+    if em_uso:
+        flash("Não é possível excluir: representante já usado em pedidos.", "erro")
+    else:
+        db.execute("DELETE FROM representantes WHERE id=?", (rep_id,))
+        db.commit()
+        flash("Representante excluído.", "sucesso")
+    return redirect(url_for("vendas_representantes"))
+
+
+# ── Tabelas de Preços ────────────────────────────────────────────────────────
+
+@app.route("/vendas/tabelas/", methods=["GET", "POST"])
+def vendas_tabelas():
+    db = get_db()
+    if request.method == "POST":
+        nome = request.form.get("nome", "").strip()
+        val  = request.form.get("validade_ate", "").strip() or None
+        if not nome:
+            flash("Informe o nome da tabela.", "erro")
+        else:
+            db.execute("INSERT INTO tabelas_precos (nome, validade_ate) VALUES (?,?)", (nome, val))
+            db.commit()
+            flash("Tabela criada.", "sucesso")
+        return redirect(url_for("vendas_tabelas"))
+    tabelas = db.execute("""
+        SELECT t.*, COUNT(i.id) AS qtd_produtos
+        FROM tabelas_precos t
+        LEFT JOIN itens_tabela_precos i ON i.tabela_id = t.id
+        GROUP BY t.id ORDER BY t.nome
+    """).fetchall()
+    return render_template("vendas/tabelas_lista.html", tabelas=tabelas)
+
+
+@app.route("/vendas/tabelas/<int:tabela_id>/", methods=["GET", "POST"])
+def vendas_tabela_detalhe(tabela_id):
+    db = get_db()
+    tabela = db.execute("SELECT * FROM tabelas_precos WHERE id=?", (tabela_id,)).fetchone()
+    if not tabela:
+        flash("Tabela não encontrada.", "erro")
+        return redirect(url_for("vendas_tabelas"))
+    if request.method == "POST":
+        acao = request.form.get("acao")
+        if acao == "add_item":
+            produto_id = request.form.get("produto_id", type=int)
+            preco      = request.form.get("preco_unitario", type=float)
+            if produto_id and preco is not None:
+                try:
+                    db.execute("INSERT INTO itens_tabela_precos (tabela_id,produto_id,preco_unitario) VALUES (?,?,?)",
+                               (tabela_id, produto_id, preco))
+                    db.commit()
+                except sqlite3.IntegrityError:
+                    db.execute("UPDATE itens_tabela_precos SET preco_unitario=? WHERE tabela_id=? AND produto_id=?",
+                               (preco, tabela_id, produto_id))
+                    db.commit()
+        elif acao == "excluir_item":
+            item_id = request.form.get("item_id", type=int)
+            if item_id:
+                db.execute("DELETE FROM itens_tabela_precos WHERE id=? AND tabela_id=?", (item_id, tabela_id))
+                db.commit()
+        elif acao == "editar_tabela":
+            nome = request.form.get("nome", "").strip()
+            val  = request.form.get("validade_ate", "").strip() or None
+            ativa = 1 if request.form.get("ativa") else 0
+            if nome:
+                db.execute("UPDATE tabelas_precos SET nome=?,validade_ate=?,ativa=? WHERE id=?",
+                           (nome, val, ativa, tabela_id))
+                db.commit()
+                flash("Tabela atualizada.", "sucesso")
+        return redirect(url_for("vendas_tabela_detalhe", tabela_id=tabela_id))
+    itens = db.execute("""
+        SELECT i.id, i.preco_unitario, p.id AS produto_id, p.codigo, p.descricao
+        FROM itens_tabela_precos i
+        JOIN produtos p ON p.id = i.produto_id
+        WHERE i.tabela_id = ?
+        ORDER BY p.descricao
+    """, (tabela_id,)).fetchall()
+    produtos_disponiveis = db.execute(
+        "SELECT id, codigo, descricao FROM produtos ORDER BY descricao"
+    ).fetchall()
+    return render_template("vendas/tabela_detalhe.html", tabela=tabela, itens=itens,
+                           produtos_disponiveis=produtos_disponiveis)
+
+
+# ── Pedidos ───────────────────────────────────────────────────────────────────
+
+@app.route("/vendas/pedidos/")
+def vendas_pedidos():
+    db = get_db()
+    status = request.args.get("status", "")
+    q = request.args.get("q", "").strip()
+    sql = """
+        SELECT p.id, p.numero, p.data, p.status, p.total,
+               c.nome AS cliente_nome, c.codigo AS cliente_codigo,
+               u.usuario AS vendedor_nome,
+               r.nome AS representante_nome
+        FROM pedidos p
+        JOIN clientes c ON c.id = p.cliente_id
+        JOIN usuarios u ON u.id = p.usuario_id
+        LEFT JOIN representantes r ON r.id = p.representante_id
+        WHERE 1=1
+    """
+    params = []
+    if status:
+        sql += " AND p.status = ?"
+        params.append(status)
+    if q:
+        sql += " AND (c.nome LIKE ? OR c.codigo LIKE ? OR CAST(p.numero AS TEXT) LIKE ?)"
+        params += [f"%{q}%", f"%{q}%", f"%{q}%"]
+    sql += " ORDER BY p.id DESC"
+    pedidos = db.execute(sql, params).fetchall()
+    return render_template("vendas/pedidos_lista.html", pedidos=pedidos, status=status, q=q)
+
+
+@app.route("/vendas/pedidos/novo", methods=["GET", "POST"])
+def vendas_pedido_novo():
+    db = get_db()
+    if request.method == "POST":
+        cliente_id      = request.form.get("cliente_id", type=int)
+        representante_id = request.form.get("representante_id", type=int) or None
+        tabela_id       = request.form.get("tabela_id", type=int) or None
+        data            = request.form.get("data") or date.today().isoformat()
+        obs             = request.form.get("observacao", "").strip()
+        usuario_id      = session["usuario_id"]
+        if not cliente_id:
+            flash("Selecione um cliente.", "erro")
+            return redirect(request.url)
+        numero = _proximo_numero_pedido(db)
+        cur = db.execute(
+            """INSERT INTO pedidos (numero,data,cliente_id,usuario_id,representante_id,tabela_id,observacao)
+               VALUES (?,?,?,?,?,?,?)""",
+            (numero, data, cliente_id, usuario_id, representante_id, tabela_id, obs)
+        )
+        db.commit()
+        return redirect(url_for("vendas_pedido_ver", pedido_id=cur.lastrowid))
+    clientes     = db.execute("SELECT id, codigo, nome FROM clientes WHERE ativo=1 ORDER BY nome").fetchall()
+    representantes = db.execute("SELECT id, nome FROM representantes WHERE ativo=1 ORDER BY nome").fetchall()
+    tabelas      = db.execute("SELECT id, nome FROM tabelas_precos WHERE ativa=1 ORDER BY nome").fetchall()
+    return render_template("vendas/pedido_novo.html", clientes=clientes,
+                           representantes=representantes, tabelas=tabelas,
+                           hoje=date.today().isoformat())
+
+
+@app.route("/vendas/pedidos/<int:pedido_id>", methods=["GET", "POST"])
+def vendas_pedido_ver(pedido_id):
+    db = get_db()
+    pedido = db.execute("""
+        SELECT p.*, c.nome AS cliente_nome, c.codigo AS cliente_codigo,
+               c.telefone AS cliente_tel, c.cidade AS cliente_cidade,
+               u.usuario AS vendedor_nome,
+               r.nome AS representante_nome,
+               t.nome AS tabela_nome
+        FROM pedidos p
+        JOIN clientes c ON c.id = p.cliente_id
+        JOIN usuarios u ON u.id = p.usuario_id
+        LEFT JOIN representantes r ON r.id = p.representante_id
+        LEFT JOIN tabelas_precos t ON t.id = p.tabela_id
+        WHERE p.id = ?
+    """, (pedido_id,)).fetchone()
+    if not pedido:
+        flash("Pedido não encontrado.", "erro")
+        return redirect(url_for("vendas_pedidos"))
+
+    if request.method == "POST":
+        acao = request.form.get("acao")
+        if acao == "add_item" and pedido["status"] == "aberto":
+            produto_id      = request.form.get("produto_id", type=int)
+            cor_estampa_id  = request.form.get("cor_estampa_id", type=int) or None
+            cor_estampa_nome = request.form.get("cor_estampa_nome", "").strip() or None
+            quantidade      = request.form.get("quantidade", type=int) or 1
+            preco_unitario  = request.form.get("preco_unitario", type=float) or 0.0
+            foto_base64     = request.form.get("foto_base64", "").strip() or None
+            obs_item        = request.form.get("obs_item", "").strip() or None
+            subtotal        = round(quantidade * preco_unitario, 2)
+            # Busca nome da cor se foi passado o ID
+            if cor_estampa_id and not cor_estampa_nome:
+                c = db.execute("SELECT descricao FROM cores_estampas WHERE id=?", (cor_estampa_id,)).fetchone()
+                if c:
+                    cor_estampa_nome = c["descricao"]
+            if produto_id:
+                db.execute("""INSERT INTO itens_pedido
+                              (pedido_id,produto_id,cor_estampa_id,cor_estampa_nome,quantidade,preco_unitario,subtotal,foto_base64,obs)
+                              VALUES (?,?,?,?,?,?,?,?,?)""",
+                           (pedido_id, produto_id, cor_estampa_id, cor_estampa_nome,
+                            quantidade, preco_unitario, subtotal, foto_base64, obs_item))
+                _recalcular_total_pedido(db, pedido_id)
+                db.commit()
+        elif acao == "excluir_item" and pedido["status"] == "aberto":
+            item_id = request.form.get("item_id", type=int)
+            if item_id:
+                db.execute("DELETE FROM itens_pedido WHERE id=? AND pedido_id=?", (item_id, pedido_id))
+                _recalcular_total_pedido(db, pedido_id)
+                db.commit()
+        elif acao == "confirmar":
+            db.execute("UPDATE pedidos SET status='confirmado' WHERE id=?", (pedido_id,))
+            db.commit()
+            flash("Pedido confirmado.", "sucesso")
+        elif acao == "cancelar":
+            db.execute("UPDATE pedidos SET status='cancelado' WHERE id=?", (pedido_id,))
+            db.commit()
+            flash("Pedido cancelado.", "sucesso")
+        elif acao == "reabrir":
+            db.execute("UPDATE pedidos SET status='aberto' WHERE id=?", (pedido_id,))
+            db.commit()
+        return redirect(url_for("vendas_pedido_ver", pedido_id=pedido_id))
+
+    itens = db.execute("""
+        SELECT i.*, p.codigo AS produto_codigo, p.descricao AS produto_descricao
+        FROM itens_pedido i
+        JOIN produtos p ON p.id = i.produto_id
+        WHERE i.pedido_id = ?
+        ORDER BY i.id
+    """, (pedido_id,)).fetchall()
+
+    # Produtos para o formulário de adicionar item
+    produtos = db.execute("SELECT id, codigo, descricao FROM produtos ORDER BY descricao").fetchall()
+    # Se pedido tem tabela, carrega preços dela para sugestão
+    precos_tabela = {}
+    if pedido["tabela_id"]:
+        rows = db.execute(
+            "SELECT produto_id, preco_unitario FROM itens_tabela_precos WHERE tabela_id=?",
+            (pedido["tabela_id"],)
+        ).fetchall()
+        precos_tabela = {r["produto_id"]: r["preco_unitario"] for r in rows}
+
+    return render_template("vendas/pedido_ver.html", pedido=pedido, itens=itens,
+                           produtos=produtos, precos_tabela=precos_tabela)
+
+
+# API: retorna cores/estampas de um produto (usado no JS do pedido)
+@app.route("/api/produto/<int:produto_id>/cores")
+def api_produto_cores(produto_id):
+    db = get_db()
+    cores = db.execute(
+        "SELECT id, codigo, descricao FROM cores_estampas WHERE produto_id=? ORDER BY descricao",
+        (produto_id,)
+    ).fetchall()
+    return {"cores": [dict(c) for c in cores]}
 
 
 if __name__ == "__main__":

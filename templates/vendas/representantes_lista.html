@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+
+  <div class="card">
+    <h2>Representantes / Guias</h2>
+    <table style="font-size:13px;">
+      <tr><th>Código</th><th>Nome</th><th>Telefone</th><th></th></tr>
+      {% for r in representantes %}
+      <tr>
+        <td>{{ r.codigo or "—" }}</td>
+        <td><b>{{ r.nome }}</b></td>
+        <td>{{ r.telefone or "—" }}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn-mini" onclick="abrirEditar({{ r.id }},'{{ r.nome|e }}','{{ r.codigo or '' }}','{{ r.telefone or '' }}')">Editar</button>
+          <form method="post" action="/vendas/representantes/{{ r.id }}/excluir" style="display:inline;"
+                onsubmit="return confirm('Excluir {{ r.nome }}?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn-mini excluir" type="submit">Excluir</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="small">Nenhum representante cadastrado.</td></tr>
+      {% endfor %}
+    </table>
+    <a href="/vendas/" class="btn secondary" style="margin-top:12px;display:inline-block;font-size:12px;">Voltar</a>
+  </div>
+
+  <div>
+    <div class="card" id="card-add">
+      <h2>Novo Representante</h2>
+      <form method="post" action="/vendas/representantes/">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="margin-bottom:8px;"><label>Nome *</label>
+          <input type="text" name="nome" required style="width:100%;box-sizing:border-box;"></div>
+        <div style="margin-bottom:8px;"><label>Código</label>
+          <input type="text" name="codigo" style="width:100%;box-sizing:border-box;"></div>
+        <div style="margin-bottom:12px;"><label>Telefone</label>
+          <input type="text" name="telefone" style="width:100%;box-sizing:border-box;"></div>
+        <button class="btn" type="submit">Salvar</button>
+      </form>
+    </div>
+
+    <div class="card" id="card-editar" style="display:none;">
+      <h2>Editar Representante</h2>
+      <form method="post" id="form-editar">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="margin-bottom:8px;"><label>Nome *</label>
+          <input type="text" name="nome" id="edit-nome" required style="width:100%;box-sizing:border-box;"></div>
+        <div style="margin-bottom:8px;"><label>Código</label>
+          <input type="text" name="codigo" id="edit-codigo" style="width:100%;box-sizing:border-box;"></div>
+        <div style="margin-bottom:12px;"><label>Telefone</label>
+          <input type="text" name="telefone" id="edit-tel" style="width:100%;box-sizing:border-box;"></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn" type="submit">Salvar</button>
+          <button type="button" class="btn secondary" onclick="fecharEditar()">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+function abrirEditar(id, nome, codigo, tel) {
+  document.getElementById('card-add').style.display = 'none';
+  document.getElementById('card-editar').style.display = '';
+  document.getElementById('edit-nome').value = nome;
+  document.getElementById('edit-codigo').value = codigo;
+  document.getElementById('edit-tel').value = tel;
+  document.getElementById('form-editar').action = '/vendas/representantes/' + id + '/editar';
+}
+function fecharEditar() {
+  document.getElementById('card-editar').style.display = 'none';
+  document.getElementById('card-add').style.display = '';
+}
+</script>
+{% endblock %}

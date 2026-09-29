@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width:620px;">
+  <h2>Importar Clientes via Excel</h2>
+  <p class="small" style="margin-bottom:16px;">
+    O arquivo Excel deve ter uma linha de cabeçalho. As colunas reconhecidas automaticamente são:<br>
+    <code>codigo</code> (ou <code>cód</code>), <code>nome</code> (ou <code>razao social</code>), <code>cnpj</code>, <code>telefone</code>, <code>email</code>, <code>endereco</code>, <code>cidade</code>, <code>estado</code> (ou <code>uf</code>).<br>
+    Clientes com o mesmo <b>código</b> serão <b>atualizados</b>; os demais serão inseridos.
+  </p>
+  <form method="post" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div style="margin-bottom:12px;">
+      <label>Arquivo Excel (.xlsx)</label>
+      <input type="file" name="arquivo" accept=".xlsx,.xls" required style="display:block;margin-top:4px;">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" type="submit">Importar</button>
+      <a href="/vendas/clientes/" class="btn secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="kpi">
+  <div class="card">
+    <div class="small">Total de Pedidos</div>
+    <div class="num">{{ totais.total }}</div>
+  </div>
+  <div class="card">
+    <div class="small">Pedidos em Aberto</div>
+    <div class="num">{{ totais.abertos }}</div>
+  </div>
+  <div class="card">
+    <div class="small">Valor em Aberto</div>
+    <div class="num" style="font-size:18px;">R$ {{ '%.2f'|format(totais.valor_aberto or 0)|replace('.',',') }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <h2 style="margin:0;">Últimos Pedidos</h2>
+    <a href="/vendas/pedidos/novo" class="btn" style="font-size:13px;">+ Novo Pedido</a>
+  </div>
+  <table style="font-size:13px;">
+    <tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Vendedor</th><th>Total</th><th>Status</th><th></th></tr>
+    {% for p in pedidos %}
+    <tr>
+      <td><b>{{ p.numero }}</b></td>
+      <td>{{ p.data|brdate }}</td>
+      <td>{{ p.cliente_nome }}</td>
+      <td>{{ p.vendedor_nome }}</td>
+      <td>R$ {{ '%.2f'|format(p.total)|replace('.',',') }}</td>
+      <td>
+        {% if p.status == 'aberto' %}<span class="badge b-pendente">Aberto</span>
+        {% elif p.status == 'confirmado' %}<span class="badge b-concluida">Confirmado</span>
+        {% else %}<span class="badge" style="background:#eee;color:#999;">Cancelado</span>{% endif %}
+      </td>
+      <td><a href="/vendas/pedidos/{{ p.id }}" class="btn-mini">Ver</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="small">Nenhum pedido registrado ainda.</td></tr>
+    {% endfor %}
+  </table>
+  <div style="margin-top:10px;display:flex;gap:8px;">
+    <a href="/vendas/pedidos/" class="btn secondary" style="font-size:12px;">Ver todos os pedidos</a>
+    <a href="/vendas/clientes/" class="btn secondary" style="font-size:12px;">Clientes</a>
+    <a href="/vendas/representantes/" class="btn secondary" style="font-size:12px;">Representantes</a>
+    <a href="/vendas/tabelas/" class="btn secondary" style="font-size:12px;">Tabelas de Preços</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start;">
+  <div class="card">
+    <h2>Tabelas de Preços</h2>
+    <table style="font-size:13px;">
+      <tr><th>Nome</th><th>Validade</th><th>Produtos</th><th>Status</th><th></th></tr>
+      {% for t in tabelas %}
+      <tr>
+        <td><b><a href="/vendas/tabelas/{{ t.id }}/" class="link-celula">{{ t.nome }}</a></b></td>
+        <td>{{ t.validade_ate|brdate if t.validade_ate else "—" }}</td>
+        <td>{{ t.qtd_produtos }}</td>
+        <td>{% if t.ativa %}<span class="badge b-concluida">Ativa</span>{% else %}<span class="badge" style="background:#eee;color:#999;">Inativa</span>{% endif %}</td>
+        <td><a href="/vendas/tabelas/{{ t.id }}/" class="btn-mini">Editar</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="small">Nenhuma tabela cadastrada.</td></tr>
+      {% endfor %}
+    </table>
+    <a href="/vendas/" class="btn secondary" style="margin-top:12px;display:inline-block;font-size:12px;">Voltar</a>
+  </div>
+
+  <div class="card">
+    <h2>Nova Tabela</h2>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div style="margin-bottom:8px;"><label>Nome *</label>
+        <input type="text" name="nome" required placeholder="Ex: Tabela Varejo 2026"
+               style="width:100%;box-sizing:border-box;"></div>
+      <div style="margin-bottom:12px;"><label>Validade (opcional)</label>
+        <input type="date" name="validade_ate" style="width:100%;box-sizing:border-box;"></div>
+      <button class="btn" type="submit">Criar Tabela</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

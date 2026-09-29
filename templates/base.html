@@ -453,6 +453,19 @@
       {% if tem_permissao('ver_historico') %}<a href="/historico" class="{{ 'active' if request.path == '/historico' }}">Histórico</a>{% endif %}
       {% if tem_permissao('ver_ajuda') %}<a href="/ajuda" class="{{ 'active' if request.path == '/ajuda' }}">Ajuda</a>{% endif %}
       {% if tem_permissao('ver_aprender_sql') %}<a href="/aprendizado-sql" class="{{ 'active' if request.path == '/aprendizado-sql' }}">📚 Aprender SQL</a>{% endif %}
+      {% if tem_permissao('vendedor') %}
+      <div class="nav-item">
+        <button type="button" class="nav-trigger {{ 'active' if request.path.startswith('/vendas') }}">Vendas</button>
+        <div class="submenu">
+          <a href="/vendas/">Dashboard Vendas</a>
+          <a href="/vendas/pedidos/novo">+ Novo Pedido</a>
+          <a href="/vendas/pedidos/">Pedidos</a>
+          <a href="/vendas/clientes/">Clientes</a>
+          <a href="/vendas/representantes/">Representantes</a>
+          <a href="/vendas/tabelas/">Tabelas de Preços</a>
+        </div>
+      </div>
+      {% endif %}
     </nav>
     {% if session.usuario_nome %}
     <div style="margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:#d9c6b3;">

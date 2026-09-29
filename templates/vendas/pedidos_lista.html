@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="margin-bottom:12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+    <h2 style="margin:0;">Pedidos de Venda</h2>
+    <a href="/vendas/pedidos/novo" class="btn" style="font-size:13px;">+ Novo Pedido</a>
+  </div>
+  <form method="get" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+    <input type="search" name="q" value="{{ q }}" placeholder="Cliente ou Nº pedido..."
+           style="flex:1;min-width:160px;padding:7px 10px;border:1px solid #d9c6b3;border-radius:6px;font-size:13px;">
+    <select name="status" style="padding:7px 10px;border:1px solid #d9c6b3;border-radius:6px;font-size:13px;">
+      <option value="" {% if not status %}selected{% endif %}>Todos os status</option>
+      <option value="aberto" {% if status=='aberto' %}selected{% endif %}>Aberto</option>
+      <option value="confirmado" {% if status=='confirmado' %}selected{% endif %}>Confirmado</option>
+      <option value="cancelado" {% if status=='cancelado' %}selected{% endif %}>Cancelado</option>
+    </select>
+    <button class="btn" type="submit">Filtrar</button>
+    {% if q or status %}<a class="btn secondary" href="/vendas/pedidos/">Limpar</a>{% endif %}
+  </form>
+</div>
+<div class="card">
+  <table style="font-size:13px;">
+    <tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Vendedor</th><th>Representante</th><th>Total</th><th>Status</th><th></th></tr>
+    {% for p in pedidos %}
+    <tr>
+      <td><b>{{ p.numero }}</b></td>
+      <td>{{ p.data|brdate }}</td>
+      <td>{{ p.cliente_nome }}</td>
+      <td>{{ p.vendedor_nome }}</td>
+      <td>{{ p.representante_nome or "—" }}</td>
+      <td>R$ {{ '%.2f'|format(p.total)|replace('.',',') }}</td>
+      <td>
+        {% if p.status == 'aberto' %}<span class="badge b-pendente">Aberto</span>
+        {% elif p.status == 'confirmado' %}<span class="badge b-concluida">Confirmado</span>
+        {% else %}<span class="badge" style="background:#eee;color:#999;">Cancelado</span>{% endif %}
+      </td>
+      <td><a href="/vendas/pedidos/{{ p.id }}" class="btn-mini">Ver</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="small">Nenhum pedido encontrado.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block content %}
+{% set aberto = pedido.status == 'aberto' %}
+
+<div class="card no-print" style="margin-bottom:12px;">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+    <div>
+      <h2 style="margin:0 0 4px;">Pedido Nº {{ pedido.numero }}</h2>
+      <p class="small" style="margin:0;">
+        {{ pedido.data|brdate }} — <b>{{ pedido.cliente_nome }}</b> ({{ pedido.cliente_codigo }})
+        {% if pedido.cliente_tel %} — {{ pedido.cliente_tel }}{% endif %}
+        {% if pedido.cliente_cidade %} — {{ pedido.cliente_cidade }}{% endif %}
+      </p>
+      <p class="small" style="margin:4px 0 0;">
+        Vendedor: <b>{{ pedido.vendedor_nome }}</b>
+        {% if pedido.representante_nome %} — Rep/Guia: <b>{{ pedido.representante_nome }}</b>{% endif %}
+        {% if pedido.tabela_nome %} — Tabela: <b>{{ pedido.tabela_nome }}</b>{% endif %}
+      </p>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      {% if aberto %}
+        <form method="post" style="display:inline;" onsubmit="return confirm('Confirmar este pedido?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="acao" value="confirmar">
+          <button class="btn" type="submit" style="background:#2a7a2a;color:#fff;">Confirmar Pedido</button>
+        </form>
+        <form method="post" style="display:inline;" onsubmit="return confirm('Cancelar este pedido?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="acao" value="cancelar">
+          <button class="btn-mini excluir" type="submit">Cancelar</button>
+        </form>
+      {% elif pedido.status == 'confirmado' %}
+        <span class="badge b-concluida" style="font-size:13px;padding:6px 12px;">Confirmado</span>
+        <form method="post" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="acao" value="reabrir">
+          <button class="btn secondary" type="submit" style="font-size:12px;">Reabrir</button>
+        </form>
+      {% else %}
+        <span class="badge" style="background:#eee;color:#999;font-size:13px;padding:6px 12px;">Cancelado</span>
+      {% endif %}
+      <button onclick="window.print()" class="btn secondary no-print" style="font-size:12px;">Imprimir</button>
+      <a href="/vendas/pedidos/" class="btn secondary no-print" style="font-size:12px;">Voltar</a>
+    </div>
+  </div>
+</div>
+
+{% if pedido.observacao %}
+<div class="card no-print" style="margin-bottom:12px;background:#fdf6f0;border-left:4px solid #AF4005;">
+  <b>Obs:</b> {{ pedido.observacao }}
+</div>
+{% endif %}
+
+<!-- Itens do pedido -->
+<div class="card" style="margin-bottom:12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <h2 style="margin:0;">Itens do Pedido</h2>
+    <span style="font-size:15px;font-weight:700;color:#5C442C;">
+      Total: R$ {{ '%.2f'|format(pedido.total)|replace('.',',') }}
+    </span>
+  </div>
+  <table style="font-size:13px;">
+    <tr><th>Produto</th><th>Cor/Estampa</th><th>Qtd</th><th>Preço Unit.</th><th>Subtotal</th>{% if aberto %}<th class="no-print"></th>{% endif %}</tr>
+    {% for item in itens %}
+    <tr>
+      <td>
+        <b>{{ item.produto_codigo }}</b> — {{ item.produto_descricao }}
+        {% if item.obs %}<br><small style="color:#888;">{{ item.obs }}</small>{% endif %}
+      </td>
+      <td>
+        {{ item.cor_estampa_nome or "—" }}
+        {% if item.foto_base64 %}
+        <img src="{{ item.foto_base64 }}" style="max-width:50px;max-height:50px;display:block;margin-top:4px;border-radius:4px;">
+        {% endif %}
+      </td>
+      <td>{{ item.quantidade }}</td>
+      <td>R$ {{ '%.2f'|format(item.preco_unitario)|replace('.',',') }}</td>
+      <td><b>R$ {{ '%.2f'|format(item.subtotal)|replace('.',',') }}</b></td>
+      {% if aberto %}
+      <td class="no-print">
+        <form method="post" onsubmit="return confirm('Remover item?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="acao" value="excluir_item">
+          <input type="hidden" name="item_id" value="{{ item.id }}">
+          <button class="btn-mini excluir" type="submit">✕</button>
+        </form>
+      </td>
+      {% endif %}
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="small">Nenhum item adicionado ainda.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<!-- Formulário para adicionar item (só se aberto) -->
+{% if aberto %}
+<div class="card no-print">
+  <h2>Adicionar Item</h2>
+  <form method="post" id="form-add-item">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="acao" value="add_item">
+    <input type="hidden" name="foto_base64" id="foto_b64">
+    <input type="hidden" name="cor_estampa_id" id="cor_id_sel">
+    <input type="hidden" name="cor_estampa_nome" id="cor_nome_sel">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div>
+        <label>Produto *</label>
+        <input type="search" id="busca-prod" placeholder="Código ou nome..." oninput="filtrarProds()"
+               style="width:100%;box-sizing:border-box;margin-bottom:4px;padding:6px 8px;border:1px solid #d9c6b3;border-radius:6px;font-size:12px;">
+        <select name="produto_id" id="sel-prod" size="5" required
+                style="width:100%;font-size:12px;border:1px solid #d9c6b3;border-radius:6px;"
+                onchange="carregarCores(this.value)">
+          {% for p in produtos %}
+          <option value="{{ p.id }}" data-label="{{ p.codigo }} {{ p.descricao }}"
+                  data-preco="{{ precos_tabela.get(p.id, '') }}">
+            {{ p.codigo }} — {{ p.descricao }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label>Cor / Estampa</label>
+        <div id="cores-container" style="border:1px solid #d9c6b3;border-radius:6px;padding:8px;min-height:80px;font-size:12px;background:#fafafa;">
+          <span style="color:#aaa;">Selecione um produto para ver as cores</span>
+        </div>
+        <div id="sem-cor" style="display:none;margin-top:8px;">
+          <label style="font-size:12px;">Sem variante — tirar foto (opcional):</label>
+          <div style="display:flex;gap:6px;align-items:center;margin-top:4px;">
+            <input type="file" id="input-foto" accept="image/*" capture="environment"
+                   onchange="previsualizarFoto(this)" style="font-size:11px;flex:1;">
+            <img id="prev-foto" style="max-width:50px;max-height:50px;border-radius:4px;display:none;">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:80px 160px 1fr;gap:12px;margin-bottom:12px;">
+      <div>
+        <label>Qtd *</label>
+        <input type="number" name="quantidade" id="qtd-input" min="1" value="1" required
+               oninput="calcSubtotal()" style="width:100%;box-sizing:border-box;">
+      </div>
+      <div>
+        <label>Preço Unit. (R$) *</label>
+        <input type="number" name="preco_unitario" id="preco-input" step="0.01" min="0" required
+               oninput="calcSubtotal()" style="width:100%;box-sizing:border-box;">
+      </div>
+      <div>
+        <label>Subtotal</label>
+        <div id="subtotal-display" style="font-size:18px;font-weight:700;color:#5C442C;padding-top:6px;">R$ 0,00</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px;">
+      <label>Observação do item (opcional)</label>
+      <input type="text" name="obs_item" style="width:100%;box-sizing:border-box;">
+    </div>
+
+    <button class="btn" type="submit">Adicionar Item</button>
+  </form>
+</div>
+
+<script>
+var precosTabela = {{ precos_tabela|tojson }};
+
+function filtrarProds() {
+  var t = document.getElementById('busca-prod').value.toLowerCase();
+  document.querySelectorAll('#sel-prod option').forEach(function(op) {
+    op.style.display = op.dataset.label.toLowerCase().includes(t) ? '' : 'none';
+  });
+}
+
+function carregarCores(produtoId) {
+  document.getElementById('cor_id_sel').value = '';
+  document.getElementById('cor_nome_sel').value = '';
+  document.getElementById('foto_b64').value = '';
+  document.getElementById('sem-cor').style.display = 'none';
+  document.getElementById('prev-foto').style.display = 'none';
+  if (!produtoId) return;
+  // Sugerir preço da tabela
+  var preco = precosTabela[produtoId];
+  if (preco) document.getElementById('preco-input').value = preco.toFixed(2);
+  calcSubtotal();
+  fetch('/api/produto/' + produtoId + '/cores')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var cont = document.getElementById('cores-container');
+      if (data.cores.length === 0) {
+        cont.innerHTML = '<span style="color:#888;font-size:12px;">Sem cores/estampas cadastradas</span>';
+        document.getElementById('sem-cor').style.display = '';
+      } else {
+        cont.innerHTML = '';
+        data.cores.forEach(function(c) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = c.descricao;
+          btn.style.cssText = 'margin:2px;padding:4px 8px;border:1px solid #d9c6b3;border-radius:4px;font-size:11px;cursor:pointer;background:#fff;';
+          btn.onclick = function() {
+            document.querySelectorAll('#cores-container button').forEach(function(b) { b.style.background='#fff'; b.style.color=''; });
+            btn.style.background = '#5C442C'; btn.style.color = '#fff';
+            document.getElementById('cor_id_sel').value = c.id;
+            document.getElementById('cor_nome_sel').value = c.descricao;
+          };
+          cont.appendChild(btn);
+        });
+      }
+    });
+}
+
+function previsualizarFoto(input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var prev = document.getElementById('prev-foto');
+    prev.src = e.target.result;
+    prev.style.display = '';
+    document.getElementById('foto_b64').value = e.target.result;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function calcSubtotal() {
+  var qtd = parseFloat(document.getElementById('qtd-input').value) || 0;
+  var preco = parseFloat(document.getElementById('preco-input').value) || 0;
+  var sub = (qtd * preco).toFixed(2).replace('.', ',');
+  document.getElementById('subtotal-display').textContent = 'R$ ' + sub;
+}
+</script>
+{% endif %}
+
+<!-- Layout de impressão -->
+<style>
+@media print {
+  .no-print { display: none !important; }
+  body { font-size: 12px; }
+  .card { border: 1px solid #ccc; margin-bottom: 8px; box-shadow: none; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #ccc; padding: 4px 6px; }
+}
+</style>
+{% endblock %}
