@@ -64,6 +64,50 @@
   {% endfor %}
 </div>
 
+<!-- Pagamento e desconto (mobile) -->
+<div class="card" style="margin-bottom:12px;">
+  <div class="card-header">Pagamento</div>
+  {% if aberto %}
+  <form method="post" style="padding:12px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="acao" value="salvar_pagamento">
+    <div style="margin-bottom:12px;">
+      <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Condição</label>
+      <select name="cond_pagamento" id="sel-cond-m" onchange="toggleParcelasM()"
+              style="width:100%;padding:11px;border:1px solid #d9c6b3;border-radius:8px;font-size:15px;">
+        <option value="avista" {% if pedido.cond_pagamento == 'avista' or not pedido.cond_pagamento %}selected{% endif %}>À vista</option>
+        <option value="prazo" {% if pedido.cond_pagamento == 'prazo' %}selected{% endif %}>A prazo</option>
+      </select>
+    </div>
+    <div id="div-parcelas-m" style="margin-bottom:12px;{% if pedido.cond_pagamento != 'prazo' %}display:none;{% endif %}">
+      <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Número de parcelas</label>
+      <input type="number" name="parcelas" min="2" max="48" value="{{ pedido.parcelas or 2 }}"
+             style="width:100%;padding:11px;border:1px solid #d9c6b3;border-radius:8px;font-size:15px;">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Desconto (R$)</label>
+      <input type="number" name="desconto" step="0.01" min="0"
+             value="{{ '%.2f'|format(pedido.desconto or 0) }}"
+             style="width:100%;padding:11px;border:1px solid #d9c6b3;border-radius:8px;font-size:15px;">
+    </div>
+    <button type="submit"
+            style="width:100%;background:#5C442C;color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;">
+      Salvar Pagamento
+    </button>
+  </form>
+  {% else %}
+  <div style="padding:12px;font-size:14px;">
+    <b>Condição:</b>
+    {% if pedido.cond_pagamento == 'prazo' %}A prazo — {{ pedido.parcelas }}x
+    {% else %}À vista{% endif %}
+    {% if pedido.desconto and pedido.desconto > 0 %}
+    <br><b>Desconto:</b> R$ {{ '%.2f'|format(pedido.desconto)|replace('.',',') }}
+    <br><b style="color:#2a7a2a;">Total líquido: R$ {{ '%.2f'|format((pedido.total or 0) - (pedido.desconto or 0))|replace('.',',') }}</b>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
 {% if aberto %}
 <!-- Formulário de adicionar item mobile -->
 <div id="adicionar-panel">
@@ -188,6 +232,12 @@
 </div>
 
 <script>
+function toggleParcelasM() {
+  var cond = document.getElementById('sel-cond-m');
+  var div = document.getElementById('div-parcelas-m');
+  if (cond && div) div.style.display = cond.value === 'prazo' ? '' : 'none';
+}
+
 var precosTabela = {{ precos_tabela|tojson }};
 var prodSel = null;
 var corSel = { id: '', nome: '' };

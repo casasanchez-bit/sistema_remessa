@@ -93,6 +93,57 @@
   </table>
 </div>
 
+<!-- Desconto e condição de pagamento -->
+<div class="card {% if not aberto %}no-print{% endif %}" style="margin-bottom:12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <h2 style="margin:0;">Pagamento e Desconto</h2>
+  </div>
+  {% if aberto %}
+  <form method="post" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="acao" value="salvar_pagamento">
+    <div>
+      <label style="font-size:12px;">Condição</label>
+      <select name="cond_pagamento" id="sel-cond" onchange="toggleParcelas()" style="min-width:120px;box-sizing:border-box;">
+        <option value="avista" {% if pedido.cond_pagamento == 'avista' %}selected{% endif %}>À vista</option>
+        <option value="prazo" {% if pedido.cond_pagamento == 'prazo' %}selected{% endif %}>A prazo</option>
+      </select>
+    </div>
+    <div id="div-parcelas" style="{% if pedido.cond_pagamento != 'prazo' %}display:none;{% endif %}">
+      <label style="font-size:12px;">Parcelas</label>
+      <input type="number" name="parcelas" min="2" max="48" value="{{ pedido.parcelas or 2 }}"
+             style="width:70px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="font-size:12px;">Desconto (R$)</label>
+      <input type="number" name="desconto" step="0.01" min="0"
+             value="{{ '%.2f'|format(pedido.desconto or 0) }}"
+             style="width:100px;box-sizing:border-box;">
+    </div>
+    <button class="btn" type="submit" style="font-size:12px;">Salvar</button>
+  </form>
+  {% else %}
+  <div class="small">
+    <b>Condição:</b>
+    {% if pedido.cond_pagamento == 'prazo' %}
+      A prazo — {{ pedido.parcelas }}x
+    {% else %}
+      À vista
+    {% endif %}
+    {% if pedido.desconto and pedido.desconto > 0 %}
+    &nbsp;|&nbsp; <b>Desconto: R$ {{ '%.2f'|format(pedido.desconto)|replace('.',',') }}</b>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% if pedido.desconto and pedido.desconto > 0 %}
+  <div style="margin-top:8px;font-size:14px;">
+    Total bruto: R$ {{ '%.2f'|format(pedido.total)|replace('.',',') }}
+    &nbsp;|&nbsp; Desconto: − R$ {{ '%.2f'|format(pedido.desconto)|replace('.',',') }}
+    &nbsp;|&nbsp; <b style="color:#2a7a2a;">Total líquido: R$ {{ '%.2f'|format((pedido.total or 0) - (pedido.desconto or 0))|replace('.',',') }}</b>
+  </div>
+  {% endif %}
+</div>
+
 <!-- Formulário para adicionar item (só se aberto) -->
 {% if aberto %}
 <div class="card no-print">
@@ -164,6 +215,12 @@
 </div>
 
 <script>
+function toggleParcelas() {
+  var cond = document.getElementById('sel-cond');
+  var div = document.getElementById('div-parcelas');
+  if (cond && div) div.style.display = cond.value === 'prazo' ? '' : 'none';
+}
+
 var precosTabela = {{ precos_tabela|tojson }};
 
 function filtrarProds() {

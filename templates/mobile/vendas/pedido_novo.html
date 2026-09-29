@@ -45,7 +45,7 @@
               style="width:100%;padding:11px;border:1px solid #d9c6b3;border-radius:8px;font-size:15px;">
         <option value="">— Sem tabela —</option>
         {% for t in tabelas %}
-        <option value="{{ t.id }}">{{ t.nome }}</option>
+        <option value="{{ t.id }}" {% if t.id == tabela_padrao_id %}selected{% endif %}>{{ t.nome }}</option>
         {% endfor %}
       </select>
     </div>

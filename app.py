@@ -174,6 +174,10 @@ def _migrar_banco():
             foto_base64 TEXT,
             obs TEXT
         )""",
+        "ALTER TABLE clientes ADD COLUMN ultima_compra TEXT",
+        "ALTER TABLE pedidos ADD COLUMN desconto REAL NOT NULL DEFAULT 0",
+        "ALTER TABLE pedidos ADD COLUMN cond_pagamento TEXT NOT NULL DEFAULT 'avista'",
+        "ALTER TABLE pedidos ADD COLUMN parcelas INTEGER NOT NULL DEFAULT 1",
     ]
     for sql in migrações:
         try:
@@ -4706,8 +4710,11 @@ def vendas_pedido_novo():
     clientes     = db.execute("SELECT id, codigo, nome FROM clientes WHERE ativo=1 ORDER BY nome").fetchall()
     representantes = db.execute("SELECT id, nome FROM representantes WHERE ativo=1 ORDER BY nome").fetchall()
     tabelas      = db.execute("SELECT id, nome FROM tabelas_precos WHERE ativa=1 ORDER BY nome").fetchall()
+    tabela_padrao = db.execute("SELECT id FROM tabelas_precos WHERE nome='Padrão Loja' LIMIT 1").fetchone()
+    tabela_padrao_id = tabela_padrao["id"] if tabela_padrao else None
     return render_template("vendas/pedido_novo.html", clientes=clientes,
                            representantes=representantes, tabelas=tabelas,
+                           tabela_padrao_id=tabela_padrao_id,
                            hoje=date.today().isoformat())
 
 
@@ -4761,6 +4768,17 @@ def vendas_pedido_ver(pedido_id):
                 db.execute("DELETE FROM itens_pedido WHERE id=? AND pedido_id=?", (item_id, pedido_id))
                 _recalcular_total_pedido(db, pedido_id)
                 db.commit()
+        elif acao == "salvar_pagamento" and pedido["status"] == "aberto":
+            desconto     = request.form.get("desconto", type=float) or 0.0
+            cond_pag     = request.form.get("cond_pagamento", "avista")
+            parcelas     = request.form.get("parcelas", type=int) or 1
+            if cond_pag not in ("avista", "prazo"):
+                cond_pag = "avista"
+            db.execute(
+                "UPDATE pedidos SET desconto=?, cond_pagamento=?, parcelas=? WHERE id=?",
+                (desconto, cond_pag, parcelas, pedido_id)
+            )
+            db.commit()
         elif acao == "confirmar":
             db.execute("UPDATE pedidos SET status='confirmado' WHERE id=?", (pedido_id,))
             db.commit()
@@ -4851,9 +4869,12 @@ def m_vendas_pedido_novo():
     clientes       = db.execute("SELECT id, codigo, nome FROM clientes WHERE ativo=1 ORDER BY nome").fetchall()
     representantes = db.execute("SELECT id, nome FROM representantes WHERE ativo=1 ORDER BY nome").fetchall()
     tabelas        = db.execute("SELECT id, nome FROM tabelas_precos WHERE ativa=1 ORDER BY nome").fetchall()
+    tabela_padrao  = db.execute("SELECT id FROM tabelas_precos WHERE nome='Padrão Loja' LIMIT 1").fetchone()
+    tabela_padrao_id = tabela_padrao["id"] if tabela_padrao else None
     return render_template("mobile/vendas/pedido_novo.html",
                            clientes=clientes, representantes=representantes,
-                           tabelas=tabelas, hoje=date.today().isoformat())
+                           tabelas=tabelas, tabela_padrao_id=tabela_padrao_id,
+                           hoje=date.today().isoformat())
 
 
 @app.route("/m/vendas/pedidos/<int:pedido_id>", methods=["GET", "POST"])
@@ -4908,6 +4929,17 @@ def m_vendas_pedido_ver(pedido_id):
             db.commit()
         elif acao == "cancelar":
             db.execute("UPDATE pedidos SET status='cancelado' WHERE id=?", (pedido_id,))
+            db.commit()
+        elif acao == "salvar_pagamento" and pedido["status"] == "aberto":
+            desconto     = request.form.get("desconto", type=float) or 0.0
+            cond_pag     = request.form.get("cond_pagamento", "avista")
+            parcelas     = request.form.get("parcelas", type=int) or 1
+            if cond_pag not in ("avista", "prazo"):
+                cond_pag = "avista"
+            db.execute(
+                "UPDATE pedidos SET desconto=?, cond_pagamento=?, parcelas=? WHERE id=?",
+                (desconto, cond_pag, parcelas, pedido_id)
+            )
             db.commit()
         elif acao == "reabrir":
             db.execute("UPDATE pedidos SET status='aberto' WHERE id=?", (pedido_id,))
