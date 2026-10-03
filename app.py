@@ -3214,17 +3214,34 @@ def resumo_fechamento_por_terceirizado():
     data_fim = request.args.get("data_fim", hoje.isoformat())
     terceirizado_id = request.args.get("terceirizado_id", "").strip()
 
-    fechamento_linhas, _ = calcular_fechamento(db, data_inicio, data_fim, terceirizado_id)
+    # Descobre quais terceirizados têm retornos no período
+    if terceirizado_id:
+        terc_rows = db.execute(
+            "SELECT id, nome FROM terceirizados WHERE id = ?", (terceirizado_id,)
+        ).fetchall()
+    else:
+        terc_rows = db.execute(
+            """SELECT DISTINCT terceirizados.id, terceirizados.nome
+               FROM terceirizados
+               JOIN retornos ON retornos.terceirizado_id = terceirizados.id
+               WHERE retornos.data_retorno >= ? AND retornos.data_retorno <= ?
+               ORDER BY terceirizados.nome""",
+            (data_inicio, data_fim),
+        ).fetchall()
 
-    grupos = {}
-    ordem = []
-    for l in fechamento_linhas:
-        if l["terceirizado"] not in grupos:
-            grupos[l["terceirizado"]] = {"terceirizado": l["terceirizado"], "linhas": [], "total": 0}
-            ordem.append(l["terceirizado"])
-        grupos[l["terceirizado"]]["linhas"].append(l)
-        grupos[l["terceirizado"]]["total"] += l["total"]
-    resumos = [grupos[nome] for nome in ordem]
+    resumos = []
+    for t in terc_rows:
+        cards, total = calcular_fechamento_por_retorno(db, data_inicio, data_fim, t["id"])
+        if cards:
+            total_pago = sum(c["total"] for c in cards if c["pago"])
+            total_pendente = sum(c["total"] for c in cards if not c["pago"])
+            resumos.append({
+                "terceirizado": t["nome"],
+                "cards": cards,
+                "total": total,
+                "total_pago": total_pago,
+                "total_pendente": total_pendente,
+            })
 
     return render_template("fechamento_resumo_terceirizado.html", data_inicio=data_inicio, data_fim=data_fim, resumos=resumos)
 

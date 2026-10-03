@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -18,11 +18,24 @@
   .cabecalho { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #5C442C; padding-bottom: 8px; margin-bottom: 10px; }
   .cabecalho h1 { font-size: 16px; margin: 0; color: #5C442C; }
   .cabecalho .info { font-size: 12px; text-align: right; }
-  table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  th, td { border: 1px solid #ccc; padding: 5px 6px; text-align: left; }
-  th { background: #F9E9DC; font-size: 9.5px; text-transform: uppercase; }
-  tfoot td { font-weight: 700; font-size: 13px; border: none; padding-top: 10px; }
-  .rodape { font-size: 9px; color: #888; margin-top: 16px; text-align: center; }
+
+  /* Cards por retorno */
+  .card-ret { border: 1px solid #ccc; border-radius: 4px; margin-bottom: 8px; page-break-inside: avoid; overflow: hidden; }
+  .card-ret-header { display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; background: #F9E9DC; }
+  .card-ret-header .num { font-size: 12px; font-weight: 700; color: #5C442C; }
+  .card-ret-header .data { font-size: 10px; color: #555; margin-left: 6px; }
+  .card-ret-header .status { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
+  .status-pago { background: #c8e6c9; color: #2e7d32; }
+  .status-pendente { background: #ffe0b2; color: #e65100; }
+  .card-ret-footer { text-align: right; padding: 4px 8px; border-top: 1px solid #e0d0c0; font-size: 11px; font-weight: 700; color: #5C442C; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  th, td { border: 1px solid #ccc; padding: 4px 5px; text-align: left; }
+  th { background: #fdf3ec; font-size: 8.5px; text-transform: uppercase; }
+
+  .totais-finais { text-align: right; margin-top: 8px; border-top: 2px solid #5C442C; padding-top: 6px; font-size: 11px; }
+  .totais-finais b { font-size: 13px; }
+  .rodape { font-size: 9px; color: #888; margin-top: 12px; text-align: center; }
   .vazio { text-align: center; padding: 40px; color: #999; }
 
   @media print {
@@ -52,28 +65,45 @@
       <h1>FECHAMENTO MENSAL — {{ r.terceirizado }}</h1>
       <div class="info">Período: {{ data_inicio|brdate }} a {{ data_fim|brdate }}</div>
     </div>
-    <table>
-      <thead>
-        <tr><th>Código</th><th>Produto</th><th>Cor/Estampa</th><th>Serviço</th><th>Qtde Retornada</th><th>Preço Unit.</th><th>Total a Pagar</th><th>Status</th></tr>
-      </thead>
-      <tbody>
-        {% for l in r.linhas %}
-        <tr>
-          <td>{{ l.produto_codigo }}</td>
-          <td>{{ l.produto }}</td>
-          <td>{{ l.cor }}</td>
-          <td>{{ l.servico }}</td>
-          <td>{{ l.qtd }}</td>
-          <td>R$ {{ l.preco|brl }}</td>
-          <td>R$ {{ l.total|brl }}</td>
-          <td>{% if l.pago %}PAGO ({{ l.data_pagamento|brdate }}){% else %}PENDENTE{% endif %}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-      <tfoot>
-        <tr><td colspan="7" style="text-align:right;">Total a pagar:</td><td>R$ {{ r.total|brl }}</td></tr>
-      </tfoot>
-    </table>
+
+    {% for card in r.cards %}
+    <div class="card-ret">
+      <div class="card-ret-header">
+        <div>
+          <span class="num">Retorno Nº {{ card.retorno_numero }}</span>
+          <span class="data">{{ card.data_retorno|brdate }}</span>
+        </div>
+        <span class="status {% if card.pago %}status-pago{% else %}status-pendente{% endif %}">
+          {% if card.pago %}PAGO — {{ card.data_pagamento|brdate }}{% else %}NÃO PAGO{% endif %}
+        </span>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Código</th><th>Produto</th><th>Cor/Estampa</th><th>Serviço</th><th>Qtde</th><th>Preço Unit.</th><th>Subtotal</th></tr>
+        </thead>
+        <tbody>
+          {% for item in card.itens %}
+          <tr>
+            <td>{{ item.produto_codigo }}</td>
+            <td>{{ item.produto }}</td>
+            <td>{{ item.cor }}</td>
+            <td>{{ item.servico }}</td>
+            <td>{{ item.qtd }}</td>
+            <td>R$ {{ item.preco|brl }}</td>
+            <td><b>R$ {{ item.subtotal|brl }}</b></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="card-ret-footer">Total: R$ {{ card.total|brl }}</div>
+    </div>
+    {% endfor %}
+
+    <div class="totais-finais">
+      <div>Total já pago: R$ {{ r.total_pago|brl }}</div>
+      <div>Total pendente: R$ {{ r.total_pendente|brl }}</div>
+      <div style="margin-top:4px;"><b>Total geral: R$ {{ r.total|brl }}</b></div>
+    </div>
     <div class="rodape">Documento gerado pelo sistema — Casa Sanchez · Controle de Remessa e Retorno</div>
   </div>
   {% endfor %}
@@ -106,4 +136,3 @@
   </script>
 </body>
 </html>
-
