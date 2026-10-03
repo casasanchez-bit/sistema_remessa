@@ -70,13 +70,12 @@
         <b style="font-size:14px;">Retorno Nº {{ card.retorno_numero }}</b>
         <span style="color:#666;font-size:13px;margin-left:10px;">{{ card.data_retorno|brdate }}</span>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;">
+      <div>
         {% if card.pago %}
           <span class="badge b-pago" style="font-size:12px;">PAGO — {{ card.data_pagamento|brdate }}</span>
         {% else %}
           <span class="badge b-pendente" style="font-size:12px;">NÃO PAGO</span>
         {% endif %}
-        <b style="font-size:14px;color:#5C442C;">R$ {{ card.total|brl }}</b>
       </div>
     </div>
     <div style="padding:0 6px 6px;">
@@ -94,6 +93,9 @@
         </tr>
         {% endfor %}
       </table>
+    <div style="text-align:right;padding:8px 14px;border-top:1px solid #e5d8cc;background:{% if card.pago %}#f4faf4{% else %}#fffaf6{% endif %};">
+        <b style="font-size:14px;color:#5C442C;">Total: R$ {{ card.total|brl }}</b>
+      </div>
     </div>
   </div>
   {% endfor %}

@@ -19,6 +19,16 @@
   th { background: #F9E9DC; font-size: 9.5px; text-transform: uppercase; }
   tfoot td { font-weight: 700; font-size: 13px; border: none; padding-top: 10px; }
   .rodape { font-size: 9px; color: #888; margin-top: 16px; text-align: center; }
+  /* Cards por retorno */
+  .card-ret { border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px; page-break-inside: avoid; overflow: hidden; }
+  .card-ret-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: #F9E9DC; }
+  .card-ret-header .num { font-size: 13px; font-weight: 700; color: #5C442C; }
+  .card-ret-header .data { font-size: 11px; color: #555; margin-left: 8px; }
+  .card-ret-header .status { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+  .status-pago { background: #c8e6c9; color: #2e7d32; }
+  .status-pendente { background: #ffe0b2; color: #e65100; }
+  .card-ret-footer { text-align: right; padding: 5px 10px; border-top: 1px solid #e0d0c0; font-size: 12px; font-weight: 700; color: #5C442C; }
+  .totais-finais { text-align: right; margin-top: 10px; border-top: 2px solid #5C442C; padding-top: 8px; font-size: 12px; }
 
   @media print {
     body { background: #fff; }
@@ -45,6 +55,47 @@
         {% endfor %}
       </div>
     </div>
+    {% if terceirizado_nome and cards_retorno %}
+    <!-- Vista cards por retorno -->
+    {% for card in cards_retorno %}
+    <div class="card-ret">
+      <div class="card-ret-header">
+        <div>
+          <span class="num">Retorno Nº {{ card.retorno_numero }}</span>
+          <span class="data">{{ card.data_retorno|brdate }}</span>
+        </div>
+        <span class="status {% if card.pago %}status-pago{% else %}status-pendente{% endif %}">
+          {% if card.pago %}PAGO — {{ card.data_pagamento|brdate }}{% else %}NÃO PAGO{% endif %}
+        </span>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Código</th><th>Produto</th><th>Cor/Estampa</th><th>Serviço</th><th>Qtde</th><th>Preço Unit.</th><th>Subtotal</th></tr>
+        </thead>
+        <tbody>
+          {% for item in card.itens %}
+          <tr>
+            <td>{{ item.produto_codigo }}</td>
+            <td>{{ item.produto }}</td>
+            <td>{{ item.cor }}</td>
+            <td>{{ item.servico }}</td>
+            <td>{{ item.qtd }}</td>
+            <td>R$ {{ item.preco|brl }}</td>
+            <td><b>R$ {{ item.subtotal|brl }}</b></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="card-ret-footer">Total: R$ {{ card.total|brl }}</div>
+    </div>
+    {% endfor %}
+    <div class="totais-finais">
+      <div>Total já pago: R$ {{ (cards_retorno|selectattr('pago')|map(attribute='total')|sum)|brl }}</div>
+      <div>Total pendente: R$ {{ (cards_retorno|rejectattr('pago')|map(attribute='total')|sum)|brl }}</div>
+      <div style="font-size:14px;margin-top:4px;"><b>Total geral a pagar: R$ {{ total_geral_cards|brl }}</b></div>
+    </div>
+    {% else %}
+    <!-- Vista tabela flat -->
     <table>
       <thead>
         <tr><th>Terceirizado</th><th>Código</th><th>Produto</th><th>Cor/Estampa</th><th>Serviço</th><th>Qtde Retornada</th><th>Preço Unit.</th><th>Total a Pagar</th><th>Status</th></tr>
@@ -70,6 +121,7 @@
         <tr><td colspan="8" style="text-align:right;">Total geral a pagar:</td><td>R$ {{ total_geral|brl }}</td></tr>
       </tfoot>
     </table>
+    {% endif %}
     <div class="rodape">Casa Sanchez · Controle de Remessa e Retorno — Emitido em <span class="data-emissao"></span></div>
   </div>
 <script>

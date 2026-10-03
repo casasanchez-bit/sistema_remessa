@@ -3108,6 +3108,8 @@ def imprimir_fechamento():
     fechamento_linhas, total_geral = calcular_fechamento(db, data_inicio, data_fim, terceirizado_id)
     terceirizado_nome = None
     lotes_pagamento = []
+    cards_retorno = []
+    total_geral_cards = 0
     if terceirizado_id:
         t = db.execute("SELECT nome FROM terceirizados WHERE id = ?", (terceirizado_id,)).fetchone()
         terceirizado_nome = t["nome"] if t else None
@@ -3119,6 +3121,7 @@ def imprimir_fechamento():
                     lotes_dict[pid] = {"id": pid, "data_pagamento": l["data_pagamento"], "total": 0}
                 lotes_dict[pid]["total"] += l["total"]
         lotes_pagamento = sorted(lotes_dict.values(), key=lambda x: x["data_pagamento"])
+        cards_retorno, total_geral_cards = calcular_fechamento_por_retorno(db, data_inicio, data_fim, terceirizado_id)
 
     return render_template(
         "fechamento_imprimir.html",
@@ -3128,6 +3131,8 @@ def imprimir_fechamento():
         linhas=fechamento_linhas,
         total_geral=total_geral,
         lotes_pagamento=lotes_pagamento,
+        cards_retorno=cards_retorno,
+        total_geral_cards=total_geral_cards,
     )
 
 
