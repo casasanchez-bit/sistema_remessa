@@ -61,6 +61,51 @@
   </div>
   {% endif %}
 
+  {% if terceirizado_id and cards_retorno %}
+  <!-- Vista por retorno (cards) — ativada quando terceirizado específico é selecionado -->
+  {% for card in cards_retorno %}
+  <div style="border:1px solid #d9c6b3;border-radius:8px;margin-bottom:14px;overflow:hidden;">
+    <div style="background:{% if card.pago %}#e8f5e9{% else %}#fff8f0{% endif %};padding:10px 14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+      <div>
+        <b style="font-size:14px;">Retorno Nº {{ card.retorno_numero }}</b>
+        <span style="color:#666;font-size:13px;margin-left:10px;">{{ card.data_retorno|brdate }}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        {% if card.pago %}
+          <span class="badge b-pago" style="font-size:12px;">PAGO — {{ card.data_pagamento|brdate }}</span>
+        {% else %}
+          <span class="badge b-pendente" style="font-size:12px;">NÃO PAGO</span>
+        {% endif %}
+        <b style="font-size:14px;color:#5C442C;">R$ {{ card.total|brl }}</b>
+      </div>
+    </div>
+    <div style="padding:0 6px 6px;">
+      <table style="font-size:12px;margin-top:0;">
+        <tr><th>Código</th><th>Produto</th><th>Cor/Estampa</th><th>Serviço</th><th>Qtde</th><th>Preço unit.</th><th>Subtotal</th></tr>
+        {% for item in card.itens %}
+        <tr>
+          <td><b>{{ item.produto_codigo }}</b></td>
+          <td>{{ item.produto }}</td>
+          <td>{{ item.cor }}</td>
+          <td>{{ item.servico }}</td>
+          <td>{{ item.qtd }}</td>
+          <td>R$ {{ item.preco|brl }}</td>
+          <td><b>R$ {{ item.subtotal|brl }}</b></td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+  <div style="text-align:right;margin-top:8px;font-size:13px;border-top:2px solid #d9c6b3;padding-top:10px;">
+    <div>Total já pago: R$ {{ total_pago|brl }}</div>
+    <div>Total pendente: R$ {{ total_pendente|brl }}</div>
+    <div style="font-size:16px;margin-top:4px;"><b>Total geral: R$ {{ total_geral_cards|brl }}</b></div>
+  </div>
+  {% elif terceirizado_id and buscou and not cards_retorno %}
+  <p class="small">Nenhum retorno encontrado neste período para o terceirizado selecionado.</p>
+  {% else %}
+  <!-- Vista tabela flat — quando pesquisando todos os terceirizados -->
   <table>
     <tr><th>Terceirizado</th><th>Código</th><th>Produto</th><th>Cor/Estampa</th><th>Serviço</th><th>Qtde retornada</th><th>Preço unit.</th><th>Total a pagar</th><th>Status</th></tr>
     {% for l in linhas %}
@@ -91,6 +136,7 @@
     <div>Total pendente: R$ {{ total_pendente|brl }}</div>
     <div style="font-size:16px;margin-top:4px;"><b>Total geral: R$ {{ total_geral|brl }}</b></div>
   </div>
+  {% endif %}
   {% endif %}
 </div>
 

@@ -2907,6 +2907,67 @@ def calcular_fechamento(db, data_inicio, data_fim, terceirizado_id):
     return fechamento_linhas, total_geral
 
 
+def calcular_fechamento_por_retorno(db, data_inicio, data_fim, terceirizado_id):
+    """Retorna lista de cards: um por retorno, com itens detalhados e total."""
+    query = """SELECT retornos.id AS retorno_id,
+                      retornos.numero AS retorno_numero,
+                      retornos.data_retorno,
+                      terceirizados.nome AS terceirizado_nome,
+                      terceirizados.registrado AS terceirizado_registrado,
+                      produtos.codigo AS produto_codigo,
+                      produtos.descricao AS produto_descricao,
+                      cores_estampas.descricao AS cor_descricao,
+                      servicos.descricao AS servico_descricao,
+                      servicos.valor_com_registro, servicos.valor_sem_registro,
+                      itens_retorno.qtd_retornada AS qtd,
+                      pf.id AS pagamento_id,
+                      pf.data_pagamento
+               FROM itens_retorno
+               JOIN retornos ON retornos.id = itens_retorno.retorno_id
+               JOIN itens_remessa ON itens_remessa.id = itens_retorno.item_remessa_id
+               JOIN item_servicos_remessa ON item_servicos_remessa.item_remessa_id = itens_remessa.id
+               JOIN servicos ON servicos.id = item_servicos_remessa.servico_id
+               JOIN terceirizados ON terceirizados.id = retornos.terceirizado_id
+               JOIN produtos ON produtos.id = itens_remessa.produto_id
+               JOIN cores_estampas ON cores_estampas.id = itens_remessa.cor_estampa_id
+               LEFT JOIN pagamentos_fechamento_retornos pfr ON pfr.retorno_id = retornos.id
+               LEFT JOIN pagamentos_fechamento pf ON pf.id = pfr.pagamento_id
+               WHERE retornos.data_retorno >= ? AND retornos.data_retorno <= ?
+               AND terceirizados.id = ?
+               ORDER BY retornos.data_retorno, retornos.numero"""
+    linhas = db.execute(query, [data_inicio, data_fim, terceirizado_id]).fetchall()
+
+    retornos_dict = {}
+    for l in linhas:
+        rid = l["retorno_id"]
+        preco = l["valor_com_registro"] if l["terceirizado_registrado"] else l["valor_sem_registro"]
+        if rid not in retornos_dict:
+            retornos_dict[rid] = {
+                "retorno_id": rid,
+                "retorno_numero": l["retorno_numero"],
+                "data_retorno": l["data_retorno"],
+                "pago": l["pagamento_id"] is not None,
+                "data_pagamento": l["data_pagamento"],
+                "itens": [],
+                "total": 0,
+            }
+        subtotal = l["qtd"] * preco
+        retornos_dict[rid]["itens"].append({
+            "produto_codigo": l["produto_codigo"],
+            "produto": l["produto_descricao"],
+            "cor": l["cor_descricao"],
+            "servico": l["servico_descricao"],
+            "qtd": l["qtd"],
+            "preco": preco,
+            "subtotal": subtotal,
+        })
+        retornos_dict[rid]["total"] += subtotal
+
+    cards = sorted(retornos_dict.values(), key=lambda x: (x["data_retorno"], x["retorno_numero"]))
+    total_geral = sum(c["total"] for c in cards)
+    return cards, total_geral
+
+
 @app.route("/fechamento")
 def fechamento():
     db = get_db()
@@ -2927,11 +2988,15 @@ def fechamento():
     total_pago = total_pendente = 0
     tem_pendentes = False
     lotes_pagamento = []
+    cards_retorno = []
+    total_geral_cards = 0
     if buscou:
         fechamento_linhas, total_geral = calcular_fechamento(db, data_inicio, data_fim, terceirizado_id)
         total_pago = sum(l["total"] for l in fechamento_linhas if l["pago"])
         total_pendente = sum(l["total"] for l in fechamento_linhas if not l["pago"])
         tem_pendentes = any(not l["pago"] for l in fechamento_linhas)
+        if terceirizado_id:
+            cards_retorno, total_geral_cards = calcular_fechamento_por_retorno(db, data_inicio, data_fim, terceirizado_id)
         # Agrupa totais por lote de pagamento
         lotes_dict = {}
         for l in fechamento_linhas:
@@ -2955,6 +3020,8 @@ def fechamento():
         tem_pendentes=tem_pendentes,
         lotes_pagamento=lotes_pagamento,
         buscou=buscou,
+        cards_retorno=cards_retorno,
+        total_geral_cards=total_geral_cards,
     )
 
 
