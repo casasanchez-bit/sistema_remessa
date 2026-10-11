@@ -11,8 +11,7 @@
   .toolbar a { margin-left: 10px; font-size: 13px; color: #5C442C; text-decoration: none; }
 
   .page { width: 210mm; margin: 0 auto; background: #fff; }
-  .via { width: 190mm; height: 138mm; margin: 8mm auto; padding: 6mm; border: 1px solid #999; box-sizing: border-box; overflow: hidden; }
-  .via + .via { border-top: 1px dashed #999; }
+  .via { width: 190mm; margin: 8mm auto; padding: 6mm; border: 1px solid #999; box-sizing: border-box; }
   .cabecalho { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #5C442C; padding-bottom: 6px; margin-bottom: 8px; }
   .cabecalho h1 { font-size: 15px; margin: 0; color: #5C442C; }
   .cabecalho .numero { font-size: 13px; font-weight: 700; text-align: right; }
@@ -44,11 +43,10 @@
   </div>
 
   <div class="page">
-    {% for via in [1, 2] %}
     <div class="via">
       <div class="cabecalho">
         <h1>REMESSA DE PRODUÇÃO — Casa Sanchez</h1>
-        <div class="numero">Nº Remessa: {{ remessa.numero }}<br>Via {{ via }}/2</div>
+        <div class="numero">Nº Remessa: {{ remessa.numero }}</div>
       </div>
       <div class="info">
         <div><b>Terceirizado</b>{{ remessa.terceirizado_codigo }} - {{ remessa.terceirizado_nome }}</div>
@@ -110,7 +108,6 @@
         <span style="float:right;">Sistema Casa Sanchez — Emitido em <span class="data-emissao"></span></span>
       </div>
     </div>
-    {% endfor %}
   {% if mps %}
   <div class="page-mp">
     <div class="cabecalho" style="margin-bottom:10px;">
