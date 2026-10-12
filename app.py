@@ -178,6 +178,14 @@ def _migrar_banco():
         "ALTER TABLE pedidos ADD COLUMN desconto REAL NOT NULL DEFAULT 0",
         "ALTER TABLE pedidos ADD COLUMN cond_pagamento TEXT NOT NULL DEFAULT 'avista'",
         "ALTER TABLE pedidos ADD COLUMN parcelas INTEGER NOT NULL DEFAULT 1",
+        """CREATE TABLE IF NOT EXISTS etiquetas_produtos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            codigo TEXT UNIQUE NOT NULL,
+            descricao TEXT NOT NULL,
+            preco_atacado REAL,
+            preco_varejo REAL,
+            atualizado_em TEXT DEFAULT (date('now'))
+        )""",
     ]
     for sql in migrações:
         try:
@@ -422,6 +430,11 @@ def is_vendedor_restrito():
     return tem_permissao("vendedor") and not tem_permissao("gerenciar_usuarios")
 
 
+def is_etiqueta_restrito():
+    """True se o usuário tem apenas a permissão 'etiquetas'."""
+    return tem_permissao("etiquetas") and not tem_permissao("gerenciar_usuarios")
+
+
 def tem_permissao(chave):
     usuario_id = session.get("usuario_id")
     if not usuario_id:
@@ -528,6 +541,8 @@ def login():
             session["usuario_id"] = row["id"]
             session["usuario_nome"] = row["usuario"]
             proximo = request.form.get("proximo", "")
+            if is_etiqueta_restrito():
+                return redirect(url_for("etiquetas_index"))
             if is_vendedor_restrito():
                 return redirect(url_for("vendas_dashboard"))
             destino = proximo if proximo.startswith("/") else url_for("dashboard")
@@ -5066,6 +5081,136 @@ def api_produto_cores(produto_id):
         (produto_id,)
     ).fetchall()
     return {"cores": [dict(c) for c in cores]}
+
+
+# ---------------------------------------------------------------------------
+# Módulo Etiquetas de Gôndola
+# ---------------------------------------------------------------------------
+
+@app.route("/etiquetas/")
+def etiquetas_index():
+    if not tem_permissao("etiquetas"):
+        flash("Acesso negado.", "erro")
+        return redirect(url_for("login"))
+    db = get_db()
+    q = request.args.get("q", "").strip()
+    if q:
+        produtos = db.execute(
+            "SELECT * FROM etiquetas_produtos WHERE codigo LIKE ? OR descricao LIKE ? ORDER BY descricao",
+            (f"%{q}%", f"%{q}%"),
+        ).fetchall()
+    else:
+        produtos = db.execute(
+            "SELECT * FROM etiquetas_produtos ORDER BY descricao"
+        ).fetchall()
+    total = db.execute("SELECT COUNT(*) FROM etiquetas_produtos").fetchone()[0]
+    return render_template("etiquetas/index.html", produtos=produtos, q=q, total=total)
+
+
+@app.route("/etiquetas/imprimir", methods=["POST"])
+def etiquetas_imprimir():
+    if not tem_permissao("etiquetas"):
+        flash("Acesso negado.", "erro")
+        return redirect(url_for("login"))
+    ids = request.form.getlist("selecionados")
+    layout = request.form.get("layout", "media")
+    if not ids:
+        flash("Selecione ao menos um produto.", "erro")
+        return redirect(url_for("etiquetas_index"))
+    db = get_db()
+    placeholders = ",".join("?" * len(ids))
+    produtos = db.execute(
+        f"SELECT * FROM etiquetas_produtos WHERE id IN ({placeholders}) ORDER BY descricao",
+        ids,
+    ).fetchall()
+    return render_template("etiquetas/imprimir.html", produtos=produtos, layout=layout)
+
+
+@app.route("/etiquetas/importar", methods=["GET", "POST"])
+def etiquetas_importar():
+    if not tem_permissao("etiquetas") and not tem_permissao("gerenciar_usuarios"):
+        flash("Acesso negado.", "erro")
+        return redirect(url_for("login"))
+    db = get_db()
+    if request.method == "POST":
+        arquivo = request.files.get("arquivo")
+        if not arquivo or not arquivo.filename:
+            flash("Selecione um arquivo.", "erro")
+            return redirect(url_for("etiquetas_importar"))
+        nome = arquivo.filename.lower()
+        inseridos = atualizados = erros = 0
+        hoje = date.today().isoformat()
+        try:
+            if nome.endswith(".xlsx") or nome.endswith(".xls"):
+                import io
+                import openpyxl
+                wb = openpyxl.load_workbook(io.BytesIO(arquivo.read()))
+                ws = wb.active
+                linhas = list(ws.iter_rows(min_row=2, values_only=True))
+                for row in linhas:
+                    if not row or not row[0]:
+                        continue
+                    codigo    = str(row[0]).strip()
+                    descricao = str(row[1]).strip() if row[1] else ""
+                    preco_at  = float(row[2]) if row[2] not in (None, "") else None
+                    preco_var = float(row[3]) if row[3] not in (None, "") else None
+                    existe = db.execute("SELECT id FROM etiquetas_produtos WHERE codigo=?", (codigo,)).fetchone()
+                    if existe:
+                        db.execute(
+                            "UPDATE etiquetas_produtos SET descricao=?, preco_atacado=?, preco_varejo=?, atualizado_em=? WHERE codigo=?",
+                            (descricao, preco_at, preco_var, hoje, codigo),
+                        )
+                        atualizados += 1
+                    else:
+                        db.execute(
+                            "INSERT INTO etiquetas_produtos (codigo, descricao, preco_atacado, preco_varejo, atualizado_em) VALUES (?,?,?,?,?)",
+                            (codigo, descricao, preco_at, preco_var, hoje),
+                        )
+                        inseridos += 1
+            elif nome.endswith(".pdf"):
+                import re, io
+                import pdfplumber
+                linha_re = re.compile(r'^(\d{4,6})\s+(.+?)\s+([\d]+,\d{2})$')
+                # Para PDF precisamos saber qual tabela (varejo ou atacado)
+                tipo = request.form.get("tipo_pdf", "varejo")
+                conteudo = arquivo.read()
+                with pdfplumber.open(io.BytesIO(conteudo)) as pdf:
+                    for page in pdf.pages:
+                        text = page.extract_text() or ""
+                        for linha in text.split('\n'):
+                            m = linha_re.match(linha.strip())
+                            if not m:
+                                continue
+                            codigo    = m.group(1).strip()
+                            descricao = m.group(2).strip()
+                            preco     = float(m.group(3).replace(',', '.'))
+                            existe = db.execute("SELECT id FROM etiquetas_produtos WHERE codigo=?", (codigo,)).fetchone()
+                            if existe:
+                                col = "preco_varejo" if tipo == "varejo" else "preco_atacado"
+                                db.execute(
+                                    f"UPDATE etiquetas_produtos SET {col}=?, descricao=?, atualizado_em=? WHERE codigo=?",
+                                    (preco, descricao, hoje, codigo),
+                                )
+                                atualizados += 1
+                            else:
+                                pv = preco if tipo == "varejo" else None
+                                pa = preco if tipo == "atacado" else None
+                                db.execute(
+                                    "INSERT INTO etiquetas_produtos (codigo, descricao, preco_atacado, preco_varejo, atualizado_em) VALUES (?,?,?,?,?)",
+                                    (codigo, descricao, pa, pv, hoje),
+                                )
+                                inseridos += 1
+            else:
+                flash("Formato não suportado. Use .xlsx ou .pdf", "erro")
+                return redirect(url_for("etiquetas_importar"))
+            db.commit()
+            flash(f"Importação concluída: {inseridos} inseridos, {atualizados} atualizados.", "sucesso")
+        except Exception as e:
+            flash(f"Erro na importação: {e}", "erro")
+        return redirect(url_for("etiquetas_index"))
+    total = db.execute("SELECT COUNT(*) FROM etiquetas_produtos").fetchone()[0]
+    ultima = db.execute("SELECT MAX(atualizado_em) FROM etiquetas_produtos").fetchone()[0]
+    return render_template("etiquetas/importar.html", total=total, ultima=ultima)
 
 
 if __name__ == "__main__":

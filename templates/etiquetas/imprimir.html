@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Imprimir Etiquetas — Casa Sanchez</title>
+  <style>
+    :root { --laranja: #AF4005; --marrom: #5C442C; --linen: #F9E9DC; }
+    * { box-sizing: border-box; }
+    body { font-family: Segoe UI, Arial, sans-serif; margin: 0; background: #f7f1eb; color: var(--marrom); }
+    header { background: var(--marrom); color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 14px; }
+    header h1 { font-size: 15px; margin: 0; }
+    .btn { background: var(--laranja); color: #fff; border: none; padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; }
+    .btn:hover { background: #C4574E; }
+    .btn.sec { background: var(--linen); color: var(--marrom); border: 1px solid #d9c6b3; }
+    main { max-width: 900px; margin: 20px auto; padding: 0 16px; }
+    .layout-sel { background: #fff; border: 1px solid #e7d7c4; border-radius: 10px; padding: 18px; margin-bottom: 18px; }
+    .layout-sel h2 { font-size: 14px; margin: 0 0 12px; }
+    .layouts { display: flex; gap: 14px; flex-wrap: wrap; }
+    .layout-opt { border: 2px solid #e7d7c4; border-radius: 8px; padding: 10px 14px; cursor: pointer; min-width: 140px; text-align: center; transition: border-color .15s; }
+    .layout-opt:hover { border-color: var(--laranja); }
+    .layout-opt.ativo { border-color: var(--laranja); background: #fff8f0; }
+    .layout-opt strong { display: block; font-size: 13px; margin-bottom: 3px; }
+    .layout-opt span { font-size: 11px; color: #888; }
+    .topbar { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; }
+    .info { font-size: 12px; color: #888; margin-left: auto; }
+
+    /* =========================================================
+       ESTILOS DE ETIQUETA — impressão
+    ========================================================= */
+
+    /* Layout PEQUENO: 5.5 x 2.5 cm — gondola pequena */
+    .etiq-pequena {
+      width: 5.5cm; height: 2.5cm;
+      border: 0.5px solid #ccc; border-radius: 3px;
+      display: inline-flex; flex-direction: column; justify-content: center;
+      padding: 2mm 3mm; margin: 2mm; background: #fff; overflow: hidden;
+      vertical-align: top;
+    }
+    .etiq-pequena .cod { font-size: 7pt; color: #888; line-height: 1; }
+    .etiq-pequena .nome { font-size: 7.5pt; font-weight: 700; line-height: 1.2; margin: 1.5mm 0 1mm; flex: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .etiq-pequena .precos { display: flex; gap: 4mm; align-items: baseline; }
+    .etiq-pequena .pat { font-size: 7pt; color: #666; }
+    .etiq-pequena .pv  { font-size: 11pt; font-weight: 800; color: var(--laranja); line-height: 1; }
+
+    /* Layout MÉDIO: 8 x 4 cm — gondola padrão */
+    .etiq-media {
+      width: 8cm; height: 4cm;
+      border: 0.5px solid #ccc; border-radius: 4px;
+      display: inline-flex; flex-direction: column; justify-content: space-between;
+      padding: 3mm 4mm; margin: 2mm; background: #fff; overflow: hidden;
+      vertical-align: top;
+    }
+    .etiq-media .cabec { display: flex; justify-content: space-between; align-items: flex-start; }
+    .etiq-media .cod { font-size: 7.5pt; color: #888; }
+    .etiq-media .loja { font-size: 7.5pt; color: var(--marrom); font-weight: 700; }
+    .etiq-media .nome { font-size: 9pt; font-weight: 700; line-height: 1.3; flex: 1; margin: 2mm 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .etiq-media .rodape { display: flex; align-items: baseline; gap: 6mm; }
+    .etiq-media .pat { font-size: 8pt; color: #666; }
+    .etiq-media .pv  { font-size: 16pt; font-weight: 800; color: var(--laranja); line-height: 1; }
+    .etiq-media .pv-lbl { font-size: 7pt; color: #888; }
+
+    /* Layout GRANDE: 10 x 5 cm — destaque */
+    .etiq-grande {
+      width: 10cm; height: 5cm;
+      border: 0.5px solid #ccc; border-radius: 4px;
+      display: inline-flex; flex-direction: column; justify-content: space-between;
+      padding: 4mm 5mm; margin: 2mm; background: #fff; overflow: hidden;
+      vertical-align: top;
+    }
+    .etiq-grande .cabec { display: flex; justify-content: space-between; align-items: center; }
+    .etiq-grande .cod { font-size: 8pt; color: #888; }
+    .etiq-grande .loja { font-size: 9pt; color: var(--marrom); font-weight: 800; letter-spacing: .5px; }
+    .etiq-grande .nome { font-size: 12pt; font-weight: 700; line-height: 1.3; margin: 3mm 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .etiq-grande .rodape { display: flex; align-items: baseline; gap: 8mm; }
+    .etiq-grande .bloco-at { }
+    .etiq-grande .pat-lbl { font-size: 7pt; color: #888; }
+    .etiq-grande .pat { font-size: 10pt; font-weight: 700; color: #555; line-height: 1; }
+    .etiq-grande .pv  { font-size: 22pt; font-weight: 800; color: var(--laranja); line-height: 1; }
+    .etiq-grande .pv-lbl { font-size: 8pt; color: #888; margin-bottom: 1mm; }
+
+    /* Painel de pré-visualização na tela */
+    #preview { background: #f0e8df; border-radius: 10px; padding: 14px; min-height: 160px; }
+
+    @media print {
+      body { background: #fff; }
+      header, .layout-sel, .topbar, .no-print { display: none !important; }
+      main { margin: 0; padding: 0; max-width: none; }
+      #preview { background: #fff; padding: 0; border-radius: 0; }
+      @page { margin: 8mm; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🖨️ Imprimir Etiquetas</h1>
+  <a href="/etiquetas/" class="btn sec no-print">← Voltar</a>
+  <button onclick="window.print()" class="btn no-print">Imprimir</button>
+</header>
+<main>
+  <div class="layout-sel no-print">
+    <h2>Escolha o layout das etiquetas:</h2>
+    <div class="layouts">
+      <div class="layout-opt {% if layout == 'pequena' %}ativo{% endif %}" onclick="setLayout('pequena', this)">
+        <strong>Pequeno</strong>
+        <span>5,5 × 2,5 cm</span>
+      </div>
+      <div class="layout-opt {% if layout == 'media' or not layout %}ativo{% endif %}" onclick="setLayout('media', this)">
+        <strong>Médio</strong>
+        <span>8 × 4 cm</span>
+      </div>
+      <div class="layout-opt {% if layout == 'grande' %}ativo{% endif %}" onclick="setLayout('grande', this)">
+        <strong>Grande</strong>
+        <span>10 × 5 cm</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="topbar no-print">
+    <strong>{{ produtos|length }} etiqueta(s)</strong>
+    <span class="info">Clique em "Imprimir" para abrir o diálogo de impressão</span>
+  </div>
+
+  <div id="preview">
+    {% for p in produtos %}
+      {# ---- PEQUENA ---- #}
+      <div class="etiq-pequena etiq" data-layout="pequena" {% if layout != 'pequena' %}style="display:none"{% endif %}>
+        <div class="cod">{{ p.codigo }}</div>
+        <div class="nome">{{ p.descricao }}</div>
+        <div class="precos">
+          {% if p.preco_atacado is not none %}<span class="pat">AT R$ {{ '%.2f'|format(p.preco_atacado)|replace('.',',') }}</span>{% endif %}
+          {% if p.preco_varejo is not none %}<span class="pv">R$ {{ '%.2f'|format(p.preco_varejo)|replace('.',',') }}</span>{% endif %}
+        </div>
+      </div>
+
+      {# ---- MÉDIA ---- #}
+      <div class="etiq-media etiq" data-layout="media" {% if layout == 'pequena' or layout == 'grande' %}style="display:none"{% endif %}>
+        <div class="cabec">
+          <span class="cod">Cód. {{ p.codigo }}</span>
+          <span class="loja">CASA SANCHEZ</span>
+        </div>
+        <div class="nome">{{ p.descricao }}</div>
+        <div class="rodape">
+          {% if p.preco_atacado is not none %}<span class="pat">Atacado: R$ {{ '%.2f'|format(p.preco_atacado)|replace('.',',') }}</span>{% endif %}
+          <div>
+            <div class="pv-lbl">Preço</div>
+            <span class="pv">{% if p.preco_varejo is not none %}R$ {{ '%.2f'|format(p.preco_varejo)|replace('.',',') }}{% else %}—{% endif %}</span>
+          </div>
+        </div>
+      </div>
+
+      {# ---- GRANDE ---- #}
+      <div class="etiq-grande etiq" data-layout="grande" {% if layout != 'grande' %}style="display:none"{% endif %}>
+        <div class="cabec">
+          <span class="cod">Cód. {{ p.codigo }}</span>
+          <span class="loja">CASA SANCHEZ</span>
+        </div>
+        <div class="nome">{{ p.descricao }}</div>
+        <div class="rodape">
+          {% if p.preco_atacado is not none %}
+          <div class="bloco-at">
+            <div class="pat-lbl">Atacado</div>
+            <div class="pat">R$ {{ '%.2f'|format(p.preco_atacado)|replace('.',',') }}</div>
+          </div>
+          {% endif %}
+          <div>
+            <div class="pv-lbl">Preço à Vista</div>
+            <div class="pv">{% if p.preco_varejo is not none %}R$ {{ '%.2f'|format(p.preco_varejo)|replace('.',',') }}{% else %}—{% endif %}</div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</main>
+<script>
+  let layoutAtual = '{{ layout or "media" }}';
+
+  function setLayout(lyt, el) {
+    layoutAtual = lyt;
+    document.querySelectorAll('.layout-opt').forEach(o => o.classList.remove('ativo'));
+    el.classList.add('ativo');
+    document.querySelectorAll('.etiq').forEach(e => {
+      e.style.display = e.dataset.layout === lyt ? '' : 'none';
+    });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Importar Produtos — Etiquetas Casa Sanchez</title>
+  <style>
+    :root { --laranja: #AF4005; --marrom: #5C442C; --linen: #F9E9DC; }
+    * { box-sizing: border-box; }
+    body { font-family: Segoe UI, Arial, sans-serif; margin: 0; background: #f7f1eb; color: var(--marrom); }
+    header { background: var(--marrom); color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 14px; }
+    header h1 { font-size: 15px; margin: 0; }
+    .btn { background: var(--laranja); color: #fff; border: none; padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; }
+    .btn:hover { background: #C4574E; }
+    .btn.sec { background: var(--linen); color: var(--marrom); border: 1px solid #d9c6b3; }
+    main { max-width: 680px; margin: 28px auto; padding: 0 16px; }
+    .card { background: #fff; border: 1px solid #e7d7c4; border-radius: 10px; padding: 22px; margin-bottom: 16px; }
+    .card h2 { font-size: 14px; margin: 0 0 14px; border-bottom: 1px solid #f1e4d6; padding-bottom: 10px; }
+    label { font-size: 11.5px; color: var(--marrom); opacity: .75; display: block; margin-bottom: 4px; font-weight: 600; }
+    input[type=file] { display: block; width: 100%; padding: 8px; border: 2px dashed #d9c6b3; border-radius: 6px; font-size: 13px; cursor: pointer; background: #faf6f2; margin-bottom: 12px; }
+    input[type=file]:hover { border-color: var(--laranja); }
+    select { padding: 8px 10px; border: 1px solid #d9c6b3; border-radius: 6px; font-size: 13px; width: 100%; margin-bottom: 12px; }
+    .hint { font-size: 11.5px; color: #888; margin-bottom: 10px; line-height: 1.5; }
+    .stat-box { background: var(--linen); border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; }
+    .stat-box .stat-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+    .stat-box .val { font-weight: 700; }
+    .flash { padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; font-size: 13px; }
+    .flash.erro { background: #fde8e8; border: 1px solid #e9a0a0; color: #7a2020; }
+    .flash.sucesso { background: #e6f4ea; border: 1px solid #a0cba8; color: #1a5c2a; }
+    .formato-info { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .fmt-card { background: #faf6f2; border: 1px solid #e7d7c4; border-radius: 6px; padding: 10px 12px; font-size: 12px; }
+    .fmt-card strong { display: block; margin-bottom: 4px; font-size: 12.5px; }
+    .fmt-card .cols { color: #666; line-height: 1.6; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>⬆️ Importar Tabela de Produtos</h1>
+  <a href="/etiquetas/" class="btn sec">← Voltar</a>
+</header>
+<main>
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in msgs %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="card">
+    <div class="stat-box">
+      <div class="stat-row"><span>Produtos cadastrados:</span><span class="val">{{ total }}</span></div>
+      {% if ultima %}<div class="stat-row"><span>Última atualização:</span><span class="val">{{ ultima }}</span></div>{% endif %}
+    </div>
+
+    <h2>Importar arquivo</h2>
+    <form method="post" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <label>Arquivo (.xlsx ou .pdf)</label>
+      <input type="file" name="arquivo" accept=".xlsx,.xls,.pdf" required>
+
+      <div id="tipo_pdf_wrap" style="display:none">
+        <label>Tipo de tabela PDF</label>
+        <select name="tipo_pdf">
+          <option value="varejo">Tabela Varejo (coluna = Preço Varejo)</option>
+          <option value="atacado">Tabela Atacado Loja (coluna = Preço Atacado)</option>
+        </select>
+      </div>
+
+      <p class="hint">
+        A importação atualiza produtos existentes (por código) e insere novos.<br>
+        Produtos removidos da tabela <strong>não são excluídos</strong> do sistema.
+      </p>
+
+      <button type="submit" class="btn">Importar</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Formatos suportados</h2>
+    <div class="formato-info">
+      <div class="fmt-card">
+        <strong>📊 Excel (.xlsx)</strong>
+        <div class="cols">
+          Coluna A: Código<br>
+          Coluna B: Descrição<br>
+          Coluna C: Preço Atacado<br>
+          Coluna D: Preço Varejo<br>
+          <em>Linha 1 = cabeçalho (ignorada)</em>
+        </div>
+      </div>
+      <div class="fmt-card">
+        <strong>📄 PDF (Handsys)</strong>
+        <div class="cols">
+          Formato: CÓDIGO DESCRIÇÃO PREÇO<br>
+          Exportado do sistema Handsys<br>
+          Escolha se é tabela Varejo ou Atacado
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+  document.querySelector('[name=arquivo]').addEventListener('change', function() {
+    const wrap = document.getElementById('tipo_pdf_wrap');
+    wrap.style.display = this.value.toLowerCase().endsWith('.pdf') ? '' : 'none';
+  });
+</script>
+</body>
+</html>
