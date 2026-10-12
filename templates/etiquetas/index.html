@@ -129,6 +129,10 @@
       const chk = tr.querySelector('.chkProd');
       if (chk) tr.classList.toggle('sel', chk.checked);
     });
+    // Limpa busca e devolve foco para próxima pesquisa
+    campo.value = '';
+    filtrar();
+    campo.focus();
   }
 
   function filtrar() {
