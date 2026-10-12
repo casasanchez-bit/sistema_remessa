@@ -5,62 +5,298 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Imprimir Etiquetas — Casa Sanchez</title>
   <style>
-    :root { --laranja: #AF4005; --marrom: #5C442C; --linen: #F9E9DC; }
-    * { box-sizing: border-box; }
-    body { font-family: Segoe UI, Arial, sans-serif; margin: 0; background: #f7f1eb; color: var(--marrom); }
-    header { background: var(--marrom); color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 14px; }
-    header h1 { font-size: 15px; margin: 0; }
-    .btn { background: var(--laranja); color: #fff; border: none; padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; }
-    .btn:hover { background: #C4574E; }
-    .btn.sec { background: var(--linen); color: var(--marrom); border: 1px solid #d9c6b3; }
-    main { max-width: 900px; margin: 20px auto; padding: 0 16px; }
-    .layout-sel { background: #fff; border: 1px solid #e7d7c4; border-radius: 10px; padding: 18px; margin-bottom: 18px; }
-    .layout-sel h2 { font-size: 14px; margin: 0 0 12px; }
-    .layouts { display: flex; gap: 14px; flex-wrap: wrap; }
-    .layout-opt { border: 2px solid #e7d7c4; border-radius: 8px; padding: 10px 14px; cursor: pointer; min-width: 140px; text-align: center; transition: border-color .15s; }
-    .layout-opt:hover { border-color: var(--laranja); }
-    .layout-opt.ativo { border-color: var(--laranja); background: #fff8f0; }
-    .layout-opt strong { display: block; font-size: 13px; margin-bottom: 3px; }
-    .layout-opt span { font-size: 11px; color: #888; }
-    .topbar { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; }
-    .info { font-size: 12px; color: #888; margin-left: auto; }
-
-    /* =========================================================
-       ESTILOS DE ETIQUETA — impressão
-    ========================================================= */
-
-    /* Layout PEQUENO: 5.5 x 2.5 cm — gondola pequena */
-    .etiq-pequena {
-      width: 5.5cm; height: 2.5cm;
-      border: 0.5px solid #ccc; border-radius: 3px;
-      display: inline-flex; flex-direction: column; justify-content: center;
-      padding: 2mm 3mm; margin: 2mm; background: #fff; overflow: hidden;
-      vertical-align: top;
+    :root {
+      --terracota: #C4574E;
+      --laranja:   #AF4005;
+      --marrom:    #5C442C;
+      --linen:     #F9E9DC;
+      --creme:     #FFF8F2;
     }
-    .etiq-pequena .cod { font-size: 7pt; color: #888; line-height: 1; }
-    .etiq-pequena .nome { font-size: 7.5pt; font-weight: 700; line-height: 1.2; margin: 1.5mm 0 1mm; flex: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .etiq-pequena .precos { display: flex; gap: 4mm; align-items: baseline; }
-    .etiq-pequena .pat { font-size: 7pt; color: #666; }
-    .etiq-pequena .pv  { font-size: 11pt; font-weight: 800; color: var(--laranja); line-height: 1; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Arial Black', 'Arial', sans-serif; background: #f0e8df; color: var(--marrom); }
 
-    /* Layout MÉDIO: 8 x 4 cm — gondola padrão */
-    .etiq-media {
-      width: 8cm; height: 4cm;
-      border: 0.5px solid #ccc; border-radius: 4px;
-      display: inline-flex; flex-direction: column; justify-content: space-between;
-      padding: 3mm 4mm; margin: 2mm; background: #fff; overflow: hidden;
-      vertical-align: top;
+    /* ── casas repeating pattern (data URI) ─────────────────────────── */
+    .casas-strip {
+      background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='22' height='16' viewBox='0 0 22 16'><path d='M11,1.5 L1.5,8.5 h2.5 v6.5 h14 v-6.5 h2.5 z' fill='none' stroke='white' stroke-opacity='0.38' stroke-width='1.3'/><rect x='8.5' y='10' width='5' height='5' fill='none' stroke='white' stroke-opacity='0.38' stroke-width='1.3'/></svg>");
+      background-repeat: repeat-x;
+      background-position: center;
+      background-size: auto 100%;
     }
-    .etiq-media .cabec { display: flex; justify-content: space-between; align-items: flex-start; }
-    .etiq-media .cod { font-size: 7.5pt; color: #888; }
-    .etiq-media .loja { font-size: 7.5pt; color: var(--marrom); font-weight: 700; }
-    .etiq-media .nome { font-size: 9pt; font-weight: 700; line-height: 1.3; flex: 1; margin: 2mm 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .etiq-media .rodape { display: flex; align-items: baseline; gap: 6mm; }
-    .etiq-media .pat { font-size: 8pt; color: #666; }
-    .etiq-media .pv  { font-size: 16pt; font-weight: 800; color: var(--laranja); line-height: 1; }
-    .etiq-media .pv-lbl { font-size: 7pt; color: #888; }
 
-    /* Layout GRANDE: 10 x 5 cm — destaque */
+    /* ================================================================
+       MODELO GÔNDOLA — 17cm × 3.5cm
+    ================================================================ */
+    .etiq-gondola {
+      width: 17cm;
+      height: 3.5cm;
+      display: flex;
+      flex-direction: column;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 2mm auto;
+      box-shadow: 0 1px 4px rgba(0,0,0,.18);
+      page-break-inside: avoid;
+    }
+    .etiq-gondola .gon-body {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
+
+    /* Secao nome (esquerda) */
+    .etiq-gondola .gon-nome {
+      background: var(--terracota);
+      flex: 0 0 42%;
+      padding: 3mm 4mm 3mm 5mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 1.5mm;
+    }
+    .etiq-gondola .gon-nome .prod-nome {
+      font-size: 11pt;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1.15;
+      text-transform: uppercase;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      letter-spacing: 0.3px;
+    }
+    .etiq-gondola .gon-nome .prod-ref {
+      font-size: 6.5pt;
+      color: rgba(255,255,255,0.78);
+      font-weight: 400;
+      font-family: Arial, sans-serif;
+      letter-spacing: 0.5px;
+    }
+
+    /* Secao varejo (meio) */
+    .etiq-gondola .gon-varejo {
+      background: var(--creme);
+      flex: 0 0 27%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2mm 3mm;
+      gap: 1mm;
+      position: relative;
+    }
+    .etiq-gondola .gon-varejo::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 6mm;
+      background: var(--creme);
+    }
+    .gon-badge {
+      font-size: 6.5pt;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 1mm 3mm;
+      border-radius: 99px;
+      border: 1.2px solid;
+      font-family: Arial, sans-serif;
+      line-height: 1;
+      position: relative;
+      z-index: 1;
+    }
+    .gon-badge-varejo  { border-color: var(--marrom); color: var(--marrom); background: var(--creme); }
+    .gon-badge-atacado { border-color: var(--linen);  color: var(--linen);  background: transparent; }
+
+    .gon-preco-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 0;
+      line-height: 1;
+    }
+    .gon-preco-rs   { font-size: 7pt;  font-weight: 700; font-family: Arial, sans-serif; }
+    .gon-preco-int  { font-size: 28pt; font-weight: 900; line-height: 1; }
+    .gon-preco-dec  { font-size: 13pt; font-weight: 900; line-height: 1; align-self: flex-start; margin-top: 2mm; }
+    .gon-preco-cada { font-size: 6.5pt; font-weight: 700; font-family: Arial, sans-serif; letter-spacing: .5px; }
+
+    .gon-varejo .gon-preco-int,
+    .gon-varejo .gon-preco-dec,
+    .gon-varejo .gon-preco-rs,
+    .gon-varejo .gon-preco-cada { color: var(--terracota); }
+
+    /* Separador central >> */
+    .etiq-gondola .gon-sep {
+      background: var(--creme);
+      flex: 0 0 4%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8pt;
+      font-weight: 900;
+      color: var(--marrom);
+      padding-bottom: 1mm;
+    }
+
+    /* Secao atacado (direita) */
+    .etiq-gondola .gon-atacado {
+      background: var(--marrom);
+      flex: 0 0 27%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2mm 3mm;
+      gap: 1mm;
+      position: relative;
+    }
+    .etiq-gondola .gon-atacado .gon-preco-int,
+    .etiq-gondola .gon-atacado .gon-preco-dec,
+    .etiq-gondola .gon-atacado .gon-preco-rs  { color: var(--linen); }
+    .etiq-gondola .gon-atacado .gon-preco-cada { color: rgba(249,233,220,0.8); }
+    .etiq-gondola .gon-atacado .gon-logo {
+      position: absolute;
+      bottom: 2mm;
+      right: 3mm;
+      font-size: 5.5pt;
+      color: rgba(249,233,220,0.55);
+      font-family: Arial, sans-serif;
+      font-weight: 700;
+      letter-spacing: .3px;
+    }
+
+    /* Strip de casas na base da gôndola */
+    .etiq-gondola .gon-strip {
+      height: 5mm;
+      background-color: var(--terracota);
+      flex-shrink: 0;
+    }
+
+    /* ================================================================
+       MODELO PONTEIRA — 4.5cm × 7.5cm (portrait)
+    ================================================================ */
+    .etiq-ponteira {
+      width: 4.5cm;
+      height: 7.5cm;
+      display: inline-flex;
+      flex-direction: column;
+      border-radius: 5px;
+      overflow: hidden;
+      margin: 2mm;
+      box-shadow: 0 1px 4px rgba(0,0,0,.18);
+      page-break-inside: avoid;
+      vertical-align: top;
+      background: var(--terracota);
+    }
+
+    /* Topo: nome do produto */
+    .etiq-ponteira .pont-topo {
+      background: var(--terracota);
+      flex: 0 0 46%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3mm 3mm 2mm;
+      text-align: center;
+      gap: 1.5mm;
+    }
+    .etiq-ponteira .pont-nome {
+      font-size: 11.5pt;
+      font-weight: 900;
+      color: #fff;
+      text-transform: uppercase;
+      line-height: 1.2;
+      letter-spacing: 0.2px;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* Precos: duas colunas */
+    .etiq-ponteira .pont-precos {
+      flex: 1;
+      display: flex;
+      gap: 0;
+      min-height: 0;
+    }
+
+    /* Caixa varejo */
+    .etiq-ponteira .pont-varejo {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2mm 2mm;
+      border: 2px solid rgba(255,255,255,0.5);
+      border-radius: 5px;
+      margin: 1.5mm 1mm 1.5mm 1.5mm;
+      gap: 0.8mm;
+    }
+    .pont-badge {
+      font-size: 5.5pt;
+      font-weight: 900;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      padding: 0.8mm 2.5mm;
+      border-radius: 99px;
+      font-family: Arial, sans-serif;
+      line-height: 1;
+    }
+    .pont-badge-v { border: 1.2px solid rgba(255,255,255,.7); color: #fff; }
+    .pont-badge-a { background: var(--linen); color: var(--marrom); }
+
+    .pont-preco-wrap {
+      display: flex;
+      align-items: baseline;
+      line-height: 1;
+      gap: 0;
+    }
+    .pont-rs  { font-size: 6.5pt; font-weight: 700; font-family: Arial, sans-serif; }
+    .pont-int { font-size: 18pt; font-weight: 900; line-height: 1; }
+    .pont-dec { font-size: 9pt;  font-weight: 900; align-self: flex-start; margin-top: 1.5mm; }
+    .pont-cada { font-size: 5.5pt; font-weight: 700; font-family: Arial, sans-serif; letter-spacing: .5px; }
+
+    .etiq-ponteira .pont-varejo .pont-rs,
+    .etiq-ponteira .pont-varejo .pont-int,
+    .etiq-ponteira .pont-varejo .pont-dec  { color: #fff; }
+    .etiq-ponteira .pont-varejo .pont-cada { color: rgba(255,255,255,0.8); }
+
+    /* Caixa atacado */
+    .etiq-ponteira .pont-atacado {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2mm 2mm;
+      background: var(--marrom);
+      border-radius: 5px;
+      margin: 1.5mm 1.5mm 1.5mm 1mm;
+      gap: 0.8mm;
+    }
+    .etiq-ponteira .pont-atacado .pont-rs,
+    .etiq-ponteira .pont-atacado .pont-int,
+    .etiq-ponteira .pont-atacado .pont-dec  { color: var(--linen); }
+    .etiq-ponteira .pont-atacado .pont-cada { color: rgba(249,233,220,0.75); }
+    .etiq-ponteira .pont-atacado .pont-int  { font-size: 22pt; }
+    .etiq-ponteira .pont-atacado .pont-dec  { font-size: 11pt; }
+    .etiq-ponteira .pont-atacado .pont-ref  {
+      font-size: 5.5pt; color: rgba(249,233,220,0.65);
+      font-family: Arial, sans-serif; letter-spacing: .3px;
+    }
+
+    /* Strip de casas na base da ponteira */
+    .etiq-ponteira .pont-strip {
+      height: 5mm;
+      flex-shrink: 0;
+      background-color: var(--terracota);
+    }
+
+    /* ================================================================
+       MODELO GRANDE — 10cm × 5cm (preservado)
+    ================================================================ */
     .etiq-grande {
       width: 10cm; height: 5cm;
       border: 0.5px solid #ccc; border-radius: 4px;
@@ -68,26 +304,52 @@
       padding: 4mm 5mm; margin: 2mm; background: #fff; overflow: hidden;
       vertical-align: top;
     }
-    .etiq-grande .cabec { display: flex; justify-content: space-between; align-items: center; }
-    .etiq-grande .cod { font-size: 8pt; color: #888; }
-    .etiq-grande .loja { font-size: 9pt; color: var(--marrom); font-weight: 800; letter-spacing: .5px; }
-    .etiq-grande .nome { font-size: 12pt; font-weight: 700; line-height: 1.3; margin: 3mm 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .etiq-grande .rodape { display: flex; align-items: baseline; gap: 8mm; }
-    .etiq-grande .bloco-at { }
-    .etiq-grande .pat-lbl { font-size: 7pt; color: #888; }
-    .etiq-grande .pat { font-size: 10pt; font-weight: 700; color: #555; line-height: 1; }
-    .etiq-grande .pv  { font-size: 22pt; font-weight: 800; color: var(--laranja); line-height: 1; }
-    .etiq-grande .pv-lbl { font-size: 8pt; color: #888; margin-bottom: 1mm; }
+    .etiq-grande .g-cabec { display: flex; justify-content: space-between; align-items: center; }
+    .etiq-grande .g-cod { font-size: 8pt; color: #888; font-family: Arial, sans-serif; }
+    .etiq-grande .g-loja { font-size: 9pt; color: var(--marrom); font-weight: 800; letter-spacing: .5px; }
+    .etiq-grande .g-nome { font-size: 12pt; font-weight: 700; line-height: 1.3; margin: 2mm 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .etiq-grande .g-rodape { display: flex; align-items: baseline; gap: 8mm; }
+    .etiq-grande .g-at-lbl { font-size: 7pt; color: #888; font-family: Arial, sans-serif; }
+    .etiq-grande .g-at { font-size: 10pt; font-weight: 700; color: #555; line-height: 1; }
+    .etiq-grande .g-pv { font-size: 22pt; font-weight: 800; color: var(--laranja); line-height: 1; }
+    .etiq-grande .g-pv-lbl { font-size: 8pt; color: #888; font-family: Arial, sans-serif; margin-bottom: 1mm; }
 
-    /* Painel de pré-visualização na tela */
-    #preview { background: #f0e8df; border-radius: 10px; padding: 14px; min-height: 160px; }
+    /* ================================================================
+       SELETOR DE LAYOUT (tela) e topo
+    ================================================================ */
+    header { background: var(--marrom); color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 14px; }
+    header h1 { font-size: 15px; margin: 0; font-family: Arial, sans-serif; }
+    .btn { background: var(--laranja); color: #fff; border: none; padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; font-family: Arial, sans-serif; }
+    .btn:hover { background: var(--terracota); }
+    .btn.sec { background: var(--linen); color: var(--marrom); border: 1px solid #d9c6b3; }
+    main { max-width: 1000px; margin: 20px auto; padding: 0 16px; font-family: Arial, sans-serif; }
+    .layout-sel { background: #fff; border: 1px solid #e7d7c4; border-radius: 10px; padding: 18px; margin-bottom: 18px; }
+    .layout-sel h2 { font-size: 14px; margin: 0 0 12px; }
+    .layouts { display: flex; gap: 14px; flex-wrap: wrap; }
+    .layout-opt { border: 2px solid #e7d7c4; border-radius: 8px; padding: 10px 16px; cursor: pointer; min-width: 130px; text-align: center; }
+    .layout-opt:hover { border-color: var(--laranja); }
+    .layout-opt.ativo { border-color: var(--laranja); background: #fff8f0; }
+    .layout-opt strong { display: block; font-size: 13px; margin-bottom: 3px; }
+    .layout-opt span { font-size: 11px; color: #888; }
+    .topbar { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; }
+    .info { font-size: 12px; color: #888; margin-left: auto; font-family: Arial, sans-serif; }
+    #preview { background: #e8ddd5; border-radius: 10px; padding: 16px; min-height: 120px; }
 
+    /* ================================================================
+       IMPRESSÃO
+    ================================================================ */
     @media print {
       body { background: #fff; }
       header, .layout-sel, .topbar, .no-print { display: none !important; }
       main { margin: 0; padding: 0; max-width: none; }
       #preview { background: #fff; padding: 0; border-radius: 0; }
-      @page { margin: 8mm; }
+      @page { margin: 8mm; size: A4; }
+
+      /* Gôndola: centralizar e empilhar */
+      .etiq-gondola { margin: 1.5mm auto; }
+
+      /* Ponteira: fluir em bloco */
+      .etiq-ponteira { display: inline-flex; }
     }
   </style>
 </head>
@@ -99,17 +361,17 @@
 </header>
 <main>
   <div class="layout-sel no-print">
-    <h2>Escolha o layout das etiquetas:</h2>
+    <h2>Escolha o modelo de etiqueta:</h2>
     <div class="layouts">
-      <div class="layout-opt {% if layout == 'pequena' %}ativo{% endif %}" onclick="setLayout('pequena', this)">
-        <strong>Pequeno</strong>
-        <span>5,5 × 2,5 cm</span>
+      <div class="layout-opt {% if layout == 'gondola' or not layout %}ativo{% endif %}" onclick="setLayout('gondola',this)">
+        <strong>🏷️ Gôndola</strong>
+        <span>17 × 3,5 cm</span>
       </div>
-      <div class="layout-opt {% if layout == 'media' or not layout %}ativo{% endif %}" onclick="setLayout('media', this)">
-        <strong>Médio</strong>
-        <span>8 × 4 cm</span>
+      <div class="layout-opt {% if layout == 'ponteira' %}ativo{% endif %}" onclick="setLayout('ponteira',this)">
+        <strong>📌 Ponteira</strong>
+        <span>4,5 × 7,5 cm</span>
       </div>
-      <div class="layout-opt {% if layout == 'grande' %}ativo{% endif %}" onclick="setLayout('grande', this)">
+      <div class="layout-opt {% if layout == 'grande' %}ativo{% endif %}" onclick="setLayout('grande',this)">
         <strong>Grande</strong>
         <span>10 × 5 cm</span>
       </div>
@@ -122,59 +384,124 @@
   </div>
 
   <div id="preview">
-    {% for p in produtos %}
-      {# ---- PEQUENA ---- #}
-      <div class="etiq-pequena etiq" data-layout="pequena" {% if layout != 'pequena' %}style="display:none"{% endif %}>
-        <div class="cod">{{ p.codigo }}</div>
-        <div class="nome">{{ p.descricao }}</div>
-        <div class="precos">
-          {% if p.preco_atacado is not none %}<span class="pat">AT R$ {{ '%.2f'|format(p.preco_atacado)|replace('.',',') }}</span>{% endif %}
-          {% if p.preco_varejo is not none %}<span class="pv">R$ {{ '%.2f'|format(p.preco_varejo)|replace('.',',') }}</span>{% endif %}
-        </div>
-      </div>
 
-      {# ---- MÉDIA ---- #}
-      <div class="etiq-media etiq" data-layout="media" {% if layout == 'pequena' or layout == 'grande' %}style="display:none"{% endif %}>
-        <div class="cabec">
-          <span class="cod">Cód. {{ p.codigo }}</span>
-          <span class="loja">CASA SANCHEZ</span>
+  {# ────────── GÔNDOLA ────────── #}
+  {% for p in produtos %}
+    {% set pv = '%.2f'|format(p.preco_varejo)  if p.preco_varejo  is not none else None %}
+    {% set pa = '%.2f'|format(p.preco_atacado) if p.preco_atacado is not none else None %}
+    <div class="etiq-gondola etiq" data-layout="gondola" {% if layout == 'ponteira' or layout == 'grande' %}style="display:none"{% endif %}>
+      <div class="gon-body">
+        <!-- Nome -->
+        <div class="gon-nome">
+          <div class="prod-nome">{{ p.descricao }}</div>
+          <div class="prod-ref">REF: {{ p.codigo }}</div>
         </div>
-        <div class="nome">{{ p.descricao }}</div>
-        <div class="rodape">
-          {% if p.preco_atacado is not none %}<span class="pat">Atacado: R$ {{ '%.2f'|format(p.preco_atacado)|replace('.',',') }}</span>{% endif %}
-          <div>
-            <div class="pv-lbl">Preço</div>
-            <span class="pv">{% if p.preco_varejo is not none %}R$ {{ '%.2f'|format(p.preco_varejo)|replace('.',',') }}{% else %}—{% endif %}</span>
-          </div>
-        </div>
-      </div>
-
-      {# ---- GRANDE ---- #}
-      <div class="etiq-grande etiq" data-layout="grande" {% if layout != 'grande' %}style="display:none"{% endif %}>
-        <div class="cabec">
-          <span class="cod">Cód. {{ p.codigo }}</span>
-          <span class="loja">CASA SANCHEZ</span>
-        </div>
-        <div class="nome">{{ p.descricao }}</div>
-        <div class="rodape">
-          {% if p.preco_atacado is not none %}
-          <div class="bloco-at">
-            <div class="pat-lbl">Atacado</div>
-            <div class="pat">R$ {{ '%.2f'|format(p.preco_atacado)|replace('.',',') }}</div>
-          </div>
+        <!-- Varejo -->
+        <div class="gon-varejo">
+          <div class="gon-badge gon-badge-varejo">VAREJO</div>
+          {% if pv %}
+            <div class="gon-preco-wrap">
+              <span class="gon-preco-rs">R$</span>
+              <span class="gon-preco-int">{{ pv.split('.')[0] }}</span>
+              <span class="gon-preco-dec">,{{ pv.split('.')[1] }}</span>
+            </div>
+            <div class="gon-preco-cada">CADA</div>
+          {% else %}
+            <span style="font-size:9pt;color:#aaa">—</span>
           {% endif %}
-          <div>
-            <div class="pv-lbl">Preço à Vista</div>
-            <div class="pv">{% if p.preco_varejo is not none %}R$ {{ '%.2f'|format(p.preco_varejo)|replace('.',',') }}{% else %}—{% endif %}</div>
-          </div>
+        </div>
+        <!-- Separador -->
+        <div class="gon-sep">»</div>
+        <!-- Atacado -->
+        <div class="gon-atacado">
+          <div class="gon-badge gon-badge-atacado">ATACADO</div>
+          {% if pa %}
+            <div class="gon-preco-wrap">
+              <span class="gon-preco-rs">R$</span>
+              <span class="gon-preco-int">{{ pa.split('.')[0] }}</span>
+              <span class="gon-preco-dec">,{{ pa.split('.')[1] }}</span>
+            </div>
+            <div class="gon-preco-cada">CADA</div>
+          {% else %}
+            <span style="font-size:9pt;color:rgba(249,233,220,.5)">—</span>
+          {% endif %}
+          <div class="gon-logo">Casa Sanchez</div>
         </div>
       </div>
-    {% endfor %}
-  </div>
+      <div class="gon-strip casas-strip"></div>
+    </div>
+  {% endfor %}
+
+  {# ────────── PONTEIRA ────────── #}
+  {% for p in produtos %}
+    {% set pv = '%.2f'|format(p.preco_varejo)  if p.preco_varejo  is not none else None %}
+    {% set pa = '%.2f'|format(p.preco_atacado) if p.preco_atacado is not none else None %}
+    <div class="etiq-ponteira etiq" data-layout="ponteira" {% if layout != 'ponteira' %}style="display:none"{% endif %}>
+      <!-- Topo: nome -->
+      <div class="pont-topo">
+        <div class="pont-nome">{{ p.descricao }}</div>
+      </div>
+      <!-- Precos -->
+      <div class="pont-precos">
+        <!-- Varejo -->
+        <div class="pont-varejo">
+          <div class="pont-badge pont-badge-v">VAREJO</div>
+          {% if pv %}
+            <div class="pont-preco-wrap">
+              <span class="pont-rs">R$</span>
+              <span class="pont-int">{{ pv.split('.')[0] }}</span>
+              <span class="pont-dec">,{{ pv.split('.')[1] }}</span>
+            </div>
+            <div class="pont-cada">CADA</div>
+          {% else %}
+            <span style="font-size:8pt;color:rgba(255,255,255,.5)">—</span>
+          {% endif %}
+        </div>
+        <!-- Atacado -->
+        <div class="pont-atacado">
+          <div class="pont-badge pont-badge-a">ATACADO</div>
+          {% if pa %}
+            <div class="pont-preco-wrap">
+              <span class="pont-rs">R$</span>
+              <span class="pont-int">{{ pa.split('.')[0] }}</span>
+              <span class="pont-dec">,{{ pa.split('.')[1] }}</span>
+            </div>
+            <div class="pont-cada">CADA</div>
+          {% endif %}
+          <div class="pont-ref">REF: {{ p.codigo }}</div>
+        </div>
+      </div>
+      <div class="pont-strip casas-strip"></div>
+    </div>
+  {% endfor %}
+
+  {# ────────── GRANDE (preservado) ────────── #}
+  {% for p in produtos %}
+    <div class="etiq-grande etiq" data-layout="grande" {% if layout != 'grande' %}style="display:none"{% endif %}>
+      <div class="g-cabec">
+        <span class="g-cod">Cód. {{ p.codigo }}</span>
+        <span class="g-loja">CASA SANCHEZ</span>
+      </div>
+      <div class="g-nome">{{ p.descricao }}</div>
+      <div class="g-rodape">
+        {% if p.preco_atacado is not none %}
+        <div>
+          <div class="g-at-lbl">Atacado</div>
+          <div class="g-at">R$ {{ '%.2f'|format(p.preco_atacado)|replace('.',',') }}</div>
+        </div>
+        {% endif %}
+        <div>
+          <div class="g-pv-lbl">Preço à Vista</div>
+          <div class="g-pv">{% if p.preco_varejo is not none %}R$ {{ '%.2f'|format(p.preco_varejo)|replace('.',',') }}{% else %}—{% endif %}</div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+
+  </div>{# /preview #}
 </main>
 <script>
-  let layoutAtual = '{{ layout or "media" }}';
-
+  let layoutAtual = '{{ layout or "gondola" }}';
   function setLayout(lyt, el) {
     layoutAtual = lyt;
     document.querySelectorAll('.layout-opt').forEach(o => o.classList.remove('ativo'));
