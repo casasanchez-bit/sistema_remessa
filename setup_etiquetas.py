@@ -50,8 +50,8 @@ if existente:
 else:
     h = hash_senha("ETIQUETA")
     cur = db.execute(
-        "INSERT INTO usuarios (usuario, senha_hash) VALUES (?,?)",
-        ("ETIQUETA", h)
+        "INSERT INTO usuarios (usuario, senha_hash, criado_em) VALUES (?,?,?)",
+        ("ETIQUETA", h, date.today().isoformat())
     )
     uid = cur.lastrowid
     db.commit()
