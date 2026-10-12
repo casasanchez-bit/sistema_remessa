@@ -5,46 +5,43 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Etiquetas de Gôndola — Casa Sanchez</title>
   <style>
-    :root {
-      --terracota: #C4574E; --laranja: #AF4005;
-      --linen: #F9E9DC; --marrom: #5C442C;
-    }
+    :root { --terracota: #C4574E; --laranja: #AF4005; --linen: #F9E9DC; --marrom: #5C442C; }
     * { box-sizing: border-box; }
     body { font-family: Segoe UI, Arial, sans-serif; margin: 0; background: #f7f1eb; color: var(--marrom); }
     header { background: var(--marrom); color: #fff; padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
     header h1 { font-size: 16px; margin: 0; font-weight: 700; }
     header .sub { font-size: 12px; opacity: .7; }
-    .badge { background: var(--laranja); color: #fff; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 99px; }
     main { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
     .topbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
-    .topbar form { display: flex; gap: 8px; flex: 1; min-width: 260px; }
-    input[type=search], input[type=text] { padding: 8px 10px; border: 1px solid #d9c6b3; border-radius: 6px; font-size: 13px; flex: 1; }
+    .busca-wrap { display: flex; gap: 8px; flex: 1; min-width: 260px; }
+    #campoBusca { padding: 8px 10px; border: 1px solid #d9c6b3; border-radius: 6px; font-size: 13px; flex: 1; }
     .btn { background: var(--laranja); color: #fff; border: none; padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
     .btn:hover { background: var(--terracota); }
     .btn.sec { background: var(--linen); color: var(--marrom); border: 1px solid #d9c6b3; }
     .btn.sec:hover { background: #eedece; }
     .btn.imp { background: #1a7a3c; }
     .btn.imp:hover { background: #155e2e; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
     .card { background: #fff; border: 1px solid #e7d7c4; border-radius: 10px; overflow: hidden; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th { background: var(--linen); color: var(--marrom); font-size: 11px; text-transform: uppercase; font-weight: 700; padding: 8px 10px; text-align: left; border-bottom: 2px solid #e7d7c4; }
     td { padding: 7px 10px; border-bottom: 1px solid #f1e4d6; vertical-align: middle; }
     tr:hover td { background: #fdf6f0; }
     tr.sel td { background: #fff8f0; }
+    tr.oculto { display: none; }
     td.preco { text-align: right; font-variant-numeric: tabular-nums; }
     td.cod { font-weight: 700; color: var(--laranja); font-size: 12px; }
     input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--laranja); }
-    .sel-bar { background: var(--linen); border: 1px solid #d9c6b3; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 600; }
+    .sel-bar { background: var(--linen); border: 1px solid #d9c6b3; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 600; flex-wrap: wrap; }
     #contador { color: var(--laranja); font-size: 16px; font-weight: 800; }
+    #infoVisiveis { font-size: 12px; color: #999; margin-left: auto; }
     .flash { padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; font-size: 13px; }
     .flash.erro { background: #fde8e8; border: 1px solid #e9a0a0; color: #7a2020; }
     .flash.sucesso { background: #e6f4ea; border: 1px solid #a0cba8; color: #1a5c2a; }
-    .info { font-size: 12px; color: #999; }
-    .empty { text-align: center; padding: 40px; color: #bbb; font-size: 14px; }
-    a.link-imp { color: var(--laranja); font-size: 12px; text-decoration: none; font-weight: 600; }
-    a.link-imp:hover { text-decoration: underline; }
     .hdr-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-    @media (max-width: 600px) { .topbar { flex-direction: column; align-items: stretch; } }
+    .empty-msg { text-align: center; padding: 30px; color: #bbb; font-size: 14px; display: none; }
+    a.link-imp { color: var(--laranja); font-size: 12px; text-decoration: none; font-weight: 600; }
+    @media (max-width: 600px) { .topbar { flex-direction: column; align-items: stretch; } .sel-bar { flex-direction: column; align-items: flex-start; } }
   </style>
 </head>
 <body>
@@ -66,19 +63,18 @@
   {% endwith %}
 
   <div class="topbar">
-    <form method="get">
-      <input type="search" name="q" value="{{ q }}" placeholder="Buscar por código ou nome…" autofocus>
-      <button type="submit" class="btn">Buscar</button>
-      {% if q %}<a href="/etiquetas/" class="btn sec">✕ Limpar</a>{% endif %}
-    </form>
-    <span class="info">{{ total }} produto{{ 's' if total != 1 }} cadastrado{{ 's' if total != 1 }}</span>
+    <div class="busca-wrap">
+      <input type="text" id="campoBusca" placeholder="Buscar por código ou nome… (filtra sem recarregar)" autocomplete="off">
+      <button type="button" class="btn sec" onclick="limparBusca()">✕ Limpar</button>
+    </div>
   </div>
 
-  <div class="sel-bar" id="selBar">
+  <div class="sel-bar">
     <span><span id="contador">0</span> produto(s) selecionado(s)</span>
-    <button type="button" class="btn sec" onclick="selecionarTodos()">Selecionar todos visíveis</button>
+    <button type="button" class="btn sec" onclick="selecionarVisiveis()">Selecionar visíveis</button>
     <button type="button" class="btn sec" onclick="limparSel()">Limpar seleção</button>
     <button type="submit" form="frmImprimir" class="btn imp" id="btnImprimir" disabled>🖨️ Prosseguir para impressão</button>
+    <span id="infoVisiveis">{{ total }} produto(s)</span>
   </div>
 
   <form id="frmImprimir" method="post" action="/etiquetas/imprimir">
@@ -88,7 +84,7 @@
       <table>
         <thead>
           <tr>
-            <th style="width:36px"><input type="checkbox" id="chkAll" title="Marcar todos"></th>
+            <th style="width:36px"><input type="checkbox" id="chkAll" title="Marcar/desmarcar todos visíveis"></th>
             <th>Código</th>
             <th>Descrição</th>
             <th style="text-align:right">Preço Atacado</th>
@@ -97,50 +93,90 @@
         </thead>
         <tbody id="tBody">
           {% for p in produtos %}
-          <tr id="tr{{ p.id }}">
+          <tr data-busca="{{ p.codigo }}|{{ p.descricao|lower }}">
             <td><input type="checkbox" name="selecionados" value="{{ p.id }}" class="chkProd" onchange="atualizar()"></td>
             <td class="cod">{{ p.codigo }}</td>
             <td>{{ p.descricao }}</td>
-            <td class="preco">{% if p.preco_atacado is not none %}R$ {{ '%.2f'|format(p.preco_atacado) | replace('.', ',') }}{% else %}—{% endif %}</td>
-            <td class="preco">{% if p.preco_varejo is not none %}R$ {{ '%.2f'|format(p.preco_varejo) | replace('.', ',') }}{% else %}—{% endif %}</td>
+            <td class="preco">{% if p.preco_atacado is not none %}R$ {{ '%.2f'|format(p.preco_atacado)|replace('.',',') }}{% else %}—{% endif %}</td>
+            <td class="preco">{% if p.preco_varejo is not none %}R$ {{ '%.2f'|format(p.preco_varejo)|replace('.',',') }}{% else %}—{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
+      <div class="empty-msg" id="emptyMsg">Nenhum produto encontrado para esta busca.</div>
       {% else %}
-      <div class="empty">
-        {% if q %}Nenhum produto encontrado para "{{ q }}".{% else %}Nenhum produto cadastrado. <a href="/etiquetas/importar" class="link-imp">Importar agora →</a>{% endif %}
+      <div class="empty-msg" style="display:block">
+        Nenhum produto cadastrado. <a href="/etiquetas/importar" class="link-imp">Importar agora →</a>
       </div>
       {% endif %}
     </div>
   </form>
 </main>
 <script>
-  const btn = document.getElementById('btnImprimir');
-  const cnt = document.getElementById('contador');
-  const chkAll = document.getElementById('chkAll');
+  const btn      = document.getElementById('btnImprimir');
+  const cnt      = document.getElementById('contador');
+  const chkAll   = document.getElementById('chkAll');
+  const campo    = document.getElementById('campoBusca');
+  const info     = document.getElementById('infoVisiveis');
+  const emptyMsg = document.getElementById('emptyMsg');
+  const totalGeral = {{ total }};
 
   function atualizar() {
-    const checks = document.querySelectorAll('.chkProd:checked');
-    cnt.textContent = checks.length;
-    btn.disabled = checks.length === 0;
+    const sel = document.querySelectorAll('.chkProd:checked').length;
+    cnt.textContent = sel;
+    btn.disabled = sel === 0;
     document.querySelectorAll('#tBody tr').forEach(tr => {
-      tr.classList.toggle('sel', tr.querySelector('.chkProd').checked);
+      const chk = tr.querySelector('.chkProd');
+      if (chk) tr.classList.toggle('sel', chk.checked);
     });
   }
-  function selecionarTodos() {
-    document.querySelectorAll('.chkProd').forEach(c => c.checked = true);
+
+  function filtrar() {
+    const q = campo.value.trim().toLowerCase();
+    let visiveis = 0;
+    document.querySelectorAll('#tBody tr').forEach(tr => {
+      const texto = tr.dataset.busca || '';
+      const mostrar = !q || texto.includes(q);
+      tr.classList.toggle('oculto', !mostrar);
+      if (mostrar) visiveis++;
+    });
+    if (emptyMsg) emptyMsg.style.display = (visiveis === 0 && q) ? 'block' : 'none';
+    info.textContent = q
+      ? `${visiveis} visível(is) de ${totalGeral}`
+      : `${totalGeral} produto(s)`;
+    // sincronizar chkAll com estado dos visíveis
+    const visivelChecks = document.querySelectorAll('#tBody tr:not(.oculto) .chkProd');
+    const todosMarcados = visivelChecks.length > 0 && [...visivelChecks].every(c => c.checked);
+    if (chkAll) chkAll.checked = todosMarcados;
+  }
+
+  function limparBusca() {
+    campo.value = '';
+    filtrar();
+    campo.focus();
+  }
+
+  function selecionarVisiveis() {
+    document.querySelectorAll('#tBody tr:not(.oculto) .chkProd').forEach(c => c.checked = true);
+    if (chkAll) chkAll.checked = true;
     atualizar();
   }
+
   function limparSel() {
     document.querySelectorAll('.chkProd').forEach(c => c.checked = false);
     if (chkAll) chkAll.checked = false;
     atualizar();
   }
+
+  campo.addEventListener('input', filtrar);
+  campo.addEventListener('keydown', e => { if (e.key === 'Escape') limparBusca(); });
+
   if (chkAll) chkAll.addEventListener('change', () => {
-    document.querySelectorAll('.chkProd').forEach(c => c.checked = chkAll.checked);
+    document.querySelectorAll('#tBody tr:not(.oculto) .chkProd').forEach(c => c.checked = chkAll.checked);
     atualizar();
   });
+
+  campo.focus();
 </script>
 </body>
 </html>

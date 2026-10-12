@@ -5093,18 +5093,11 @@ def etiquetas_index():
         flash("Acesso negado.", "erro")
         return redirect(url_for("login"))
     db = get_db()
-    q = request.args.get("q", "").strip()
-    if q:
-        produtos = db.execute(
-            "SELECT * FROM etiquetas_produtos WHERE codigo LIKE ? OR descricao LIKE ? ORDER BY descricao",
-            (f"%{q}%", f"%{q}%"),
-        ).fetchall()
-    else:
-        produtos = db.execute(
-            "SELECT * FROM etiquetas_produtos ORDER BY descricao"
-        ).fetchall()
-    total = db.execute("SELECT COUNT(*) FROM etiquetas_produtos").fetchone()[0]
-    return render_template("etiquetas/index.html", produtos=produtos, q=q, total=total)
+    produtos = db.execute(
+        "SELECT * FROM etiquetas_produtos ORDER BY descricao"
+    ).fetchall()
+    total = len(produtos)
+    return render_template("etiquetas/index.html", produtos=produtos, total=total)
 
 
 @app.route("/etiquetas/imprimir", methods=["POST"])
