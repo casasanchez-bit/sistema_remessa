@@ -188,6 +188,10 @@ def _migrar_banco():
         )""",
         "ALTER TABLE etiquetas_produtos ADD COLUMN preco_promocao REAL",
         "ALTER TABLE etiquetas_produtos ADD COLUMN nome_generico TEXT",
+        """CREATE TABLE IF NOT EXISTS etiquetas_codigos_bloqueados (
+            codigo TEXT PRIMARY KEY,
+            bloqueado_em TEXT DEFAULT (date('now'))
+        )""",
     ]
     for sql in migrações:
         try:
@@ -5229,10 +5233,15 @@ def etiquetas_importar():
                 if not produtos:
                     raise ValueError(f"nenhum produto encontrado em '{arq.filename}'")
                 lidos.append((tipo, col, produtos))
+            # Carrega lista de bloqueados uma vez para não fazer 1 query por produto
+            bloqueados = {r[0] for r in db.execute("SELECT codigo FROM etiquetas_codigos_bloqueados").fetchall()}
             # Só grava depois de ler todos os arquivos sem erro
             for tipo, col, produtos in lidos:
-                inseridos = atualizados = 0
+                inseridos = atualizados = ignorados = 0
                 for cod, desc, preco in produtos:
+                    if cod in bloqueados:
+                        ignorados += 1
+                        continue
                     existe = db.execute("SELECT id FROM etiquetas_produtos WHERE codigo=?", (cod,)).fetchone()
                     if existe:
                         db.execute(
@@ -5246,7 +5255,10 @@ def etiquetas_importar():
                             (cod, desc, preco, hoje),
                         )
                         inseridos += 1
-                resumo.append(f"{tipo.capitalize()}: {atualizados} atualizados, {inseridos} novos")
+                msg = f"{tipo.capitalize()}: {atualizados} atualizados, {inseridos} novos"
+                if ignorados:
+                    msg += f", {ignorados} ignorados (bloqueados)"
+                resumo.append(msg)
             db.commit()
             flash("Importação concluída — " + " | ".join(resumo) + ".", "sucesso")
         except Exception as e:
