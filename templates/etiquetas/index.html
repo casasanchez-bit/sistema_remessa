@@ -85,6 +85,25 @@
     .promo-salvar { background: var(--laranja); color: #fff; border: none; border-radius: 4px; padding: 3px 7px; font-size: 11px; font-weight: 700; cursor: pointer; }
     .promo-cancelar { background: none; border: none; color: #aaa; cursor: pointer; font-size: 13px; padding: 0 2px; }
     .promo-ok { color: #1a7a3c; font-size: 11px; display: none; }
+
+    /* Edição inline de nome na etiqueta */
+    .nome-cell { position: relative; min-width: 130px; }
+    .nome-val {
+      display: inline-flex; align-items: center; gap: 4px;
+      cursor: pointer; border-radius: 4px; padding: 2px 6px; font-size: 12px;
+    }
+    .nome-val.tem-nome { color: #1a5c2a; font-weight: 700; background: #e8f5ec; }
+    .nome-val.sem-nome { color: #bbb; }
+    .nome-val:hover { background: #e0f0e4; }
+    .nome-input-wrap { display: none; align-items: center; gap: 4px; }
+    .nome-input-wrap.ativo { display: flex; }
+    .nome-input {
+      width: 130px; padding: 3px 6px; border: 1.5px solid var(--laranja);
+      border-radius: 4px; font-size: 12px;
+    }
+    .nome-salvar { background: var(--laranja); color: #fff; border: none; border-radius: 4px; padding: 3px 7px; font-size: 11px; font-weight: 700; cursor: pointer; }
+    .nome-cancelar { background: none; border: none; color: #aaa; cursor: pointer; font-size: 13px; padding: 0 2px; }
+    .nome-ok { color: #1a7a3c; font-size: 11px; display: none; }
   </style>
 </head>
 <body>
@@ -130,6 +149,7 @@
             <th style="width:36px"><input type="checkbox" id="chkAll" title="Marcar/desmarcar todos visíveis"></th>
             <th>Código</th>
             <th>Descrição</th>
+            <th title="Nome exibido na etiqueta (substitui a descrição)">Nome na Etiqueta ✏️</th>
             <th style="text-align:right">Preço Atacado</th>
             <th style="text-align:right">Preço Varejo</th>
             <th style="text-align:right" title="Clique no valor para editar">Promoção ✏️</th>
@@ -137,10 +157,24 @@
         </thead>
         <tbody id="tBody">
           {% for p in produtos %}
-          <tr data-busca="{{ p.codigo }}|{{ p.descricao|lower }}">
+          <tr data-busca="{{ p.codigo }}|{{ p.descricao|lower }}|{{ (p.nome_generico or '')|lower }}">
             <td><input type="checkbox" name="selecionados" value="{{ p.id }}" class="chkProd" onchange="atualizar()"></td>
             <td class="cod">{{ p.codigo }}</td>
             <td>{{ p.descricao }}</td>
+            <td class="nome-cell" data-id="{{ p.id }}">
+              <span class="nome-val {% if p.nome_generico %}tem-nome{% else %}sem-nome{% endif %}"
+                    onclick="abrirNome(this)" title="Clique para editar nome na etiqueta">
+                {% if p.nome_generico %}✏️ {{ p.nome_generico }}{% else %}+ nome{% endif %}
+              </span>
+              <span class="nome-input-wrap">
+                <input type="text" class="nome-input" placeholder="Nome na etiqueta…"
+                       value="{{ p.nome_generico or '' }}"
+                       onkeydown="teclaNome(event, this)">
+                <button type="button" class="nome-salvar" onclick="salvarNome(this)">✓</button>
+                <button type="button" class="nome-cancelar" onclick="cancelarNome(this)" title="Cancelar">✕</button>
+              </span>
+              <span class="nome-ok">✓ Salvo</span>
+            </td>
             <td class="preco">{% if p.preco_atacado is not none %}R$ {{ '%.2f'|format(p.preco_atacado)|replace('.',',') }}{% else %}—{% endif %}</td>
             <td class="preco">{% if p.preco_varejo is not none %}R$ {{ '%.2f'|format(p.preco_varejo)|replace('.',',') }}{% else %}—{% endif %}</td>
             <td class="preco promo-cell" data-id="{{ p.id }}">
@@ -235,7 +269,7 @@
                    + '<button type="button" class="ps-rem" title="Remover da seleção">✕</button>';
       li.querySelector('.ps-cod').textContent   = tds[1].textContent.trim();
       li.querySelector('.ps-desc').textContent  = tds[2].textContent.trim();
-      li.querySelector('.ps-preco').textContent = tds[4].textContent.trim();
+      li.querySelector('.ps-preco').textContent = tds[5].textContent.trim();
       li.querySelector('.ps-rem').onclick = () => {
         tr.querySelector('.chkProd').checked = false;
         atualizar(false);
@@ -324,6 +358,57 @@
         cell.querySelector('.promo-input-wrap').classList.remove('ativo');
         span.style.display = '';
         const ok = cell.querySelector('.promo-ok');
+        ok.style.display = 'inline';
+        setTimeout(() => ok.style.display = 'none', 1500);
+      })
+      .catch(() => alert('Erro de rede ao salvar'));
+  }
+
+  /* ── Edição inline de nome na etiqueta ── */
+  function abrirNome(span) {
+    const cell = span.closest('.nome-cell');
+    span.style.display = 'none';
+    cell.querySelector('.nome-input-wrap').classList.add('ativo');
+    const input = cell.querySelector('.nome-input');
+    input.focus(); input.select();
+  }
+
+  function cancelarNome(btn) {
+    const cell = btn.closest('.nome-cell');
+    cell.querySelector('.nome-input-wrap').classList.remove('ativo');
+    cell.querySelector('.nome-val').style.display = '';
+  }
+
+  function teclaNome(e, input) {
+    if (e.key === 'Enter')  salvarNome(input.nextElementSibling);
+    if (e.key === 'Escape') cancelarNome(input.parentElement.querySelector('.nome-cancelar'));
+  }
+
+  function salvarNome(btnSalvar) {
+    const cell  = btnSalvar.closest('.nome-cell');
+    const id    = cell.dataset.id;
+    const input = cell.querySelector('.nome-input');
+    const valor = input.value.trim();
+    const fd = new FormData();
+    fd.append('csrf_token', csrfToken);
+    fd.append('id', id);
+    fd.append('nome_generico', valor);
+    fetch('/etiquetas/nome-generico', { method: 'POST', body: fd })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) { alert('Erro ao salvar'); return; }
+        const span = cell.querySelector('.nome-val');
+        if (data.nome_generico) {
+          span.textContent = '✏️ ' + data.nome_generico;
+          span.className = 'nome-val tem-nome';
+        } else {
+          span.textContent = '+ nome';
+          span.className = 'nome-val sem-nome';
+        }
+        span.onclick = function() { abrirNome(this); };
+        cell.querySelector('.nome-input-wrap').classList.remove('ativo');
+        span.style.display = '';
+        const ok = cell.querySelector('.nome-ok');
         ok.style.display = 'inline';
         setTimeout(() => ok.style.display = 'none', 1500);
       })

@@ -187,6 +187,7 @@ def _migrar_banco():
             atualizado_em TEXT DEFAULT (date('now'))
         )""",
         "ALTER TABLE etiquetas_produtos ADD COLUMN preco_promocao REAL",
+        "ALTER TABLE etiquetas_produtos ADD COLUMN nome_generico TEXT",
     ]
     for sql in migrações:
         try:
@@ -5099,6 +5100,18 @@ def etiquetas_index():
     ).fetchall()
     total = len(produtos)
     return render_template("etiquetas/index.html", produtos=produtos, total=total)
+
+
+@app.route("/etiquetas/nome-generico", methods=["POST"])
+def etiquetas_nome_generico():
+    if not tem_permissao("etiquetas"):
+        return {"ok": False, "erro": "Acesso negado"}, 403
+    db = get_db()
+    pid  = request.form.get("id")
+    nome = request.form.get("nome_generico", "").strip() or None
+    db.execute("UPDATE etiquetas_produtos SET nome_generico=? WHERE id=?", (nome, pid))
+    db.commit()
+    return {"ok": True, "nome_generico": nome}
 
 
 @app.route("/etiquetas/preco-promocao", methods=["POST"])

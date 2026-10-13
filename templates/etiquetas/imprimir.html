@@ -312,7 +312,7 @@
     <div class="etiq-gondola etiq" data-layout="gondola" {% if layout == 'ponteira' or layout == 'grande' %}style="display:none"{% endif %}>
       <img class="gon-fundo" src="{{ url_for('static', filename='etiquetas/gondola_fundo.webp') }}" alt="">
       <div class="gon-nome">
-        <div class="prod-nome">{{ p.descricao }}</div>
+        <div class="prod-nome">{{ p.nome_generico or p.descricao }}</div>
         <div class="prod-ref">REF: {{ p.codigo }}</div>
       </div>
       <div class="gon-box gon-box-varejo">
