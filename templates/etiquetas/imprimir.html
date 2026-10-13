@@ -163,6 +163,16 @@
       letter-spacing: .3px;
     }
 
+    /* Decoração botânica */
+    .etiq-gondola .gon-nome { position: relative; overflow: hidden; }
+    .gon-botanica {
+      position: absolute;
+      bottom: 0;
+      pointer-events: none;
+    }
+    .gon-botanica-esq { left: 0; width: 18mm; height: 95%; }
+    .gon-botanica-dir { right: 0; width: 14mm; height: 88%; transform: scaleX(-1); }
+
     /* Strip de casas na base da gôndola */
     .etiq-gondola .gon-strip {
       height: 5mm;
@@ -395,6 +405,20 @@
         <div class="gon-nome">
           <div class="prod-nome">{{ p.descricao }}</div>
           <div class="prod-ref">REF: {{ p.codigo }}</div>
+          <div class="gon-botanica gon-botanica-esq" aria-hidden="true">
+            <svg viewBox="0 0 40 100" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" preserveAspectRatio="xMinYMax meet">
+              <path d="M19,99 C18,82 17,65 18,46 C19,32 22,18 23,6" stroke="rgba(255,225,195,0.65)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+              <path d="M18,88 C7,80 2,66 6,55 C13,61 18,74 18,88Z" fill="rgba(255,225,195,0.40)"/>
+              <path d="M19,84 C30,75 34,61 30,50 C22,57 19,70 19,84Z" fill="rgba(255,225,195,0.35)"/>
+              <path d="M18,68 C7,59 3,44 8,33 C14,40 18,54 18,68Z" fill="rgba(255,225,195,0.38)"/>
+              <path d="M19,64 C30,54 33,39 28,28 C21,36 18,50 19,64Z" fill="rgba(255,225,195,0.33)"/>
+              <path d="M19,47 C9,38 6,23 11,13 C17,21 19,35 19,47Z" fill="rgba(255,225,195,0.36)"/>
+              <path d="M20,43 C31,33 32,18 27,8 C20,17 18,31 20,43Z" fill="rgba(255,225,195,0.30)"/>
+              <circle cx="21" cy="7" r="3.2" fill="rgba(255,225,195,0.48)"/>
+              <circle cx="27" cy="11" r="2.2" fill="rgba(255,225,195,0.40)"/>
+              <circle cx="16" cy="10" r="2.2" fill="rgba(255,225,195,0.40)"/>
+            </svg>
+          </div>
         </div>
         <!-- Varejo -->
         <div class="gon-varejo">
@@ -431,6 +455,20 @@
             <span style="font-size:9pt;color:rgba(249,233,220,.5)">—</span>
           {% endif %}
           <div class="gon-logo">Casa Sanchez</div>
+          <div class="gon-botanica gon-botanica-dir" aria-hidden="true">
+            <svg viewBox="0 0 40 100" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" preserveAspectRatio="xMinYMax meet">
+              <path d="M19,99 C18,82 17,65 18,46 C19,32 22,18 23,6" stroke="rgba(255,225,195,0.50)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+              <path d="M18,88 C7,80 2,66 6,55 C13,61 18,74 18,88Z" fill="rgba(255,225,195,0.30)"/>
+              <path d="M19,84 C30,75 34,61 30,50 C22,57 19,70 19,84Z" fill="rgba(255,225,195,0.26)"/>
+              <path d="M18,68 C7,59 3,44 8,33 C14,40 18,54 18,68Z" fill="rgba(255,225,195,0.28)"/>
+              <path d="M19,64 C30,54 33,39 28,28 C21,36 18,50 19,64Z" fill="rgba(255,225,195,0.24)"/>
+              <path d="M19,47 C9,38 6,23 11,13 C17,21 19,35 19,47Z" fill="rgba(255,225,195,0.26)"/>
+              <path d="M20,43 C31,33 32,18 27,8 C20,17 18,31 20,43Z" fill="rgba(255,225,195,0.22)"/>
+              <circle cx="21" cy="7" r="3.2" fill="rgba(255,225,195,0.36)"/>
+              <circle cx="27" cy="11" r="2.2" fill="rgba(255,225,195,0.30)"/>
+              <circle cx="16" cy="10" r="2.2" fill="rgba(255,225,195,0.30)"/>
+            </svg>
+          </div>
         </div>
       </div>
       <div class="gon-strip casas-strip"></div>
