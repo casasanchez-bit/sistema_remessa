@@ -11,7 +11,32 @@
     header { background: var(--marrom); color: #fff; padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
     header h1 { font-size: 16px; margin: 0; font-weight: 700; }
     header .sub { font-size: 12px; opacity: .7; }
-    main { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
+    main { max-width: 1500px; margin: 24px auto; padding: 0 16px; }
+
+    /* Layout: tabela à esquerda + painel de selecionados à direita */
+    .grade { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+    .painel-sel {
+      position: sticky; top: 12px;
+      background: #fff; border: 1px solid #e7d7c4; border-radius: 10px;
+      display: flex; flex-direction: column; max-height: calc(100vh - 24px); overflow: hidden;
+    }
+    .painel-sel .ps-topo { background: var(--linen); padding: 10px 14px; border-bottom: 2px solid #e7d7c4; font-size: 12px; font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
+    .painel-sel .ps-topo #contadorPainel { color: var(--laranja); font-size: 15px; font-weight: 800; }
+    .painel-sel .ps-lista { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+    .painel-sel .ps-lista li { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-bottom: 1px solid #f1e4d6; font-size: 12px; }
+    .painel-sel .ps-lista li:last-child { border-bottom: none; }
+    .painel-sel .ps-cod { font-weight: 700; color: var(--laranja); min-width: 44px; }
+    .painel-sel .ps-desc { flex: 1; line-height: 1.25; }
+    .painel-sel .ps-preco { color: #888; font-size: 11px; white-space: nowrap; }
+    .painel-sel .ps-rem { background: none; border: none; color: #c9a; cursor: pointer; font-size: 14px; padding: 0 2px; }
+    .painel-sel .ps-rem:hover { color: #c00; }
+    .painel-sel .ps-vazio { padding: 26px 14px; text-align: center; color: #bbb; font-size: 13px; }
+    .painel-sel .ps-rodape { padding: 10px 12px; border-top: 1px solid #e7d7c4; background: #fdf9f5; }
+    .painel-sel .ps-rodape .btn { width: 100%; justify-content: center; }
+    @media (max-width: 900px) {
+      .grade { grid-template-columns: 1fr; }
+      .painel-sel { position: static; max-height: 50vh; order: -1; }
+    }
     .topbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
     .busca-wrap { display: flex; gap: 8px; flex: 1; min-width: 260px; }
     #campoBusca { padding: 8px 10px; border: 1px solid #d9c6b3; border-radius: 6px; font-size: 13px; flex: 1; }
@@ -95,6 +120,7 @@
     <span id="infoVisiveis">{{ total }} produto(s)</span>
   </div>
 
+  <div class="grade">
   <form id="frmImprimir" method="post" action="/etiquetas/imprimir">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="card">
@@ -149,6 +175,16 @@
       {% endif %}
     </div>
   </form>
+
+  <aside class="painel-sel">
+    <div class="ps-topo">✅ Selecionados: <span id="contadorPainel">0</span></div>
+    <ul class="ps-lista" id="listaSel"></ul>
+    <div class="ps-vazio" id="vazioSel">Nenhum produto selecionado ainda.<br>Marque na tabela ao lado.</div>
+    <div class="ps-rodape">
+      <button type="submit" form="frmImprimir" class="btn imp" id="btnImprimir2" disabled>🖨️ Prosseguir para impressão</button>
+    </div>
+  </aside>
+  </div>
 </main>
 <script>
   const btn      = document.getElementById('btnImprimir');
@@ -160,18 +196,54 @@
   const totalGeral = {{ total }};
   const csrfToken  = document.querySelector('[name=csrf_token]').value;
 
+  const btn2      = document.getElementById('btnImprimir2');
+  const cntPainel = document.getElementById('contadorPainel');
+  const listaSel  = document.getElementById('listaSel');
+  const vazioSel  = document.getElementById('vazioSel');
+  let ordemSel = [];   // ids na ordem em que foram marcados (último no topo do painel)
+
   /* ── Selecção ── */
-  function atualizar() {
-    const sel = document.querySelectorAll('.chkProd:checked').length;
+  function atualizar(limparCampo = true) {
+    const marcados = [...document.querySelectorAll('.chkProd:checked')];
+    const sel = marcados.length;
     cnt.textContent = sel;
-    btn.disabled = sel === 0;
+    cntPainel.textContent = sel;
+    btn.disabled = btn2.disabled = sel === 0;
     document.querySelectorAll('#tBody tr').forEach(tr => {
       const chk = tr.querySelector('.chkProd');
       if (chk) tr.classList.toggle('sel', chk.checked);
     });
-    campo.value = '';
-    filtrar();
-    campo.focus();
+    const ids = new Set(marcados.map(c => c.value));
+    ordemSel = ordemSel.filter(id => ids.has(id));
+    marcados.forEach(c => { if (!ordemSel.includes(c.value)) ordemSel.push(c.value); });
+    renderPainel();
+    if (limparCampo) {
+      campo.value = '';
+      filtrar();
+      campo.focus();
+    } else {
+      filtrar();
+    }
+  }
+
+  function renderPainel() {
+    vazioSel.style.display = ordemSel.length ? 'none' : 'block';
+    listaSel.innerHTML = '';
+    [...ordemSel].reverse().forEach(id => {
+      const tr = document.querySelector(`.chkProd[value="${id}"]`).closest('tr');
+      const tds = tr.querySelectorAll('td');
+      const li = document.createElement('li');
+      li.innerHTML = '<span class="ps-cod"></span><span class="ps-desc"></span><span class="ps-preco"></span>'
+                   + '<button type="button" class="ps-rem" title="Remover da seleção">✕</button>';
+      li.querySelector('.ps-cod').textContent   = tds[1].textContent.trim();
+      li.querySelector('.ps-desc').textContent  = tds[2].textContent.trim();
+      li.querySelector('.ps-preco').textContent = tds[4].textContent.trim();
+      li.querySelector('.ps-rem').onclick = () => {
+        tr.querySelector('.chkProd').checked = false;
+        atualizar(false);
+      };
+      listaSel.appendChild(li);
+    });
   }
 
   function filtrar() {
@@ -205,6 +277,7 @@
     document.querySelectorAll('#tBody tr:not(.oculto) .chkProd').forEach(c => c.checked = chkAll.checked);
     atualizar();
   });
+  atualizar(false);   // navegador pode restaurar checkboxes ao voltar da impressão
   campo.focus();
 
   /* ── Edição inline de promoção ── */
