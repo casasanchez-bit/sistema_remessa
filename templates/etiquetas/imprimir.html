@@ -5,6 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Imprimir Etiquetas — Casa Sanchez</title>
   <style>
+    @font-face {
+      font-family: 'Billiona';
+      src: url("{{ url_for('static', filename='etiquetas/Billiona.otf') }}") format('opentype');
+      font-weight: normal; font-style: normal;
+    }
+    @font-face {
+      font-family: 'Bahnschrift';
+      src: url("{{ url_for('static', filename='etiquetas/BAHNSCHRIFT.TTF') }}") format('truetype');
+      font-weight: normal; font-style: normal;
+    }
+
     :root {
       --terracota: #C4574E;
       --laranja:   #AF4005;
@@ -52,14 +63,15 @@
       gap: 1mm;
     }
     .etiq-gondola .prod-nome {
-      font-size: 11pt; font-weight: 900; color: #fff;
+      font-family: 'Bahnschrift', 'Arial Black', Arial, sans-serif;
+      font-size: 11pt; font-weight: 700; color: var(--linen);
       line-height: 1.12; text-transform: uppercase;
       display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
       overflow: hidden;
     }
     .etiq-gondola .prod-ref {
-      font-size: 6.5pt; color: rgba(255,255,255,.8);
-      font-family: Arial, sans-serif; letter-spacing: .8px;
+      font-family: 'Bahnschrift', Arial, sans-serif;
+      font-size: 6.5pt; color: rgba(249,233,220,.75); letter-spacing: .8px;
     }
     /* Caixas creme de preço — posições medidas na arte (2000×400 px) */
     .etiq-gondola .gon-box {
@@ -73,8 +85,8 @@
 
     .gon-preco-wrap { display: flex; align-items: baseline; line-height: 1; }
     .gon-preco-rs   { font-size: 9pt;  font-weight: 700; font-family: Arial, sans-serif; margin-right: 1mm; }
-    .gon-preco-int  { font-size: 27pt; font-weight: 900; line-height: 1; }
-    .gon-preco-dec  { font-size: 13pt; font-weight: 900; line-height: 1; align-self: flex-start; margin-top: 1mm; }
+    .gon-preco-int  { font-family: 'Billiona', 'Arial Black', Arial, sans-serif; font-size: 29pt; font-weight: normal; line-height: 1; }
+    .gon-preco-dec  { font-family: 'Billiona', 'Arial Black', Arial, sans-serif; font-size: 14pt; font-weight: normal; line-height: 1; align-self: flex-start; margin-top: 1mm; }
     .gon-box-varejo  .gon-preco-wrap { color: var(--terracota); }
     .gon-box-atacado .gon-preco-wrap { color: var(--marrom); }
     .gon-vazio { font-size: 12pt; color: #c9b8a8; }
