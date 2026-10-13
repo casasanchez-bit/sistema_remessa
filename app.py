@@ -5133,6 +5133,60 @@ def etiquetas_imprimir():
     return render_template("etiquetas/imprimir.html", produtos=produtos, layout=layout)
 
 
+def _ler_tabela_handsys(arquivo):
+    """Lê o relatório 'Tabela de Preços' exportado do Handsys (.xls ou .xlsx).
+
+    O relatório vem paginado: cabeçalho da loja e a linha CÓDIGO/DESCRIÇÃO/A VISTA
+    se repetem a cada página. Considera produto toda linha cujo código (coluna
+    da palavra CÓDIGO) é só dígitos e cujo preço é numérico.
+    Retorna (nome_da_tabela, [(codigo, descricao, preco), ...]).
+    """
+    import io
+    nome = arquivo.filename.lower()
+    conteudo = arquivo.read()
+    if nome.endswith(".xls"):
+        try:
+            import xlrd
+        except ImportError:
+            raise ValueError("o servidor não tem a biblioteca 'xlrd' para ler .xls (veja instruções de instalação)")
+        sh = xlrd.open_workbook(file_contents=conteudo).sheet_by_index(0)
+        linhas = [[c.value for c in sh.row(r)] for r in range(sh.nrows)]
+    elif nome.endswith(".xlsx"):
+        import openpyxl
+        ws = openpyxl.load_workbook(io.BytesIO(conteudo), data_only=True).active
+        linhas = [list(r) for r in ws.iter_rows(values_only=True)]
+    else:
+        raise ValueError(f"'{arquivo.filename}' não é Excel (.xls ou .xlsx)")
+
+    nome_tabela = ""
+    col_cod = col_desc = col_preco = None
+    produtos = {}
+    for row in linhas:
+        textos = [str(v).strip() if v is not None else "" for v in row]
+        # Nome da tabela: célula seguinte a "Tabela de Preço:"
+        for i, t in enumerate(textos):
+            if t.lower().startswith("tabela de pre") and t.endswith(":"):
+                nome_tabela = next((x for x in textos[i + 1:] if x), nome_tabela)
+        # Linha de cabeçalho das colunas
+        if any("DIGO" in t.upper() for t in textos) and any("DESCRI" in t.upper() for t in textos):
+            col_cod = next(i for i, t in enumerate(textos) if "DIGO" in t.upper())
+            col_desc = next(i for i, t in enumerate(textos) if "DESCRI" in t.upper())
+            col_preco = next((i for i, t in enumerate(textos) if i > col_desc and t), None)
+            continue
+        if col_cod is None or col_preco is None or col_preco >= len(row):
+            continue
+        cod = row[col_cod]
+        if isinstance(cod, float) and cod.is_integer():
+            cod = int(cod)
+        cod = str(cod).strip() if cod is not None else ""
+        preco = row[col_preco]
+        if not cod.isdigit() or isinstance(preco, bool) or not isinstance(preco, (int, float)):
+            continue
+        desc = " ".join(str(row[col_desc] or "").split())
+        produtos[cod] = (cod, desc, round(float(preco), 2))
+    return nome_tabela, list(produtos.values())
+
+
 @app.route("/etiquetas/importar", methods=["GET", "POST"])
 def etiquetas_importar():
     if not tem_permissao("etiquetas") and not tem_permissao("gerenciar_usuarios"):
@@ -5140,85 +5194,57 @@ def etiquetas_importar():
         return redirect(url_for("login"))
     db = get_db()
     if request.method == "POST":
-        arquivo = request.files.get("arquivo")
-        if not arquivo or not arquivo.filename:
-            flash("Selecione um arquivo.", "erro")
+        envios = [
+            ("varejo", "preco_varejo", request.files.get("arquivo_varejo")),
+            ("atacado", "preco_atacado", request.files.get("arquivo_atacado")),
+        ]
+        envios = [e for e in envios if e[2] and e[2].filename]
+        if not envios:
+            flash("Selecione ao menos um arquivo (Varejo e/ou Atacado).", "erro")
             return redirect(url_for("etiquetas_importar"))
-        nome = arquivo.filename.lower()
-        inseridos = atualizados = erros = 0
         hoje = date.today().isoformat()
+        resumo = []
         try:
-            if nome.endswith(".xlsx") or nome.endswith(".xls"):
-                import io
-                import openpyxl
-                wb = openpyxl.load_workbook(io.BytesIO(arquivo.read()))
-                ws = wb.active
-                linhas = list(ws.iter_rows(min_row=2, values_only=True))
-                for row in linhas:
-                    if not row or not row[0]:
-                        continue
-                    codigo    = str(row[0]).strip()
-                    descricao = str(row[1]).strip() if row[1] else ""
-                    preco_at  = float(row[2]) if row[2] not in (None, "") else None
-                    preco_var = float(row[3]) if row[3] not in (None, "") else None
-                    preco_promo = float(row[4]) if len(row) > 4 and row[4] not in (None, "") else None
-                    existe = db.execute("SELECT id FROM etiquetas_produtos WHERE codigo=?", (codigo,)).fetchone()
+            lidos = []
+            for tipo, col, arq in envios:
+                nome_tabela, produtos = _ler_tabela_handsys(arq)
+                outro = "atacado" if tipo == "varejo" else "varejo"
+                if outro in nome_tabela.lower() and tipo not in nome_tabela.lower():
+                    raise ValueError(
+                        f"o arquivo '{arq.filename}' é a tabela '{nome_tabela}', mas foi colocado no campo {tipo.upper()}"
+                    )
+                if not produtos:
+                    raise ValueError(f"nenhum produto encontrado em '{arq.filename}'")
+                lidos.append((tipo, col, produtos))
+            # Só grava depois de ler todos os arquivos sem erro
+            for tipo, col, produtos in lidos:
+                inseridos = atualizados = 0
+                for cod, desc, preco in produtos:
+                    existe = db.execute("SELECT id FROM etiquetas_produtos WHERE codigo=?", (cod,)).fetchone()
                     if existe:
                         db.execute(
-                            "UPDATE etiquetas_produtos SET descricao=?, preco_atacado=?, preco_varejo=?, preco_promocao=?, atualizado_em=? WHERE codigo=?",
-                            (descricao, preco_at, preco_var, preco_promo, hoje, codigo),
+                            f"UPDATE etiquetas_produtos SET {col}=?, descricao=?, atualizado_em=? WHERE codigo=?",
+                            (preco, desc, hoje, cod),
                         )
                         atualizados += 1
                     else:
                         db.execute(
-                            "INSERT INTO etiquetas_produtos (codigo, descricao, preco_atacado, preco_varejo, preco_promocao, atualizado_em) VALUES (?,?,?,?,?,?)",
-                            (codigo, descricao, preco_at, preco_var, preco_promo, hoje),
+                            f"INSERT INTO etiquetas_produtos (codigo, descricao, {col}, atualizado_em) VALUES (?,?,?,?)",
+                            (cod, desc, preco, hoje),
                         )
                         inseridos += 1
-            elif nome.endswith(".pdf"):
-                import re, io
-                import pdfplumber
-                linha_re = re.compile(r'^(\d{4,6})\s+(.+?)\s+([\d]+,\d{2})$')
-                # Para PDF precisamos saber qual tabela (varejo ou atacado)
-                tipo = request.form.get("tipo_pdf", "varejo")
-                conteudo = arquivo.read()
-                with pdfplumber.open(io.BytesIO(conteudo)) as pdf:
-                    for page in pdf.pages:
-                        text = page.extract_text() or ""
-                        for linha in text.split('\n'):
-                            m = linha_re.match(linha.strip())
-                            if not m:
-                                continue
-                            codigo    = m.group(1).strip()
-                            descricao = m.group(2).strip()
-                            preco     = float(m.group(3).replace(',', '.'))
-                            existe = db.execute("SELECT id FROM etiquetas_produtos WHERE codigo=?", (codigo,)).fetchone()
-                            if existe:
-                                col = "preco_varejo" if tipo == "varejo" else "preco_atacado"
-                                db.execute(
-                                    f"UPDATE etiquetas_produtos SET {col}=?, descricao=?, atualizado_em=? WHERE codigo=?",
-                                    (preco, descricao, hoje, codigo),
-                                )
-                                atualizados += 1
-                            else:
-                                pv = preco if tipo == "varejo" else None
-                                pa = preco if tipo == "atacado" else None
-                                db.execute(
-                                    "INSERT INTO etiquetas_produtos (codigo, descricao, preco_atacado, preco_varejo, atualizado_em) VALUES (?,?,?,?,?)",
-                                    (codigo, descricao, pa, pv, hoje),
-                                )
-                                inseridos += 1
-            else:
-                flash("Formato não suportado. Use .xlsx ou .pdf", "erro")
-                return redirect(url_for("etiquetas_importar"))
+                resumo.append(f"{tipo.capitalize()}: {atualizados} atualizados, {inseridos} novos")
             db.commit()
-            flash(f"Importação concluída: {inseridos} inseridos, {atualizados} atualizados.", "sucesso")
+            flash("Importação concluída — " + " | ".join(resumo) + ".", "sucesso")
         except Exception as e:
-            flash(f"Erro na importação: {e}", "erro")
+            db.rollback()
+            flash(f"Erro na importação: {e}. Nada foi alterado.", "erro")
+            return redirect(url_for("etiquetas_importar"))
         return redirect(url_for("etiquetas_index"))
     total = db.execute("SELECT COUNT(*) FROM etiquetas_produtos").fetchone()[0]
     ultima = db.execute("SELECT MAX(atualizado_em) FROM etiquetas_produtos").fetchone()[0]
     return render_template("etiquetas/importar.html", total=total, ultima=ultima)
+
 
 
 if __name__ == "__main__":

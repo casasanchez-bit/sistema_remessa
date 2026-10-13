@@ -31,6 +31,8 @@
     .fmt-card { background: #faf6f2; border: 1px solid #e7d7c4; border-radius: 6px; padding: 10px 12px; font-size: 12px; }
     .fmt-card strong { display: block; margin-bottom: 4px; font-size: 12.5px; }
     .fmt-card .cols { color: #666; line-height: 1.6; }
+    .campos-arq { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 560px) { .campos-arq { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -51,24 +53,26 @@
       {% if ultima %}<div class="stat-row"><span>Última atualização:</span><span class="val">{{ ultima }}</span></div>{% endif %}
     </div>
 
-    <h2>Importar arquivo</h2>
+    <h2>Importar tabelas do Handsys</h2>
     <form method="post" enctype="multipart/form-data">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-      <label>Arquivo (.xlsx ou .pdf)</label>
-      <input type="file" name="arquivo" accept=".xlsx,.xls,.pdf" required>
-
-      <div id="tipo_pdf_wrap" style="display:none">
-        <label>Tipo de tabela PDF</label>
-        <select name="tipo_pdf">
-          <option value="varejo">Tabela Varejo (coluna = Preço Varejo)</option>
-          <option value="atacado">Tabela Atacado Loja (coluna = Preço Atacado)</option>
-        </select>
+      <div class="campos-arq">
+        <div>
+          <label>🏷️ Tabela VAREJO (.xls)</label>
+          <input type="file" name="arquivo_varejo" accept=".xls,.xlsx">
+        </div>
+        <div>
+          <label>📦 Tabela ATACADO (.xls)</label>
+          <input type="file" name="arquivo_atacado" accept=".xls,.xlsx">
+        </div>
       </div>
 
       <p class="hint">
-        A importação atualiza produtos existentes (por código) e insere novos.<br>
-        Produtos removidos da tabela <strong>não são excluídos</strong> do sistema.
+        Pode enviar os dois juntos ou só um. Cada arquivo atualiza <strong>apenas o seu preço</strong>
+        (varejo ou atacado) — o outro preço e as promoções não são alterados.<br>
+        Produtos novos são cadastrados; produtos que saíram da tabela <strong>não são excluídos</strong>.<br>
+        Se algum arquivo der erro, <strong>nada é alterado</strong>.
       </p>
 
       <button type="submit" class="btn">Importar</button>
@@ -76,35 +80,14 @@
   </div>
 
   <div class="card">
-    <h2>Formatos suportados</h2>
-    <div class="formato-info">
-      <div class="fmt-card">
-        <strong>📊 Excel (.xlsx)</strong>
-        <div class="cols">
-          Coluna A: Código<br>
-          Coluna B: Descrição<br>
-          Coluna C: Preço Atacado<br>
-          Coluna D: Preço Varejo<br>
-          Coluna E: Preço Promoção <em>(opcional)</em><br>
-          <em>Linha 1 = cabeçalho (ignorada)</em>
-        </div>
-      </div>
-      <div class="fmt-card">
-        <strong>📄 PDF (Handsys)</strong>
-        <div class="cols">
-          Formato: CÓDIGO DESCRIÇÃO PREÇO<br>
-          Exportado do sistema Handsys<br>
-          Escolha se é tabela Varejo ou Atacado
-        </div>
-      </div>
-    </div>
+    <h2>Como exportar do Handsys</h2>
+    <p class="hint" style="margin:0">
+      Gere o relatório <strong>Tabela de Preços</strong> da tabela desejada
+      (ex.: <em>TABELA VAREJO 2026</em> ou <em>ATACADO LOJA</em>) e salve em Excel.
+      O sistema lê as colunas <strong>CÓDIGO</strong>, <strong>DESCRIÇÃO</strong> e <strong>A VISTA</strong>
+      e confere se cada arquivo foi colocado no campo certo.
+    </p>
   </div>
 </main>
-<script>
-  document.querySelector('[name=arquivo]').addEventListener('change', function() {
-    const wrap = document.getElementById('tipo_pdf_wrap');
-    wrap.style.display = this.value.toLowerCase().endsWith('.pdf') ? '' : 'none';
-  });
-</script>
 </body>
 </html>
