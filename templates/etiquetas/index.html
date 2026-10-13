@@ -11,7 +11,7 @@
     header { background: var(--marrom); color: #fff; padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
     header h1 { font-size: 16px; margin: 0; font-weight: 700; }
     header .sub { font-size: 12px; opacity: .7; }
-    main { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+    main { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
     .topbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
     .busca-wrap { display: flex; gap: 8px; flex: 1; min-width: 260px; }
     #campoBusca { padding: 8px 10px; border: 1px solid #d9c6b3; border-radius: 6px; font-size: 13px; flex: 1; }
@@ -29,7 +29,7 @@
     tr:hover td { background: #fdf6f0; }
     tr.sel td { background: #fff8f0; }
     tr.oculto { display: none; }
-    td.preco { text-align: right; font-variant-numeric: tabular-nums; }
+    td.preco { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     td.cod { font-weight: 700; color: var(--laranja); font-size: 12px; }
     input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--laranja); }
     .sel-bar { background: var(--linen); border: 1px solid #d9c6b3; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 600; flex-wrap: wrap; }
@@ -40,8 +40,26 @@
     .flash.sucesso { background: #e6f4ea; border: 1px solid #a0cba8; color: #1a5c2a; }
     .hdr-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
     .empty-msg { text-align: center; padding: 30px; color: #bbb; font-size: 14px; display: none; }
-    a.link-imp { color: var(--laranja); font-size: 12px; text-decoration: none; font-weight: 600; }
-    @media (max-width: 600px) { .topbar { flex-direction: column; align-items: stretch; } .sel-bar { flex-direction: column; align-items: flex-start; } }
+
+    /* Edição inline de preço promoção */
+    .promo-cell { position: relative; min-width: 110px; }
+    .promo-val {
+      display: inline-flex; align-items: center; gap: 5px;
+      cursor: pointer; border-radius: 4px; padding: 2px 6px;
+      font-size: 12px;
+    }
+    .promo-val.tem-promo { color: #c00; font-weight: 700; background: #fff0f0; }
+    .promo-val.sem-promo { color: #bbb; }
+    .promo-val:hover { background: #ffe8e0; }
+    .promo-input-wrap { display: none; align-items: center; gap: 4px; }
+    .promo-input-wrap.ativo { display: flex; }
+    .promo-input {
+      width: 80px; padding: 3px 6px; border: 1.5px solid var(--laranja);
+      border-radius: 4px; font-size: 12px; font-variant-numeric: tabular-nums;
+    }
+    .promo-salvar { background: var(--laranja); color: #fff; border: none; border-radius: 4px; padding: 3px 7px; font-size: 11px; font-weight: 700; cursor: pointer; }
+    .promo-cancelar { background: none; border: none; color: #aaa; cursor: pointer; font-size: 13px; padding: 0 2px; }
+    .promo-ok { color: #1a7a3c; font-size: 11px; display: none; }
   </style>
 </head>
 <body>
@@ -89,6 +107,7 @@
             <th>Descrição</th>
             <th style="text-align:right">Preço Atacado</th>
             <th style="text-align:right">Preço Varejo</th>
+            <th style="text-align:right" title="Clique no valor para editar">Promoção ✏️</th>
           </tr>
         </thead>
         <tbody id="tBody">
@@ -99,6 +118,25 @@
             <td>{{ p.descricao }}</td>
             <td class="preco">{% if p.preco_atacado is not none %}R$ {{ '%.2f'|format(p.preco_atacado)|replace('.',',') }}{% else %}—{% endif %}</td>
             <td class="preco">{% if p.preco_varejo is not none %}R$ {{ '%.2f'|format(p.preco_varejo)|replace('.',',') }}{% else %}—{% endif %}</td>
+            <td class="preco promo-cell" data-id="{{ p.id }}">
+              <span class="promo-val {% if p.preco_promocao is not none %}tem-promo{% else %}sem-promo{% endif %}"
+                    onclick="abrirPromo(this)"
+                    title="Clique para editar preço de promoção">
+                {% if p.preco_promocao is not none %}
+                  🔴 R$ {{ '%.2f'|format(p.preco_promocao)|replace('.',',') }}
+                {% else %}
+                  + promoção
+                {% endif %}
+              </span>
+              <span class="promo-input-wrap">
+                <input type="text" class="promo-input" placeholder="0,00"
+                       value="{% if p.preco_promocao is not none %}{{ '%.2f'|format(p.preco_promocao)|replace('.',',') }}{% endif %}"
+                       onkeydown="teclaPromo(event, this)">
+                <button type="button" class="promo-salvar" onclick="salvarPromo(this)">✓</button>
+                <button type="button" class="promo-cancelar" onclick="cancelarPromo(this)" title="Cancelar">✕</button>
+              </span>
+              <span class="promo-ok">✓ Salvo</span>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -106,7 +144,7 @@
       <div class="empty-msg" id="emptyMsg">Nenhum produto encontrado para esta busca.</div>
       {% else %}
       <div class="empty-msg" style="display:block">
-        Nenhum produto cadastrado. <a href="/etiquetas/importar" class="link-imp">Importar agora →</a>
+        Nenhum produto cadastrado. <a href="/etiquetas/importar">Importar agora →</a>
       </div>
       {% endif %}
     </div>
@@ -120,7 +158,9 @@
   const info     = document.getElementById('infoVisiveis');
   const emptyMsg = document.getElementById('emptyMsg');
   const totalGeral = {{ total }};
+  const csrfToken  = document.querySelector('[name=csrf_token]').value;
 
+  /* ── Selecção ── */
   function atualizar() {
     const sel = document.querySelectorAll('.chkProd:checked').length;
     cnt.textContent = sel;
@@ -129,7 +169,6 @@
       const chk = tr.querySelector('.chkProd');
       if (chk) tr.classList.toggle('sel', chk.checked);
     });
-    // Limpa busca e devolve foco para próxima pesquisa
     campo.value = '';
     filtrar();
     campo.focus();
@@ -139,48 +178,86 @@
     const q = campo.value.trim().toLowerCase();
     let visiveis = 0;
     document.querySelectorAll('#tBody tr').forEach(tr => {
-      const texto = tr.dataset.busca || '';
-      const mostrar = !q || texto.includes(q);
+      const mostrar = !q || (tr.dataset.busca || '').includes(q);
       tr.classList.toggle('oculto', !mostrar);
       if (mostrar) visiveis++;
     });
     if (emptyMsg) emptyMsg.style.display = (visiveis === 0 && q) ? 'block' : 'none';
-    info.textContent = q
-      ? `${visiveis} visível(is) de ${totalGeral}`
-      : `${totalGeral} produto(s)`;
-    // sincronizar chkAll com estado dos visíveis
+    info.textContent = q ? `${visiveis} visível(is) de ${totalGeral}` : `${totalGeral} produto(s)`;
     const visivelChecks = document.querySelectorAll('#tBody tr:not(.oculto) .chkProd');
-    const todosMarcados = visivelChecks.length > 0 && [...visivelChecks].every(c => c.checked);
-    if (chkAll) chkAll.checked = todosMarcados;
+    if (chkAll) chkAll.checked = visivelChecks.length > 0 && [...visivelChecks].every(c => c.checked);
   }
 
-  function limparBusca() {
-    campo.value = '';
-    filtrar();
-    campo.focus();
-  }
-
+  function limparBusca() { campo.value = ''; filtrar(); campo.focus(); }
   function selecionarVisiveis() {
     document.querySelectorAll('#tBody tr:not(.oculto) .chkProd').forEach(c => c.checked = true);
     if (chkAll) chkAll.checked = true;
     atualizar();
   }
-
   function limparSel() {
     document.querySelectorAll('.chkProd').forEach(c => c.checked = false);
     if (chkAll) chkAll.checked = false;
     atualizar();
   }
-
   campo.addEventListener('input', filtrar);
   campo.addEventListener('keydown', e => { if (e.key === 'Escape') limparBusca(); });
-
   if (chkAll) chkAll.addEventListener('change', () => {
     document.querySelectorAll('#tBody tr:not(.oculto) .chkProd').forEach(c => c.checked = chkAll.checked);
     atualizar();
   });
-
   campo.focus();
+
+  /* ── Edição inline de promoção ── */
+  function abrirPromo(span) {
+    const cell = span.closest('.promo-cell');
+    span.style.display = 'none';
+    cell.querySelector('.promo-input-wrap').classList.add('ativo');
+    cell.querySelector('.promo-input').focus();
+    cell.querySelector('.promo-input').select();
+  }
+
+  function cancelarPromo(btn) {
+    const cell = btn.closest('.promo-cell');
+    cell.querySelector('.promo-input-wrap').classList.remove('ativo');
+    cell.querySelector('.promo-val').style.display = '';
+  }
+
+  function teclaPromo(e, input) {
+    if (e.key === 'Enter') salvarPromo(input.nextElementSibling);
+    if (e.key === 'Escape') cancelarPromo(input.parentElement.querySelector('.promo-cancelar'));
+  }
+
+  function salvarPromo(btnSalvar) {
+    const cell  = btnSalvar.closest('.promo-cell');
+    const id    = cell.dataset.id;
+    const input = cell.querySelector('.promo-input');
+    const valor = input.value.trim().replace(',', '.');
+    const fd = new FormData();
+    fd.append('csrf_token', csrfToken);
+    fd.append('id', id);
+    fd.append('preco_promocao', valor);
+    fetch('/etiquetas/preco-promocao', { method: 'POST', body: fd })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) { alert('Erro ao salvar'); return; }
+        const span = cell.querySelector('.promo-val');
+        if (data.preco_promocao !== null && data.preco_promocao !== undefined) {
+          const fmt = 'R$ ' + data.preco_promocao.toFixed(2).replace('.', ',');
+          span.textContent = '🔴 ' + fmt;
+          span.className = 'promo-val tem-promo';
+        } else {
+          span.textContent = '+ promoção';
+          span.className = 'promo-val sem-promo';
+        }
+        span.onclick = function() { abrirPromo(this); };
+        cell.querySelector('.promo-input-wrap').classList.remove('ativo');
+        span.style.display = '';
+        const ok = cell.querySelector('.promo-ok');
+        ok.style.display = 'inline';
+        setTimeout(() => ok.style.display = 'none', 1500);
+      })
+      .catch(() => alert('Erro de rede ao salvar'));
+  }
 </script>
 </body>
 </html>

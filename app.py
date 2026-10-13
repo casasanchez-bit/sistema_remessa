@@ -186,6 +186,7 @@ def _migrar_banco():
             preco_varejo REAL,
             atualizado_em TEXT DEFAULT (date('now'))
         )""",
+        "ALTER TABLE etiquetas_produtos ADD COLUMN preco_promocao REAL",
     ]
     for sql in migrações:
         try:
@@ -5100,6 +5101,19 @@ def etiquetas_index():
     return render_template("etiquetas/index.html", produtos=produtos, total=total)
 
 
+@app.route("/etiquetas/preco-promocao", methods=["POST"])
+def etiquetas_preco_promocao():
+    if not tem_permissao("etiquetas"):
+        return {"ok": False, "erro": "Acesso negado"}, 403
+    db = get_db()
+    pid   = request.form.get("id")
+    valor = request.form.get("preco_promocao", "").strip().replace(",", ".")
+    preco = float(valor) if valor else None
+    db.execute("UPDATE etiquetas_produtos SET preco_promocao=? WHERE id=?", (preco, pid))
+    db.commit()
+    return {"ok": True, "preco_promocao": preco}
+
+
 @app.route("/etiquetas/imprimir", methods=["POST"])
 def etiquetas_imprimir():
     if not tem_permissao("etiquetas"):
@@ -5147,17 +5161,18 @@ def etiquetas_importar():
                     descricao = str(row[1]).strip() if row[1] else ""
                     preco_at  = float(row[2]) if row[2] not in (None, "") else None
                     preco_var = float(row[3]) if row[3] not in (None, "") else None
+                    preco_promo = float(row[4]) if len(row) > 4 and row[4] not in (None, "") else None
                     existe = db.execute("SELECT id FROM etiquetas_produtos WHERE codigo=?", (codigo,)).fetchone()
                     if existe:
                         db.execute(
-                            "UPDATE etiquetas_produtos SET descricao=?, preco_atacado=?, preco_varejo=?, atualizado_em=? WHERE codigo=?",
-                            (descricao, preco_at, preco_var, hoje, codigo),
+                            "UPDATE etiquetas_produtos SET descricao=?, preco_atacado=?, preco_varejo=?, preco_promocao=?, atualizado_em=? WHERE codigo=?",
+                            (descricao, preco_at, preco_var, preco_promo, hoje, codigo),
                         )
                         atualizados += 1
                     else:
                         db.execute(
-                            "INSERT INTO etiquetas_produtos (codigo, descricao, preco_atacado, preco_varejo, atualizado_em) VALUES (?,?,?,?,?)",
-                            (codigo, descricao, preco_at, preco_var, hoje),
+                            "INSERT INTO etiquetas_produtos (codigo, descricao, preco_atacado, preco_varejo, preco_promocao, atualizado_em) VALUES (?,?,?,?,?,?)",
+                            (codigo, descricao, preco_at, preco_var, preco_promo, hoje),
                         )
                         inseridos += 1
             elif nome.endswith(".pdf"):

@@ -386,8 +386,9 @@
 
   {# ────────── GÔNDOLA ────────── #}
   {% for p in produtos %}
-    {% set pv = '%.2f'|format(p.preco_varejo)  if p.preco_varejo  is not none else None %}
-    {% set pa = '%.2f'|format(p.preco_atacado) if p.preco_atacado is not none else None %}
+    {% set pv = '%.2f'|format(p.preco_varejo)    if p.preco_varejo    is not none else None %}
+    {% set pa = '%.2f'|format(p.preco_atacado)   if p.preco_atacado   is not none else None %}
+    {% set pp = '%.2f'|format(p.preco_promocao)  if p.preco_promocao  is not none else None %}
     <div class="etiq-gondola etiq" data-layout="gondola" {% if layout == 'ponteira' or layout == 'grande' %}style="display:none"{% endif %}>
       <div class="gon-body">
         <!-- Nome -->
@@ -407,6 +408,11 @@
             <div class="gon-preco-cada">CADA</div>
           {% else %}
             <span style="font-size:9pt;color:#aaa">—</span>
+          {% endif %}
+          {% if pp %}
+            <div style="margin-top:1mm;background:#c00;color:#fff;border-radius:3px;padding:1mm 2mm;font-size:6pt;font-weight:900;letter-spacing:.5px;font-family:Arial,sans-serif;line-height:1.2;text-align:center">
+              PROMO R${{ pp.replace('.',',') }}
+            </div>
           {% endif %}
         </div>
         <!-- Separador -->
@@ -433,8 +439,9 @@
 
   {# ────────── PONTEIRA ────────── #}
   {% for p in produtos %}
-    {% set pv = '%.2f'|format(p.preco_varejo)  if p.preco_varejo  is not none else None %}
-    {% set pa = '%.2f'|format(p.preco_atacado) if p.preco_atacado is not none else None %}
+    {% set pv = '%.2f'|format(p.preco_varejo)   if p.preco_varejo   is not none else None %}
+    {% set pa = '%.2f'|format(p.preco_atacado)  if p.preco_atacado  is not none else None %}
+    {% set pp = '%.2f'|format(p.preco_promocao) if p.preco_promocao is not none else None %}
     <div class="etiq-ponteira etiq" data-layout="ponteira" {% if layout != 'ponteira' %}style="display:none"{% endif %}>
       <!-- Topo: nome -->
       <div class="pont-topo">
@@ -454,6 +461,11 @@
             <div class="pont-cada">CADA</div>
           {% else %}
             <span style="font-size:8pt;color:rgba(255,255,255,.5)">—</span>
+          {% endif %}
+          {% if pp %}
+            <div style="margin-top:1mm;background:#c00;color:#fff;border-radius:3px;padding:0.8mm 2mm;font-size:5.5pt;font-weight:900;letter-spacing:.5px;font-family:Arial,sans-serif;line-height:1.2;text-align:center">
+              PROMO R${{ pp.replace('.',',') }}
+            </div>
           {% endif %}
         </div>
         <!-- Atacado -->
@@ -476,6 +488,7 @@
 
   {# ────────── GRANDE (preservado) ────────── #}
   {% for p in produtos %}
+    {% set pp = '%.2f'|format(p.preco_promocao) if p.preco_promocao is not none else None %}
     <div class="etiq-grande etiq" data-layout="grande" {% if layout != 'grande' %}style="display:none"{% endif %}>
       <div class="g-cabec">
         <span class="g-cod">Cód. {{ p.codigo }}</span>
@@ -493,6 +506,12 @@
           <div class="g-pv-lbl">Preço à Vista</div>
           <div class="g-pv">{% if p.preco_varejo is not none %}R$ {{ '%.2f'|format(p.preco_varejo)|replace('.',',') }}{% else %}—{% endif %}</div>
         </div>
+        {% if pp %}
+        <div>
+          <div class="g-at-lbl" style="color:#c00">Promoção</div>
+          <div class="g-at" style="color:#c00;font-weight:900">R$ {{ pp.replace('.',',') }}</div>
+        </div>
+        {% endif %}
       </div>
     </div>
   {% endfor %}
