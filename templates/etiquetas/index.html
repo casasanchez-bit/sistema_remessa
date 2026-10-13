@@ -116,7 +116,6 @@
     <span><span id="contador">0</span> produto(s) selecionado(s)</span>
     <button type="button" class="btn sec" onclick="selecionarVisiveis()">Selecionar visíveis</button>
     <button type="button" class="btn sec" onclick="limparSel()">Limpar seleção</button>
-    <button type="submit" form="frmImprimir" class="btn imp" id="btnImprimir" disabled>🖨️ Prosseguir para impressão</button>
     <span id="infoVisiveis">{{ total }} produto(s)</span>
   </div>
 
@@ -181,13 +180,12 @@
     <ul class="ps-lista" id="listaSel"></ul>
     <div class="ps-vazio" id="vazioSel">Nenhum produto selecionado ainda.<br>Marque na tabela ao lado.</div>
     <div class="ps-rodape">
-      <button type="submit" form="frmImprimir" class="btn imp" id="btnImprimir2" disabled>🖨️ Prosseguir para impressão</button>
+      <button type="submit" form="frmImprimir" class="btn imp" id="btnImprimir" disabled>🖨️ Prosseguir para impressão</button>
     </div>
   </aside>
   </div>
 </main>
 <script>
-  const btn      = document.getElementById('btnImprimir');
   const cnt      = document.getElementById('contador');
   const chkAll   = document.getElementById('chkAll');
   const campo    = document.getElementById('campoBusca');
@@ -196,7 +194,7 @@
   const totalGeral = {{ total }};
   const csrfToken  = document.querySelector('[name=csrf_token]').value;
 
-  const btn2      = document.getElementById('btnImprimir2');
+  const btn       = document.getElementById('btnImprimir');
   const cntPainel = document.getElementById('contadorPainel');
   const listaSel  = document.getElementById('listaSel');
   const vazioSel  = document.getElementById('vazioSel');
@@ -208,7 +206,7 @@
     const sel = marcados.length;
     cnt.textContent = sel;
     cntPainel.textContent = sel;
-    btn.disabled = btn2.disabled = sel === 0;
+    btn.disabled = sel === 0;
     document.querySelectorAll('#tBody tr').forEach(tr => {
       const chk = tr.querySelector('.chkProd');
       if (chk) tr.classList.toggle('sel', chk.checked);
