@@ -125,6 +125,10 @@
     <div class="ajuste-resultado">
       Fechamento Final: <b class="fechamento-final">R$ {{ total_geral_cards|brl }}</b>
     </div>
+    <div class="obs-box">
+      <label class="ajuste-label" style="margin-bottom:6px;display:block;">Observações do Fechamento</label>
+      <textarea class="obs-textarea" placeholder="Adicione informações relevantes sobre este fechamento…" rows="3"></textarea>
+    </div>
   </div>
   {% elif terceirizado_id and buscou and not cards_retorno %}
   <p class="small">Nenhum retorno encontrado neste período para o terceirizado selecionado.</p>
@@ -181,6 +185,10 @@
     <div class="ajuste-resultado">
       Fechamento Final: <b class="fechamento-final">R$ {{ total_geral|brl }}</b>
     </div>
+    <div class="obs-box">
+      <label class="ajuste-label" style="margin-bottom:6px;display:block;">Observações do Fechamento</label>
+      <textarea class="obs-textarea" placeholder="Adicione informações relevantes sobre este fechamento…" rows="3"></textarea>
+    </div>
   </div>
   {% endif %}
   {% endif %}
@@ -215,6 +223,13 @@
     font-size: 15px; color: #5C442C; padding: 10px 14px;
     background: #f9e9dc; border-radius: 8px; display: inline-block;
   }
+  .obs-box { margin-top: 16px; }
+  .obs-textarea {
+    width: 100%; padding: 9px 12px; border: 1.5px solid #d9c6b3; border-radius: 6px;
+    font-family: Segoe UI, Arial, sans-serif; font-size: 13px; color: #5C442C;
+    background: #faf6f2; resize: vertical; outline: none; line-height: 1.5;
+  }
+  .obs-textarea:focus { border-color: #AF4005; background: #fff; }
 </style>
 <script>
   const params = new URLSearchParams({ data_inicio: "{{ data_inicio }}", data_fim: "{{ data_fim }}", terceirizado_id: "{{ terceirizado_id }}" });
