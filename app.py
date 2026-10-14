@@ -192,6 +192,16 @@ def _migrar_banco():
             codigo TEXT PRIMARY KEY,
             bloqueado_em TEXT DEFAULT (date('now'))
         )""",
+        """CREATE TABLE IF NOT EXISTS fechamento_ajustes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            terceirizado_id TEXT NOT NULL,
+            data_inicio TEXT NOT NULL,
+            data_fim TEXT NOT NULL,
+            credito REAL NOT NULL DEFAULT 0,
+            debito REAL NOT NULL DEFAULT 0,
+            observacoes TEXT NOT NULL DEFAULT '',
+            UNIQUE(terceirizado_id, data_inicio, data_fim)
+        )""",
     ]
     for sql in migrações:
         try:
@@ -3028,6 +3038,15 @@ def fechamento():
                 lotes_dict[pid]["total"] += l["total"]
         lotes_pagamento = sorted(lotes_dict.values(), key=lambda x: x["data_pagamento"])
 
+    ajuste = {"credito": 0, "debito": 0, "observacoes": ""}
+    if buscou and terceirizado_id:
+        aj = db.execute(
+            "SELECT credito, debito, observacoes FROM fechamento_ajustes WHERE terceirizado_id=? AND data_inicio=? AND data_fim=?",
+            (terceirizado_id, data_inicio, data_fim)
+        ).fetchone()
+        if aj:
+            ajuste = {"credito": aj["credito"], "debito": aj["debito"], "observacoes": aj["observacoes"]}
+
     return render_template(
         "fechamento.html",
         data_inicio=data_inicio,
@@ -3043,7 +3062,31 @@ def fechamento():
         buscou=buscou,
         cards_retorno=cards_retorno,
         total_geral_cards=total_geral_cards,
+        ajuste=ajuste,
     )
+
+
+@app.route("/fechamento/salvar-ajuste", methods=["POST"])
+def salvar_ajuste_fechamento():
+    db = get_db()
+    data = request.get_json()
+    terceirizado_id = str(data.get("terceirizado_id", "")).strip()
+    data_inicio = str(data.get("data_inicio", "")).strip()
+    data_fim = str(data.get("data_fim", "")).strip()
+    credito = float(data.get("credito") or 0)
+    debito = float(data.get("debito") or 0)
+    observacoes = str(data.get("observacoes") or "").strip()
+    if not (terceirizado_id and data_inicio and data_fim):
+        return {"ok": False, "erro": "Parâmetros inválidos"}, 400
+    db.execute(
+        """INSERT INTO fechamento_ajustes (terceirizado_id, data_inicio, data_fim, credito, debito, observacoes)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT(terceirizado_id, data_inicio, data_fim)
+           DO UPDATE SET credito=excluded.credito, debito=excluded.debito, observacoes=excluded.observacoes""",
+        (terceirizado_id, data_inicio, data_fim, credito, debito, observacoes)
+    )
+    db.commit()
+    return {"ok": True}
 
 
 @app.route("/fechamento/pagar", methods=["POST"])
@@ -3144,6 +3187,15 @@ def imprimir_fechamento():
         lotes_pagamento = sorted(lotes_dict.values(), key=lambda x: x["data_pagamento"])
         cards_retorno, total_geral_cards = calcular_fechamento_por_retorno(db, data_inicio, data_fim, terceirizado_id)
 
+    ajuste = {"credito": 0, "debito": 0, "observacoes": ""}
+    if terceirizado_id:
+        aj = db.execute(
+            "SELECT credito, debito, observacoes FROM fechamento_ajustes WHERE terceirizado_id=? AND data_inicio=? AND data_fim=?",
+            (terceirizado_id, data_inicio, data_fim)
+        ).fetchone()
+        if aj:
+            ajuste = {"credito": aj["credito"], "debito": aj["debito"], "observacoes": aj["observacoes"]}
+
     return render_template(
         "fechamento_imprimir.html",
         data_inicio=data_inicio,
@@ -3154,6 +3206,7 @@ def imprimir_fechamento():
         lotes_pagamento=lotes_pagamento,
         cards_retorno=cards_retorno,
         total_geral_cards=total_geral_cards,
+        ajuste=ajuste,
     )
 
 

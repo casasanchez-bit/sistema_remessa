@@ -111,14 +111,14 @@
         <label class="ajuste-label">Crédito (+)</label>
         <div class="ajuste-input-wrap verde">
           <span>R$</span>
-          <input type="number" class="ajuste-input ajuste-credito" min="0" step="0.01" placeholder="0,00">
+          <input type="number" class="ajuste-input ajuste-credito" min="0" step="0.01" placeholder="0,00" value="{{ ajuste.credito if ajuste.credito else '' }}">
         </div>
       </div>
       <div class="ajuste-campo">
         <label class="ajuste-label">Débito (−)</label>
         <div class="ajuste-input-wrap vermelho">
           <span>R$</span>
-          <input type="number" class="ajuste-input ajuste-debito" min="0" step="0.01" placeholder="0,00">
+          <input type="number" class="ajuste-input ajuste-debito" min="0" step="0.01" placeholder="0,00" value="{{ ajuste.debito if ajuste.debito else '' }}">
         </div>
       </div>
     </div>
@@ -127,8 +127,9 @@
     </div>
     <div class="obs-box">
       <label class="ajuste-label" style="margin-bottom:6px;display:block;">Observações do Fechamento</label>
-      <textarea class="obs-textarea" placeholder="Adicione informações relevantes sobre este fechamento…" rows="3"></textarea>
+      <textarea class="obs-textarea" placeholder="Adicione informações relevantes sobre este fechamento…" rows="3">{{ ajuste.observacoes }}</textarea>
     </div>
+    <div class="ajuste-status" style="font-size:11px;color:#999;margin-top:6px;height:14px;"></div>
   </div>
   {% elif terceirizado_id and buscou and not cards_retorno %}
   <p class="small">Nenhum retorno encontrado neste período para o terceirizado selecionado.</p>
@@ -171,14 +172,14 @@
         <label class="ajuste-label">Crédito (+)</label>
         <div class="ajuste-input-wrap verde">
           <span>R$</span>
-          <input type="number" class="ajuste-input ajuste-credito" min="0" step="0.01" placeholder="0,00">
+          <input type="number" class="ajuste-input ajuste-credito" min="0" step="0.01" placeholder="0,00" value="{{ ajuste.credito if ajuste.credito else '' }}">
         </div>
       </div>
       <div class="ajuste-campo">
         <label class="ajuste-label">Débito (−)</label>
         <div class="ajuste-input-wrap vermelho">
           <span>R$</span>
-          <input type="number" class="ajuste-input ajuste-debito" min="0" step="0.01" placeholder="0,00">
+          <input type="number" class="ajuste-input ajuste-debito" min="0" step="0.01" placeholder="0,00" value="{{ ajuste.debito if ajuste.debito else '' }}">
         </div>
       </div>
     </div>
@@ -187,8 +188,9 @@
     </div>
     <div class="obs-box">
       <label class="ajuste-label" style="margin-bottom:6px;display:block;">Observações do Fechamento</label>
-      <textarea class="obs-textarea" placeholder="Adicione informações relevantes sobre este fechamento…" rows="3"></textarea>
+      <textarea class="obs-textarea" placeholder="Adicione informações relevantes sobre este fechamento…" rows="3">{{ ajuste.observacoes }}</textarea>
     </div>
+    <div class="ajuste-status" style="font-size:11px;color:#999;margin-top:6px;height:14px;"></div>
   </div>
   {% endif %}
   {% endif %}
@@ -241,18 +243,57 @@
   function fmtBRL(v) {
     return 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   }
+
+  const _ajusteParams = {
+    terceirizado_id: "{{ terceirizado_id }}",
+    data_inicio: "{{ data_inicio }}",
+    data_fim: "{{ data_fim }}"
+  };
+
   document.querySelectorAll('.ajuste-box').forEach(box => {
     const total = parseFloat(box.dataset.total) || 0;
     const resultado = box.querySelector('.fechamento-final');
     const credito = box.querySelector('.ajuste-credito');
     const debito  = box.querySelector('.ajuste-debito');
+    const obs     = box.querySelector('.obs-textarea');
+    const status  = box.querySelector('.ajuste-status');
+
     function recalc() {
       const c = parseFloat(credito.value) || 0;
       const d = parseFloat(debito.value)  || 0;
       resultado.textContent = fmtBRL(total + c - d);
     }
-    credito.addEventListener('input', recalc);
-    debito.addEventListener('input', recalc);
+    recalc();
+
+    let _timer = null;
+    function salvarAjuste() {
+      if (!_ajusteParams.terceirizado_id) return;
+      clearTimeout(_timer);
+      _timer = setTimeout(() => {
+        if (status) status.textContent = 'Salvando…';
+        fetch('/fechamento/salvar-ajuste', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            terceirizado_id: _ajusteParams.terceirizado_id,
+            data_inicio: _ajusteParams.data_inicio,
+            data_fim: _ajusteParams.data_fim,
+            credito: parseFloat(credito.value) || 0,
+            debito: parseFloat(debito.value) || 0,
+            observacoes: obs ? obs.value : ''
+          })
+        }).then(r => r.json()).then(d => {
+          if (status) status.textContent = d.ok ? 'Salvo ✓' : 'Erro ao salvar';
+          setTimeout(() => { if (status) status.textContent = ''; }, 2500);
+        }).catch(() => {
+          if (status) status.textContent = 'Erro ao salvar';
+        });
+      }, 800);
+    }
+
+    credito.addEventListener('input', () => { recalc(); salvarAjuste(); });
+    debito.addEventListener('input',  () => { recalc(); salvarAjuste(); });
+    if (obs) obs.addEventListener('input', salvarAjuste);
   });
 </script>
 {% endblock %}

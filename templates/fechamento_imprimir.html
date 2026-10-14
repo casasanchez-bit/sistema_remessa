@@ -29,6 +29,11 @@
   .status-pendente { background: #ffe0b2; color: #e65100; }
   .card-ret-footer { text-align: right; padding: 5px 10px; border-top: 1px solid #e0d0c0; font-size: 12px; font-weight: 700; color: #5C442C; }
   .totais-finais { text-align: right; margin-top: 10px; border-top: 2px solid #5C442C; padding-top: 8px; font-size: 12px; }
+  .ajuste-print { margin-top: 10px; border-top: 2px dashed #ccc; padding-top: 8px; font-size: 11px; }
+  .ajuste-print-titulo { font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #5C442C; margin-bottom: 6px; }
+  .ajuste-print-linha { display: flex; justify-content: space-between; margin-bottom: 2px; }
+  .ajuste-print-final { font-size: 14px; font-weight: 700; color: #5C442C; border-top: 1px solid #ccc; padding-top: 6px; margin-top: 6px; display: flex; justify-content: space-between; }
+  .obs-print { margin-top: 8px; font-size: 10px; color: #444; border: 1px solid #ddd; border-radius: 3px; padding: 5px 8px; background: #fafafa; }
 
   @media print {
     body { background: #fff; }
@@ -94,6 +99,24 @@
       <div>Total pendente: R$ {{ (cards_retorno|rejectattr('pago')|map(attribute='total')|sum)|brl }}</div>
       <div style="font-size:14px;margin-top:4px;"><b>Total geral a pagar: R$ {{ total_geral_cards|brl }}</b></div>
     </div>
+    {% if ajuste.credito or ajuste.debito or ajuste.observacoes %}
+    <div class="ajuste-print">
+      <div class="ajuste-print-titulo">Ajuste Manual</div>
+      {% if ajuste.credito %}
+      <div class="ajuste-print-linha"><span>Crédito (+)</span><span>R$ {{ ajuste.credito|brl }}</span></div>
+      {% endif %}
+      {% if ajuste.debito %}
+      <div class="ajuste-print-linha"><span>Débito (−)</span><span style="color:#7a2020;">− R$ {{ ajuste.debito|brl }}</span></div>
+      {% endif %}
+      <div class="ajuste-print-final">
+        <span>Fechamento Final</span>
+        <span>R$ {{ (total_geral_cards + ajuste.credito - ajuste.debito)|brl }}</span>
+      </div>
+      {% if ajuste.observacoes %}
+      <div class="obs-print"><b>Observações:</b> {{ ajuste.observacoes }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
     {% else %}
     <!-- Vista tabela flat -->
     <table>
@@ -121,6 +144,24 @@
         <tr><td colspan="8" style="text-align:right;">Total geral a pagar:</td><td>R$ {{ total_geral|brl }}</td></tr>
       </tfoot>
     </table>
+    {% if ajuste.credito or ajuste.debito or ajuste.observacoes %}
+    <div class="ajuste-print">
+      <div class="ajuste-print-titulo">Ajuste Manual</div>
+      {% if ajuste.credito %}
+      <div class="ajuste-print-linha"><span>Crédito (+)</span><span>R$ {{ ajuste.credito|brl }}</span></div>
+      {% endif %}
+      {% if ajuste.debito %}
+      <div class="ajuste-print-linha"><span>Débito (−)</span><span style="color:#7a2020;">− R$ {{ ajuste.debito|brl }}</span></div>
+      {% endif %}
+      <div class="ajuste-print-final">
+        <span>Fechamento Final</span>
+        <span>R$ {{ (total_geral + ajuste.credito - ajuste.debito)|brl }}</span>
+      </div>
+      {% if ajuste.observacoes %}
+      <div class="obs-print"><b>Observações:</b> {{ ajuste.observacoes }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
     {% endif %}
     <div class="rodape">Casa Sanchez · Controle de Remessa e Retorno — Emitido em <span class="data-emissao"></span></div>
   </div>
