@@ -273,7 +273,7 @@
         if (status) status.textContent = 'Salvando…';
         fetch('/fechamento/salvar-ajuste', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
           body: JSON.stringify({
             terceirizado_id: _ajusteParams.terceirizado_id,
             data_inicio: _ajusteParams.data_inicio,

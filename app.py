@@ -3078,13 +3078,20 @@ def salvar_ajuste_fechamento():
     observacoes = str(data.get("observacoes") or "").strip()
     if not (terceirizado_id and data_inicio and data_fim):
         return {"ok": False, "erro": "Parâmetros inválidos"}, 400
-    db.execute(
-        """INSERT INTO fechamento_ajustes (terceirizado_id, data_inicio, data_fim, credito, debito, observacoes)
-           VALUES (?, ?, ?, ?, ?, ?)
-           ON CONFLICT(terceirizado_id, data_inicio, data_fim)
-           DO UPDATE SET credito=excluded.credito, debito=excluded.debito, observacoes=excluded.observacoes""",
-        (terceirizado_id, data_inicio, data_fim, credito, debito, observacoes)
-    )
+    existing = db.execute(
+        "SELECT id FROM fechamento_ajustes WHERE terceirizado_id=? AND data_inicio=? AND data_fim=?",
+        (terceirizado_id, data_inicio, data_fim)
+    ).fetchone()
+    if existing:
+        db.execute(
+            "UPDATE fechamento_ajustes SET credito=?, debito=?, observacoes=? WHERE id=?",
+            (credito, debito, observacoes, existing["id"])
+        )
+    else:
+        db.execute(
+            "INSERT INTO fechamento_ajustes (terceirizado_id, data_inicio, data_fim, credito, debito, observacoes) VALUES (?, ?, ?, ?, ?, ?)",
+            (terceirizado_id, data_inicio, data_fim, credito, debito, observacoes)
+        )
     db.commit()
     return {"ok": True}
 
