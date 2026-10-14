@@ -153,6 +153,7 @@
             <th style="text-align:right">Preço Atacado</th>
             <th style="text-align:right">Preço Varejo</th>
             <th style="text-align:right" title="Clique no valor para editar">Promoção ✏️</th>
+            <th style="text-align:center; white-space:nowrap">Atualizado</th>
           </tr>
         </thead>
         <tbody id="tBody">
@@ -195,6 +196,11 @@
                 <button type="button" class="promo-cancelar" onclick="cancelarPromo(this)" title="Cancelar">✕</button>
               </span>
               <span class="promo-ok">✓ Salvo</span>
+            </td>
+            <td style="text-align:center; font-size:11px; color:#999; white-space:nowrap">
+              {% if p.atualizado_em %}
+                {{ p.atualizado_em[8:10] }}/{{ p.atualizado_em[5:7] }}/{{ p.atualizado_em[0:4] }}
+              {% else %}—{% endif %}
             </td>
           </tr>
           {% endfor %}
