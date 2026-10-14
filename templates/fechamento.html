@@ -104,6 +104,28 @@
     <div>Total pendente: R$ {{ total_pendente|brl }}</div>
     <div style="font-size:16px;margin-top:4px;"><b>Total geral: R$ {{ total_geral_cards|brl }}</b></div>
   </div>
+  <div class="ajuste-box" data-total="{{ total_geral_cards }}">
+    <div class="ajuste-titulo">Ajuste Manual</div>
+    <div class="ajuste-campos">
+      <div class="ajuste-campo">
+        <label class="ajuste-label">Crédito (+)</label>
+        <div class="ajuste-input-wrap verde">
+          <span>R$</span>
+          <input type="number" class="ajuste-input ajuste-credito" min="0" step="0.01" placeholder="0,00">
+        </div>
+      </div>
+      <div class="ajuste-campo">
+        <label class="ajuste-label">Débito (−)</label>
+        <div class="ajuste-input-wrap vermelho">
+          <span>R$</span>
+          <input type="number" class="ajuste-input ajuste-debito" min="0" step="0.01" placeholder="0,00">
+        </div>
+      </div>
+    </div>
+    <div class="ajuste-resultado">
+      Fechamento Final: <b class="fechamento-final">R$ {{ total_geral_cards|brl }}</b>
+    </div>
+  </div>
   {% elif terceirizado_id and buscou and not cards_retorno %}
   <p class="small">Nenhum retorno encontrado neste período para o terceirizado selecionado.</p>
   {% else %}
@@ -138,16 +160,85 @@
     <div>Total pendente: R$ {{ total_pendente|brl }}</div>
     <div style="font-size:16px;margin-top:4px;"><b>Total geral: R$ {{ total_geral|brl }}</b></div>
   </div>
+  <div class="ajuste-box" data-total="{{ total_geral }}">
+    <div class="ajuste-titulo">Ajuste Manual</div>
+    <div class="ajuste-campos">
+      <div class="ajuste-campo">
+        <label class="ajuste-label">Crédito (+)</label>
+        <div class="ajuste-input-wrap verde">
+          <span>R$</span>
+          <input type="number" class="ajuste-input ajuste-credito" min="0" step="0.01" placeholder="0,00">
+        </div>
+      </div>
+      <div class="ajuste-campo">
+        <label class="ajuste-label">Débito (−)</label>
+        <div class="ajuste-input-wrap vermelho">
+          <span>R$</span>
+          <input type="number" class="ajuste-input ajuste-debito" min="0" step="0.01" placeholder="0,00">
+        </div>
+      </div>
+    </div>
+    <div class="ajuste-resultado">
+      Fechamento Final: <b class="fechamento-final">R$ {{ total_geral|brl }}</b>
+    </div>
+  </div>
   {% endif %}
   {% endif %}
 </div>
 
+<style>
+  .ajuste-box {
+    margin-top: 18px; border-top: 2px dashed #d9c6b3;
+    padding-top: 14px; padding-bottom: 4px;
+  }
+  .ajuste-titulo {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .6px; color: #5C442C; opacity: .7; margin-bottom: 10px;
+  }
+  .ajuste-campos { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 12px; }
+  .ajuste-campo { display: flex; flex-direction: column; gap: 4px; }
+  .ajuste-label { font-size: 11px; font-weight: 700; color: #5C442C; opacity: .75; }
+  .ajuste-input-wrap {
+    display: flex; align-items: center; gap: 5px;
+    border: 1.5px solid #d9c6b3; border-radius: 6px;
+    padding: 4px 8px; background: #faf6f2; font-size: 13px;
+  }
+  .ajuste-input-wrap.verde { border-color: #a0cba8; }
+  .ajuste-input-wrap.verde span { color: #1a7a3c; font-weight: 700; }
+  .ajuste-input-wrap.vermelho { border-color: #e9a0a0; }
+  .ajuste-input-wrap.vermelho span { color: #7a2020; font-weight: 700; }
+  .ajuste-input {
+    width: 110px; border: none; background: transparent;
+    font-size: 13px; outline: none; font-variant-numeric: tabular-nums;
+  }
+  .ajuste-resultado {
+    font-size: 15px; color: #5C442C; padding: 10px 14px;
+    background: #f9e9dc; border-radius: 8px; display: inline-block;
+  }
+</style>
 <script>
   const params = new URLSearchParams({ data_inicio: "{{ data_inicio }}", data_fim: "{{ data_fim }}", terceirizado_id: "{{ terceirizado_id }}" });
   document.getElementById('imprimirLink').href = "/fechamento/imprimir?" + params.toString();
   document.getElementById('resumoLink').href = "/fechamento/resumo-por-terceirizado?" + params.toString();
   document.getElementById('excelLink').href = "/fechamento/exportar-excel?" + params.toString();
   searchableSelect(document.getElementById('terceirizadoFiltroSelect'));
+
+  function fmtBRL(v) {
+    return 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+  document.querySelectorAll('.ajuste-box').forEach(box => {
+    const total = parseFloat(box.dataset.total) || 0;
+    const resultado = box.querySelector('.fechamento-final');
+    const credito = box.querySelector('.ajuste-credito');
+    const debito  = box.querySelector('.ajuste-debito');
+    function recalc() {
+      const c = parseFloat(credito.value) || 0;
+      const d = parseFloat(debito.value)  || 0;
+      resultado.textContent = fmtBRL(total + c - d);
+    }
+    credito.addEventListener('input', recalc);
+    debito.addEventListener('input', recalc);
+  });
 </script>
 {% endblock %}
 
