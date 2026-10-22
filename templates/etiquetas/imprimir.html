@@ -308,7 +308,7 @@
 
   {# ────────── GÔNDOLA (arte Canva) ────────── #}
   {% for p in produtos %}
-    {% set tem_promo = p.preco_promocao is not none and p.preco_promocao > 0 %}
+    {% set tem_promo = p.preco_promocao is not none and p.preco_promocao > 0 and (p.promo_validade is none or p.promo_validade >= today) %}
     {% set preco_exibir = p.preco_promocao if tem_promo else None %}
     {% set pv = '%.2f'|format(preco_exibir if tem_promo else p.preco_varejo)   if (preco_exibir if tem_promo else p.preco_varejo)   is not none else None %}
     {% set pa = '%.2f'|format(preco_exibir if tem_promo else p.preco_atacado)  if (preco_exibir if tem_promo else p.preco_atacado)  is not none else None %}

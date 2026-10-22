@@ -188,6 +188,7 @@ def _migrar_banco():
         )""",
         "ALTER TABLE etiquetas_produtos ADD COLUMN preco_promocao REAL",
         "ALTER TABLE etiquetas_produtos ADD COLUMN nome_generico TEXT",
+        "ALTER TABLE etiquetas_produtos ADD COLUMN promo_validade TEXT",
         """CREATE TABLE IF NOT EXISTS etiquetas_codigos_bloqueados (
             codigo TEXT PRIMARY KEY,
             bloqueado_em TEXT DEFAULT (date('now'))
@@ -5159,11 +5160,17 @@ def etiquetas_index():
         flash("Acesso negado.", "erro")
         return redirect(url_for("login"))
     db = get_db()
+    db.execute(
+        "UPDATE etiquetas_produtos SET preco_promocao=NULL, promo_validade=NULL "
+        "WHERE promo_validade IS NOT NULL AND promo_validade < date('now')"
+    )
+    db.commit()
     produtos = db.execute(
         "SELECT * FROM etiquetas_produtos ORDER BY descricao"
     ).fetchall()
     total = len(produtos)
-    return render_template("etiquetas/index.html", produtos=produtos, total=total)
+    hoje = date.today().isoformat()
+    return render_template("etiquetas/index.html", produtos=produtos, total=total, hoje=hoje)
 
 
 @app.route("/etiquetas/nome-generico", methods=["POST"])
@@ -5183,12 +5190,16 @@ def etiquetas_preco_promocao():
     if not tem_permissao("etiquetas"):
         return {"ok": False, "erro": "Acesso negado"}, 403
     db = get_db()
-    pid   = request.form.get("id")
-    valor = request.form.get("preco_promocao", "").strip().replace(",", ".")
-    preco = float(valor) if valor else None
-    db.execute("UPDATE etiquetas_produtos SET preco_promocao=? WHERE id=?", (preco, pid))
+    pid      = request.form.get("id")
+    valor    = request.form.get("preco_promocao", "").strip().replace(",", ".")
+    preco    = float(valor) if valor else None
+    validade = request.form.get("promo_validade", "").strip() or None
+    db.execute(
+        "UPDATE etiquetas_produtos SET preco_promocao=?, promo_validade=? WHERE id=?",
+        (preco, validade, pid)
+    )
     db.commit()
-    return {"ok": True, "preco_promocao": preco}
+    return {"ok": True, "preco_promocao": preco, "promo_validade": validade}
 
 
 @app.route("/etiquetas/imprimir", methods=["POST"])
@@ -5207,7 +5218,8 @@ def etiquetas_imprimir():
         f"SELECT * FROM etiquetas_produtos WHERE id IN ({placeholders}) ORDER BY descricao",
         ids,
     ).fetchall()
-    return render_template("etiquetas/imprimir.html", produtos=produtos, layout=layout)
+    today = date.today().isoformat()
+    return render_template("etiquetas/imprimir.html", produtos=produtos, layout=layout, today=today)
 
 
 def _ler_tabela_handsys(arquivo):

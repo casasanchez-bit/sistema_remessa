@@ -85,6 +85,12 @@
     .promo-salvar { background: var(--laranja); color: #fff; border: none; border-radius: 4px; padding: 3px 7px; font-size: 11px; font-weight: 700; cursor: pointer; }
     .promo-cancelar { background: none; border: none; color: #aaa; cursor: pointer; font-size: 13px; padding: 0 2px; }
     .promo-ok { color: #1a7a3c; font-size: 11px; display: none; }
+    .validade-input {
+      width: 110px; padding: 3px 6px; border: 1.5px solid var(--laranja);
+      border-radius: 4px; font-size: 12px; margin-top: 3px;
+    }
+    .validade-label { font-size: 10px; color: #999; margin-top: 2px; white-space: nowrap; }
+    .validade-expirada { color: #c00; font-weight: 700; }
 
     /* Edição inline de nome na etiqueta */
     .nome-cell { position: relative; min-width: 130px; }
@@ -156,6 +162,7 @@
             <th style="text-align:right">Preço Atacado</th>
             <th style="text-align:right">Preço Varejo</th>
             <th style="text-align:right" title="Clique no valor para editar">Promoção ✏️</th>
+            <th style="text-align:center" title="Validade do preço de promoção">Validade<br>Promo</th>
             <th style="text-align:center">Preço<br>Atualizado em:</th>
           </tr>
         </thead>
@@ -191,14 +198,29 @@
                   + promoção
                 {% endif %}
               </span>
-              <span class="promo-input-wrap">
-                <input type="text" class="promo-input" placeholder="0,00"
-                       value="{% if p.preco_promocao is not none %}{{ '%.2f'|format(p.preco_promocao)|replace('.',',') }}{% endif %}"
-                       onkeydown="teclaPromo(event, this)">
-                <button type="button" class="promo-salvar" onclick="salvarPromo(this)">✓</button>
-                <button type="button" class="promo-cancelar" onclick="cancelarPromo(this)" title="Cancelar">✕</button>
+              <span class="promo-input-wrap" style="flex-direction:column; align-items:flex-start; gap:2px">
+                <span style="display:flex; gap:4px; align-items:center">
+                  <input type="text" class="promo-input" placeholder="0,00"
+                         value="{% if p.preco_promocao is not none %}{{ '%.2f'|format(p.preco_promocao)|replace('.',',') }}{% endif %}"
+                         onkeydown="teclaPromo(event, this)">
+                  <button type="button" class="promo-salvar" onclick="salvarPromo(this)">✓</button>
+                  <button type="button" class="promo-cancelar" onclick="cancelarPromo(this)" title="Cancelar">✕</button>
+                </span>
+                <span style="display:flex; align-items:center; gap:4px">
+                  <span class="validade-label">Validade:</span>
+                  <input type="date" class="validade-input" value="{{ p.promo_validade or '' }}">
+                </span>
               </span>
               <span class="promo-ok">✓ Salvo</span>
+            </td>
+            <td class="validade-cell" data-id="{{ p.id }}" style="text-align:center; font-size:11px; white-space:nowrap">
+              {% if p.promo_validade %}
+                <span class="validade-val{% if p.promo_validade < hoje %} validade-expirada{% endif %}">
+                  {{ p.promo_validade[8:10] }}/{{ p.promo_validade[5:7] }}/{{ p.promo_validade[0:4] }}{% if p.promo_validade < hoje %} ✕{% endif %}
+                </span>
+              {% else %}
+                <span style="color:#bbb">—</span>
+              {% endif %}
             </td>
             <td style="text-align:center; font-size:11px; color:#999; white-space:nowrap">
               {% if p.atualizado_em %}
@@ -342,14 +364,17 @@
   }
 
   function salvarPromo(btnSalvar) {
-    const cell  = btnSalvar.closest('.promo-cell');
-    const id    = cell.dataset.id;
-    const input = cell.querySelector('.promo-input');
-    const valor = input.value.trim().replace(',', '.');
+    const cell     = btnSalvar.closest('.promo-cell');
+    const id       = cell.dataset.id;
+    const input    = cell.querySelector('.promo-input');
+    const valInput = cell.querySelector('.validade-input');
+    const valor    = input.value.trim().replace(',', '.');
+    const validade = valInput ? valInput.value.trim() : '';
     const fd = new FormData();
     fd.append('csrf_token', csrfToken);
     fd.append('id', id);
     fd.append('preco_promocao', valor);
+    fd.append('promo_validade', validade);
     fetch('/etiquetas/preco-promocao', { method: 'POST', body: fd })
       .then(r => r.json())
       .then(data => {
@@ -366,6 +391,23 @@
         span.onclick = function() { abrirPromo(this); };
         cell.querySelector('.promo-input-wrap').classList.remove('ativo');
         span.style.display = '';
+        // atualiza a célula de validade ao lado
+        const tr = cell.closest('tr');
+        if (tr) {
+          const vCell = tr.querySelector('.validade-cell');
+          if (vCell) {
+            if (data.promo_validade) {
+              const d = data.promo_validade;
+              const fmt = d.substring(8,10)+'/'+d.substring(5,7)+'/'+d.substring(0,4);
+              const hoje = '{{ hoje }}';
+              const expirada = d < hoje;
+              vCell.innerHTML = '<span class="validade-val' + (expirada ? ' validade-expirada' : '') + '">'
+                + fmt + (expirada ? ' ✕' : '') + '</span>';
+            } else {
+              vCell.innerHTML = '<span style="color:#bbb">—</span>';
+            }
+          }
+        }
         const ok = cell.querySelector('.promo-ok');
         ok.style.display = 'inline';
         setTimeout(() => ok.style.display = 'none', 1500);
