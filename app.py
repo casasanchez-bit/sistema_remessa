@@ -1109,7 +1109,11 @@ def mobile_inventario_lista():
         r["produto_id"] for r in
         db.execute("SELECT DISTINCT produto_id FROM inventario_estoque").fetchall()
     )
-    lista = [dict(p) | {"tem_inv": p["id"] in ids_com_inv} for p in produtos]
+    lista = []
+    for p in produtos:
+        d = dict(p)
+        d["tem_inv"] = p["id"] in ids_com_inv
+        lista.append(d)
     return render_template("mobile/inventario_lista.html", produtos=lista)
 
 
