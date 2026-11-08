@@ -1372,9 +1372,12 @@ def inventario_estoque(produto_id):
             refs     = request.form.getlist("ref_fornecedor")
             forns    = request.form.getlist("fornecedor")
 
+            def vint(v): return int(v) if str(v).strip().lstrip('-').isdigit() else None
+            def vstr(v): return str(v).strip() or None
+            def vcort(v):
+                val = str(v).strip().upper().replace(" ", "")
+                return val if val else None
             for i, inv_id in enumerate(ids):
-                def vint(v): return int(v) if v.strip() else None
-                def vstr(v): return v.strip() or None
                 try:
                     db.execute(
                         """UPDATE inventario_estoque SET
@@ -1383,7 +1386,7 @@ def inventario_estoque(produto_id):
                            WHERE id=? AND produto_id=?""",
                         (vstr(cores[i]), vint(est_mins[i]), vint(est_maxs[i]),
                          vstr(cost1s[i]), vstr(cost2s[i]),
-                         vint(corts[i]), vint(tecidos[i]),
+                         vcort(corts[i]), vint(tecidos[i]),
                          vstr(refs[i]), vstr(forns[i]),
                          inv_id, produto_id)
                     )
