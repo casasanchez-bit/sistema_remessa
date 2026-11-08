@@ -1101,6 +1101,58 @@ def mobile_produto_ver(produto_id):
                            pendente_por_terceirizado=pendente_por_terceirizado)
 
 
+@app.route("/m/inventario/")
+def mobile_inventario_lista():
+    db = get_db()
+    produtos = db.execute("SELECT * FROM produtos ORDER BY descricao COLLATE NOCASE").fetchall()
+    ids_com_inv = set(
+        r["produto_id"] for r in
+        db.execute("SELECT DISTINCT produto_id FROM inventario_estoque").fetchall()
+    )
+    lista = [dict(p) | {"tem_inv": p["id"] in ids_com_inv} for p in produtos]
+    return render_template("mobile/inventario_lista.html", produtos=lista)
+
+
+@app.route("/m/inventario/<int:produto_id>")
+def mobile_inventario_produto(produto_id):
+    db = get_db()
+    produto = db.execute("SELECT * FROM produtos WHERE id = ?", (produto_id,)).fetchone()
+    if produto is None:
+        return redirect(url_for("mobile_inventario_lista"))
+    itens = db.execute(
+        "SELECT * FROM inventario_estoque WHERE produto_id=? ORDER BY cor COLLATE NOCASE",
+        (produto_id,)
+    ).fetchall()
+    return render_template("mobile/inventario_produto.html", produto=produto, itens=itens)
+
+
+@app.route("/m/inventario/<int:produto_id>/salvar-linha", methods=["POST"])
+def mobile_inventario_salvar_linha(produto_id):
+    db = get_db()
+    data   = request.get_json()
+    inv_id = data.get("inv_id")
+    if not inv_id:
+        return {"ok": False, "erro": "ID inválido"}, 400
+    def vint(v): return int(v) if v is not None and str(v).strip().lstrip('-').isdigit() else None
+    def vstr(v): return str(v).strip() if v else None
+    def vcort(v):
+        val = str(v).strip().upper().replace(" ", "") if v else ""
+        return val or None
+    db.execute(
+        """UPDATE inventario_estoque SET
+            est_min=?, est_max=?, costureira_1=?, costureira_2=?,
+            cortado=?, est_tecido_pcs=?, ref_fornecedor=?, fornecedor=?
+           WHERE id=? AND produto_id=?""",
+        (vint(data.get("est_min")), vint(data.get("est_max")),
+         vstr(data.get("costureira_1")), vstr(data.get("costureira_2")),
+         vcort(data.get("cortado")), vint(data.get("est_tecido_pcs")),
+         vstr(data.get("ref_fornecedor")), vstr(data.get("fornecedor")),
+         inv_id, produto_id)
+    )
+    db.commit()
+    return {"ok": True}
+
+
 @app.route("/m/terceirizado/<int:terceirizado_id>")
 def mobile_terceirizado_ver(terceirizado_id):
     db = get_db()
