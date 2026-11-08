@@ -6,7 +6,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, flash, g, redirect, render_template, request, send_file, send_from_directory, session, url_for
+from flask import Flask, flash, g, jsonify, redirect, render_template, request, send_file, send_from_directory, session, url_for
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -1135,10 +1135,12 @@ def mobile_inventario_produto(produto_id):
 @app.route("/m/inventario/<int:produto_id>/salvar-linha", methods=["POST"])
 def mobile_inventario_salvar_linha(produto_id):
     db = get_db()
-    data   = request.get_json()
+    data = request.get_json(force=True, silent=True)
+    if not data:
+        return jsonify({"ok": False, "erro": "Dados inválidos"}), 400
     inv_id = data.get("inv_id")
     if not inv_id:
-        return {"ok": False, "erro": "ID inválido"}, 400
+        return jsonify({"ok": False, "erro": "ID inválido"}), 400
     def vint(v): return int(v) if v is not None and str(v).strip().lstrip('-').isdigit() else None
     def vstr(v): return str(v).strip() if v else None
     def vcort(v):
@@ -1156,7 +1158,7 @@ def mobile_inventario_salvar_linha(produto_id):
          inv_id, produto_id)
     )
     db.commit()
-    return {"ok": True}
+    return jsonify({"ok": True})
 
 
 @app.route("/m/inventario/<int:produto_id>/salvar", methods=["POST"])

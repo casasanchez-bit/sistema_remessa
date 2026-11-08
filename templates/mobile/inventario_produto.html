@@ -241,7 +241,11 @@
 
     fetch('/m/inventario/{{ produto.id }}/salvar-linha', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+        'X-CSRF-Token': csrfToken
+      },
       body: JSON.stringify(dados)
     })
     .then(function(r) { return r.json(); })
