@@ -203,6 +203,20 @@ def _migrar_banco():
             observacoes TEXT NOT NULL DEFAULT '',
             UNIQUE(terceirizado_id, data_inicio, data_fim)
         )""",
+        """CREATE TABLE IF NOT EXISTS inventario_estoque (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            produto_id INTEGER NOT NULL REFERENCES produtos(id) ON DELETE CASCADE,
+            cor TEXT NOT NULL,
+            est_min INTEGER,
+            est_max INTEGER,
+            costureira_1 TEXT,
+            costureira_2 TEXT,
+            cortado INTEGER,
+            est_tecido_pcs INTEGER,
+            ref_fornecedor TEXT,
+            fornecedor TEXT,
+            UNIQUE(produto_id, cor)
+        )""",
     ]
     for sql in migrações:
         try:
@@ -210,6 +224,31 @@ def _migrar_banco():
             con.commit()
         except sqlite3.OperationalError:
             pass
+
+    # ── Dados iniciais do inventário — produto 13027 (CP BAGUETE MODERN LINHO LISA) ──
+    try:
+        p13027 = con.execute("SELECT id FROM produtos WHERE codigo='13027'").fetchone()
+        if p13027:
+            cores_13027 = [
+                ("Caramelo", "214", None),
+                ("Palha",    "204", None),
+                ("Canela",   "828", None),
+                ("Azul",     "730", None),
+                ("Tabaco",   "840", None),
+                ("Cinza Escuro", "903", None),
+                ("Cru",      "200", None),
+                ("Cinza Claro", "Gelo", "Edan"),
+                ("Marinho",  None,  None),
+                ("Palha Esc", None, None),
+            ]
+            for cor, ref, forn in cores_13027:
+                con.execute(
+                    "INSERT OR IGNORE INTO inventario_estoque (produto_id, cor, ref_fornecedor, fornecedor) VALUES (?,?,?,?)",
+                    (p13027["id"], cor, ref, forn)
+                )
+            con.commit()
+    except Exception:
+        pass
 
     # ── Multi-serviço por item de remessa ──────────────────────────────────────
     try:
@@ -1308,6 +1347,78 @@ def ver_produto(produto_id):
         tem_composicao=tem_composicao,
         from_dashboard=from_dashboard,
     )
+
+
+@app.route("/produtos/<int:produto_id>/inventario", methods=["GET", "POST"])
+def inventario_estoque(produto_id):
+    db = get_db()
+    produto = db.execute("SELECT * FROM produtos WHERE id = ?", (produto_id,)).fetchone()
+    if produto is None:
+        flash("Produto não encontrado.", "erro")
+        return redirect(url_for("cadastros_produtos"))
+
+    if request.method == "POST":
+        acao = request.form.get("acao", "")
+
+        if acao == "salvar":
+            ids      = request.form.getlist("inv_id")
+            cores    = request.form.getlist("cor")
+            est_mins = request.form.getlist("est_min")
+            est_maxs = request.form.getlist("est_max")
+            cost1s   = request.form.getlist("costureira_1")
+            cost2s   = request.form.getlist("costureira_2")
+            corts    = request.form.getlist("cortado")
+            tecidos  = request.form.getlist("est_tecido_pcs")
+            refs     = request.form.getlist("ref_fornecedor")
+            forns    = request.form.getlist("fornecedor")
+
+            for i, inv_id in enumerate(ids):
+                def vint(v): return int(v) if v.strip() else None
+                def vstr(v): return v.strip() or None
+                try:
+                    db.execute(
+                        """UPDATE inventario_estoque SET
+                            cor=?, est_min=?, est_max=?, costureira_1=?, costureira_2=?,
+                            cortado=?, est_tecido_pcs=?, ref_fornecedor=?, fornecedor=?
+                           WHERE id=? AND produto_id=?""",
+                        (vstr(cores[i]), vint(est_mins[i]), vint(est_maxs[i]),
+                         vstr(cost1s[i]), vstr(cost2s[i]),
+                         vint(corts[i]), vint(tecidos[i]),
+                         vstr(refs[i]), vstr(forns[i]),
+                         inv_id, produto_id)
+                    )
+                except Exception:
+                    pass
+            db.commit()
+            flash("Inventário salvo com sucesso.", "ok")
+
+        elif acao == "adicionar":
+            cor_nova = request.form.get("nova_cor", "").strip().upper()
+            if cor_nova:
+                try:
+                    db.execute(
+                        "INSERT INTO inventario_estoque (produto_id, cor) VALUES (?, ?)",
+                        (produto_id, cor_nova)
+                    )
+                    db.commit()
+                except Exception:
+                    flash("Cor já cadastrada para este produto.", "erro")
+            else:
+                flash("Informe o nome da cor.", "erro")
+
+        elif acao == "excluir":
+            inv_id = request.form.get("inv_id_excluir")
+            if inv_id:
+                db.execute("DELETE FROM inventario_estoque WHERE id=? AND produto_id=?", (inv_id, produto_id))
+                db.commit()
+
+        return redirect(url_for("inventario_estoque", produto_id=produto_id))
+
+    itens = db.execute(
+        "SELECT * FROM inventario_estoque WHERE produto_id=? ORDER BY cor COLLATE NOCASE",
+        (produto_id,)
+    ).fetchall()
+    return render_template("produto_inventario.html", produto=produto, itens=itens)
 
 
 @app.route("/produtos/<int:produto_id>/editar", methods=["GET", "POST"])
