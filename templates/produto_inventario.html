@@ -33,8 +33,6 @@
   .td-num-view { text-align:right; min-width:60px; color:#333; }
   .td-text-view { min-width:90px; color:#333; }
   .td-vazio    { color:#ccc; text-align:center; }
-  .link-cost   { color:#1a5c8a; text-decoration:none; font-weight:600; border-bottom:1px dashed #1a5c8a; }
-  .link-cost:hover { color:#AF4005; border-color:#AF4005; }
   .cortado-view { font-family:monospace; font-size:13px; color:#AF4005; font-weight:700; letter-spacing:2px; }
   .pcs-hint    { font-size:11px; color:#888; margin-left:4px; }
 
@@ -122,22 +120,8 @@
             <td class="td-num-view" style="font-weight:700;color:#1a7a3c">{% if item.est_atual is not none %}{{ item.est_atual }}{% else %}<span class="td-vazio">—</span>{% endif %}</td>
             <td class="td-num-view">{% if item.est_min is not none %}{{ item.est_min }}{% else %}<span class="td-vazio">—</span>{% endif %}</td>
             <td class="td-num-view">{% if item.est_max is not none %}{{ item.est_max }}{% else %}<span class="td-vazio">—</span>{% endif %}</td>
-            <td class="td-text-view">
-              {% if item.costureira_1 %}
-                {% set tid1 = terceirizados_map.get(item.costureira_1.upper().strip()) %}
-                {% if tid1 %}
-                  <a href="/terceirizados/{{ tid1 }}?destaque={{ produto.id }}" class="link-cost" title="Ver remessas pendentes de {{ item.costureira_1 }}">{{ item.costureira_1 }}</a>
-                {% else %}{{ item.costureira_1 }}{% endif %}
-              {% else %}<span class="td-vazio">—</span>{% endif %}
-            </td>
-            <td class="td-text-view">
-              {% if item.costureira_2 %}
-                {% set tid2 = terceirizados_map.get(item.costureira_2.upper().strip()) %}
-                {% if tid2 %}
-                  <a href="/terceirizados/{{ tid2 }}?destaque={{ produto.id }}" class="link-cost" title="Ver remessas pendentes de {{ item.costureira_2 }}">{{ item.costureira_2 }}</a>
-                {% else %}{{ item.costureira_2 }}{% endif %}
-              {% else %}<span class="td-vazio">—</span>{% endif %}
-            </td>
+            <td class="td-text-view">{{ item.costureira_1 or '<span class="td-vazio">—</span>'|safe }}</td>
+            <td class="td-text-view">{{ item.costureira_2 or '<span class="td-vazio">—</span>'|safe }}</td>
             <td style="text-align:center">
               {% if item.cortado %}
                 <span class="cortado-view">{{ item.cortado }}</span>

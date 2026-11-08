@@ -3,26 +3,34 @@
 {% block content %}
 <style>
   /* ── Cards de cor ── */
-  .cor-card { background:#fff; border-radius:10px; box-shadow:0 1px 5px rgba(0,0,0,.1); margin-bottom:12px; overflow:hidden; border:1.5px solid #78909C; }
+  .cor-card { background:#fff; border-radius:10px; box-shadow:0 1px 5px rgba(0,0,0,.1); margin-bottom:14px; overflow:hidden; border:1.5px solid #78909C; }
   .cor-card-header { background:#fff; padding:11px 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f0ece8; }
-  .cor-nome { font-weight:700; font-size:15px; color:var(--marrom); }
-  .cor-resumo { padding:8px 14px 10px; font-size:13px; color:#666; display:flex; flex-wrap:wrap; gap:6px 14px; border-bottom:1px solid #f0ece8; background:#fff; }
-  .cor-resumo span { background:none; padding:0; }
-  .cor-resumo .val-destaque { color:var(--laranja); font-weight:700; }
-  .cor-resumo .val-atual   { color:#1a7a3c; font-weight:700; }
-  .cor-resumo .sem-val { color:#ccc; }
+  .cor-nome { font-weight:700; font-size:16px; color:var(--marrom); }
 
-  /* ── Formulário de edição dentro do card ── */
-  .cor-form { padding:12px 14px; display:none; border-top:2px solid var(--linen); }
+  /* ── Resumo (visualização) ── */
+  .cor-resumo { padding:10px 14px 12px; font-size:13px; color:#555; display:flex; flex-direction:column; gap:5px; }
+  .resumo-linha { display:flex; gap:6px; align-items:baseline; }
+  .resumo-label { color:#999; font-size:12px; min-width:90px; }
+  .resumo-val { font-weight:600; color:#333; }
+  .resumo-val.destaque { color:var(--laranja); }
+  .resumo-val.atual { color:#1a7a3c; }
+  .sem-val { color:#ccc; font-weight:400; }
+
+  /* ── Botão editar por card ── */
+  .btn-editar-card { background:var(--laranja); color:#fff; border:none; border-radius:7px; padding:7px 16px; font-size:13px; font-weight:700; cursor:pointer; }
+
+  /* ── Formulário de edição ── */
+  .cor-form { padding:12px 14px 4px; display:none; border-top:2px solid #e8ddd4; }
   .cor-form.aberto { display:block; }
   .campo-grupo { margin-bottom:12px; }
   .campo-label { font-size:12px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.4px; margin-bottom:4px; }
+  .campo-label.label-atual { color:#1a7a3c; }
   .campo-input { width:100%; padding:10px 12px; border:1.5px solid #d9c6b3; border-radius:8px; font-size:15px; outline:none; background:#fafafa; box-sizing:border-box; }
   .campo-input:focus { border-color:var(--laranja); background:#fff; }
-  .campo-input.est-atual-input { border-color:#1a7a3c; color:#1a7a3c; font-weight:700; }
-  .campo-input.est-atual-input:focus { border-color:#1a7a3c; box-shadow:0 0 0 2px rgba(26,122,60,.15); }
+  .campo-input.inp-atual { border-color:#1a7a3c; color:#1a7a3c; font-weight:700; }
+  .campo-input.inp-atual:focus { box-shadow:0 0 0 2px rgba(26,122,60,.15); }
 
-  /* ── Contador Cortado ── */
+  /* ── Cortado ── */
   .cortado-contador { display:flex; align-items:center; justify-content:center; gap:14px; margin:6px 0 2px; }
   .btn-cort { width:52px; height:52px; border-radius:50%; border:none; font-size:28px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; }
   .btn-cort-menos { background:#f0ece8; color:#5C442C; }
@@ -31,15 +39,14 @@
   .cort-display { font-size:22px; font-weight:700; color:var(--laranja); letter-spacing:4px; min-width:90px; text-align:center; font-family:monospace; }
   .cort-pcs { font-size:12px; color:#888; text-align:center; margin-top:2px; }
 
-  /* ── Botões topo (global Editar/Cancelar) ── */
-  .inv-topo-acoes { display:flex; gap:8px; margin-bottom:14px; }
-  .btn-editar-global { flex:1; background:#1a5c8a; color:#fff; border:none; border-radius:9px; padding:13px; font-size:15px; font-weight:700; cursor:pointer; }
-  .btn-cancelar-global { flex:1; background:#888; color:#fff; border:none; border-radius:9px; padding:13px; font-size:15px; cursor:pointer; display:none; }
+  /* ── Botões do card ── */
+  .card-btns { display:flex; gap:8px; margin-top:4px; margin-bottom:12px; }
+  .btn-salvar-card { flex:1; background:#1a7a3c; color:#fff; border:none; border-radius:9px; padding:12px; font-size:14px; font-weight:700; cursor:pointer; }
+  .btn-salvar-card:disabled { background:#aaa; }
+  .btn-fechar-card { background:#e0d6cc; color:#5C442C; border:none; border-radius:9px; padding:12px 18px; font-size:14px; cursor:pointer; }
 
-  /* ── Botão salvar global ── */
-  .salvar-global-wrap { display:none; margin-top:8px; }
-  .btn-salvar-global { width:100%; background:#1a7a3c; color:#fff; border:none; border-radius:9px; padding:14px; font-size:16px; font-weight:700; cursor:pointer; }
-  .btn-salvar-global:disabled { background:#aaa; }
+  /* ── Status salvo ── */
+  .salvo-ok { color:#1a7a3c; font-size:13px; text-align:center; margin-bottom:10px; display:none; font-weight:700; }
 
   /* ── Flash ── */
   .flash-m { background:#d4edda; color:#155724; border-radius:8px; padding:10px 14px; margin-bottom:12px; font-size:14px; }
@@ -51,78 +58,91 @@
   <div class="card-header">📦 {{ produto.codigo }} · {{ produto.descricao }}</div>
 </div>
 
-{% with msgs = get_flashed_messages(with_categories=true) %}
-  {% for cat, msg in msgs %}
-    <div class="flash-m">{{ msg }}</div>
-  {% endfor %}
-{% endwith %}
+<div id="flashMsg" class="flash-m" style="display:none"></div>
 
 {% if itens %}
-
-<div class="inv-topo-acoes">
-  <button class="btn-editar-global" id="btnEditar" onclick="entrarEdicao()">✏️ Editar Inventário</button>
-  <button class="btn-cancelar-global" id="btnCancelar" onclick="cancelarEdicao()">✕ Cancelar</button>
-</div>
-
-<form method="post" action="/m/inventario/{{ produto.id }}/salvar" id="frmInventario"
-      onsubmit="bloquearSalvar()">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
   {% for item in itens %}
   <div class="cor-card" id="card_{{ item.id }}">
     <div class="cor-card-header">
       <span class="cor-nome">{{ item.cor }}</span>
+      <button class="btn-editar-card" id="btnEd_{{ item.id }}" onclick="abrirCard({{ item.id }})">✏️ Editar</button>
     </div>
 
-    <!-- Resumo (modo visualização) -->
+    <!-- Resumo visualização -->
     <div class="cor-resumo" id="resumo_{{ item.id }}">
-      <span>Atual: <b class="val-atual">{% if item.est_atual is not none %}{{ item.est_atual }}{% else %}<span class="sem-val">—</span>{% endif %}</b></span>
-      <span>Mín: <b>{% if item.est_min is not none %}{{ item.est_min }}{% else %}<span class="sem-val">—</span>{% endif %}</b></span>
-      <span>Máx: <b>{% if item.est_max is not none %}{{ item.est_max }}{% else %}<span class="sem-val">—</span>{% endif %}</b></span>
-      <span>Cortado: <b class="val-destaque">{% if item.cortado %}{{ item.cortado }} ({{ item.cortado|length * 60 }} pç){% else %}<span class="sem-val">—</span>{% endif %}</b></span>
-      {% if item.est_tecido_pcs is not none %}<span>Tecido: <b>{{ item.est_tecido_pcs }} pç</b></span>{% endif %}
-      {% if item.ref_fornecedor %}<span>REF: <b>{{ item.ref_fornecedor }}</b></span>{% endif %}
-      {% if item.fornecedor %}<span>Forn: <b>{{ item.fornecedor }}</b></span>{% endif %}
+      <div class="resumo-linha">
+        <span class="resumo-label">Est. Atual:</span>
+        <span class="resumo-val atual" id="rv_atual_{{ item.id }}">{% if item.est_atual is not none %}{{ item.est_atual }}{% else %}<span class="sem-val">—</span>{% endif %}</span>
+      </div>
+      <div class="resumo-linha">
+        <span class="resumo-label">Est. Mínimo:</span>
+        <span class="resumo-val" id="rv_min_{{ item.id }}">{% if item.est_min is not none %}{{ item.est_min }}{% else %}<span class="sem-val">—</span>{% endif %}</span>
+      </div>
+      <div class="resumo-linha">
+        <span class="resumo-label">Est. Máximo:</span>
+        <span class="resumo-val" id="rv_max_{{ item.id }}">{% if item.est_max is not none %}{{ item.est_max }}{% else %}<span class="sem-val">—</span>{% endif %}</span>
+      </div>
+      <div class="resumo-linha">
+        <span class="resumo-label">Costureira 1:</span>
+        <span class="resumo-val" id="rv_c1_{{ item.id }}">{% if item.costureira_1 %}{{ item.costureira_1 }}{% else %}<span class="sem-val">—</span>{% endif %}</span>
+      </div>
+      <div class="resumo-linha">
+        <span class="resumo-label">Costureira 2:</span>
+        <span class="resumo-val" id="rv_c2_{{ item.id }}">{% if item.costureira_2 %}{{ item.costureira_2 }}{% else %}<span class="sem-val">—</span>{% endif %}</span>
+      </div>
+      <div class="resumo-linha">
+        <span class="resumo-label">Cortado:</span>
+        <span class="resumo-val destaque" id="rv_cort_{{ item.id }}">{% if item.cortado %}{{ item.cortado }} ({{ item.cortado|length * 60 }} pç){% else %}<span class="sem-val">—</span>{% endif %}</span>
+      </div>
+      <div class="resumo-linha">
+        <span class="resumo-label">Est. Tecido:</span>
+        <span class="resumo-val" id="rv_tec_{{ item.id }}">{% if item.est_tecido_pcs is not none %}{{ item.est_tecido_pcs }} pç{% else %}<span class="sem-val">—</span>{% endif %}</span>
+      </div>
+      <div class="resumo-linha">
+        <span class="resumo-label">REF Forn.:</span>
+        <span class="resumo-val" id="rv_ref_{{ item.id }}">{% if item.ref_fornecedor %}{{ item.ref_fornecedor }}{% else %}<span class="sem-val">—</span>{% endif %}</span>
+      </div>
+      <div class="resumo-linha">
+        <span class="resumo-label">Fornecedor:</span>
+        <span class="resumo-val" id="rv_forn_{{ item.id }}">{% if item.fornecedor %}{{ item.fornecedor }}{% else %}<span class="sem-val">—</span>{% endif %}</span>
+      </div>
     </div>
 
-    <!-- Campos de edição (ocultos no modo visualização) -->
+    <!-- Formulário de edição -->
     <div class="cor-form" id="form_{{ item.id }}">
-      <input type="hidden" name="inv_id" value="{{ item.id }}">
 
       <div class="campo-grupo">
-        <div class="campo-label" style="color:#1a7a3c">Est. Atual</div>
-        <input type="number" name="est_atual" class="campo-input est-atual-input"
+        <div class="campo-label label-atual">Est. Atual</div>
+        <input type="number" class="campo-input inp-atual" id="f_atual_{{ item.id }}"
                value="{{ item.est_atual if item.est_atual is not none else '' }}" min="0" inputmode="numeric">
       </div>
 
       <div class="campo-grupo">
         <div class="campo-label">Est. Mínimo</div>
-        <input type="number" name="est_min" class="campo-input"
+        <input type="number" class="campo-input" id="f_min_{{ item.id }}"
                value="{{ item.est_min if item.est_min is not none else '' }}" min="0" inputmode="numeric">
       </div>
 
       <div class="campo-grupo">
         <div class="campo-label">Est. Máximo</div>
-        <input type="number" name="est_max" class="campo-input"
+        <input type="number" class="campo-input" id="f_max_{{ item.id }}"
                value="{{ item.est_max if item.est_max is not none else '' }}" min="0" inputmode="numeric">
       </div>
 
       <div class="campo-grupo">
         <div class="campo-label">Costureira 1</div>
-        <input type="text" name="costureira_1" class="campo-input"
+        <input type="text" class="campo-input" id="f_c1_{{ item.id }}"
                value="{{ item.costureira_1 or '' }}" maxlength="60">
       </div>
 
       <div class="campo-grupo">
         <div class="campo-label">Costureira 2</div>
-        <input type="text" name="costureira_2" class="campo-input"
+        <input type="text" class="campo-input" id="f_c2_{{ item.id }}"
                value="{{ item.costureira_2 or '' }}" maxlength="60">
       </div>
 
       <div class="campo-grupo">
         <div class="campo-label">Cortado (cada X = 60 pç)</div>
-        <!-- input hidden sincronizado pelos botões +/- -->
-        <input type="hidden" name="cortado" id="cort_input_{{ item.id }}" value="{{ item.cortado or '' }}">
         <div class="cortado-contador">
           <button type="button" class="btn-cort btn-cort-menos" onclick="removerX({{ item.id }})">−</button>
           <div>
@@ -137,30 +157,32 @@
 
       <div class="campo-grupo">
         <div class="campo-label">Est. Tecido (Pç)</div>
-        <input type="number" name="est_tecido_pcs" class="campo-input"
+        <input type="number" class="campo-input" id="f_tec_{{ item.id }}"
                value="{{ item.est_tecido_pcs if item.est_tecido_pcs is not none else '' }}" min="0" inputmode="numeric">
       </div>
 
       <div class="campo-grupo">
         <div class="campo-label">REF Fornecedor</div>
-        <input type="text" name="ref_fornecedor" class="campo-input"
+        <input type="text" class="campo-input" id="f_ref_{{ item.id }}"
                value="{{ item.ref_fornecedor or '' }}" maxlength="40">
       </div>
 
       <div class="campo-grupo">
         <div class="campo-label">Fornecedor</div>
-        <input type="text" name="fornecedor" class="campo-input"
+        <input type="text" class="campo-input" id="f_forn_{{ item.id }}"
                value="{{ item.fornecedor or '' }}" maxlength="60">
       </div>
+
+      <div class="card-btns">
+        <button type="button" class="btn-fechar-card" onclick="fecharCard({{ item.id }})">Fechar</button>
+        <button type="button" class="btn-salvar-card" id="btnSalvar_{{ item.id }}"
+                onclick="salvarCard({{ item.id }})">💾 Salvar</button>
+      </div>
+      <div class="salvo-ok" id="ok_{{ item.id }}">✓ Salvo com sucesso</div>
+
     </div>
   </div>
   {% endfor %}
-
-  <div class="salvar-global-wrap" id="salvarWrap">
-    <button type="submit" class="btn-salvar-global" id="btnSalvar">💾 Salvar Inventário</button>
-  </div>
-</form>
-
 {% else %}
   <div class="card">
     <div class="empty">Nenhuma cor cadastrada para este produto.<br>Use o sistema desktop para adicionar cores.</div>
@@ -168,46 +190,96 @@
 {% endif %}
 
 <script>
-  var modoEdicao = false;
+  const csrfToken = '{{ csrf_token() }}';
 
-  function entrarEdicao() {
-    modoEdicao = true;
-    document.querySelectorAll('.cor-form').forEach(function(f) { f.classList.add('aberto'); });
-    document.getElementById('btnEditar').style.display = 'none';
-    document.getElementById('btnCancelar').style.display = '';
-    document.getElementById('salvarWrap').style.display = 'block';
-    var btn = document.getElementById('btnSalvar');
-    if (btn) { btn.disabled = false; btn.textContent = '💾 Salvar Inventário'; }
+  function abrirCard(id) {
+    document.getElementById('form_' + id).classList.add('aberto');
+    document.getElementById('btnEd_' + id).style.display = 'none';
   }
-
-  function cancelarEdicao() {
-    modoEdicao = false;
-    document.querySelectorAll('.cor-form').forEach(function(f) { f.classList.remove('aberto'); });
-    document.getElementById('btnEditar').style.display = '';
-    document.getElementById('btnCancelar').style.display = 'none';
-    document.getElementById('salvarWrap').style.display = 'none';
-  }
-
-  function bloquearSalvar() {
-    var btn = document.getElementById('btnSalvar');
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando…'; }
+  function fecharCard(id) {
+    document.getElementById('form_' + id).classList.remove('aberto');
+    document.getElementById('btnEd_' + id).style.display = '';
+    document.getElementById('ok_' + id).style.display = 'none';
   }
 
   function adicionarX(id) {
     var el = document.getElementById('cort_' + id);
     el.textContent += 'X';
-    sincronizarCort(id);
+    atualizarPcs(id);
   }
   function removerX(id) {
     var el = document.getElementById('cort_' + id);
     if (el.textContent.length > 0) el.textContent = el.textContent.slice(0, -1);
-    sincronizarCort(id);
+    atualizarPcs(id);
   }
-  function sincronizarCort(id) {
+  function atualizarPcs(id) {
     var val = document.getElementById('cort_' + id).textContent;
-    document.getElementById('cort_input_' + id).value = val;
     var n = (val.match(/X/gi) || []).length;
     document.getElementById('cort_pcs_' + id).textContent = n > 0 ? (n * 60) + ' pç' : '';
+  }
+
+  function vint(v) { var s = String(v).trim(); return s === '' ? null : (parseInt(s) || null); }
+  function vstr(v) { var s = String(v).trim(); return s || null; }
+
+  function salvarCard(id) {
+    var btn = document.getElementById('btnSalvar_' + id);
+    btn.disabled = true;
+    btn.textContent = '⏳ Salvando…';
+
+    var dados = {
+      inv_id:         id,
+      est_atual:      vint(document.getElementById('f_atual_' + id).value),
+      est_min:        vint(document.getElementById('f_min_' + id).value),
+      est_max:        vint(document.getElementById('f_max_' + id).value),
+      costureira_1:   vstr(document.getElementById('f_c1_' + id).value),
+      costureira_2:   vstr(document.getElementById('f_c2_' + id).value),
+      cortado:        vstr(document.getElementById('cort_' + id).textContent),
+      est_tecido_pcs: vint(document.getElementById('f_tec_' + id).value),
+      ref_fornecedor: vstr(document.getElementById('f_ref_' + id).value),
+      fornecedor:     vstr(document.getElementById('f_forn_' + id).value)
+    };
+
+    fetch('/m/inventario/{{ produto.id }}/salvar-linha', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+      body: JSON.stringify(dados)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      btn.disabled = false;
+      btn.textContent = '💾 Salvar';
+      if (data.ok) {
+        atualizarResumo(id, dados);
+        var ok = document.getElementById('ok_' + id);
+        ok.style.display = 'block';
+        setTimeout(function() { ok.style.display = 'none'; }, 2500);
+      } else {
+        alert('Erro ao salvar: ' + (data.erro || ''));
+      }
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.textContent = '💾 Salvar';
+      alert('Erro de rede. Tente novamente.');
+    });
+  }
+
+  function semVal() { return '<span class="sem-val">—</span>'; }
+
+  function atualizarResumo(id, d) {
+    var cort = d.cortado || '';
+    var pcs  = cort.length * 60;
+    function v(val) { return val !== null ? val : semVal(); }
+
+    document.getElementById('rv_atual_' + id).innerHTML = d.est_atual !== null ? d.est_atual : semVal();
+    document.getElementById('rv_min_'  + id).innerHTML = d.est_min  !== null ? d.est_min  : semVal();
+    document.getElementById('rv_max_'  + id).innerHTML = d.est_max  !== null ? d.est_max  : semVal();
+    document.getElementById('rv_c1_'   + id).innerHTML = d.costureira_1 || semVal();
+    document.getElementById('rv_c2_'   + id).innerHTML = d.costureira_2 || semVal();
+    document.getElementById('rv_cort_' + id).innerHTML = cort ? cort + ' (' + pcs + ' pç)' : semVal();
+    document.getElementById('rv_tec_'  + id).innerHTML = d.est_tecido_pcs !== null ? d.est_tecido_pcs + ' pç' : semVal();
+    document.getElementById('rv_ref_'  + id).innerHTML = d.ref_fornecedor || semVal();
+    document.getElementById('rv_forn_' + id).innerHTML = d.fornecedor     || semVal();
   }
 </script>
 {% endblock %}
