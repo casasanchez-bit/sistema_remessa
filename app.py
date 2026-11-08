@@ -219,6 +219,7 @@ def _migrar_banco():
             UNIQUE(produto_id, cor)
         )""",
         "ALTER TABLE inventario_estoque ADD COLUMN est_atual INTEGER",
+        "ALTER TABLE inventario_estoque ADD COLUMN foto_estampa TEXT",
     ]
     for sql in migrações:
         try:
@@ -248,6 +249,66 @@ def _migrar_banco():
                     "INSERT OR IGNORE INTO inventario_estoque (produto_id, cor, ref_fornecedor, fornecedor) VALUES (?,?,?,?)",
                     (p13027["id"], cor, ref, forn)
                 )
+            con.commit()
+    except Exception:
+        pass
+
+    # ── Dados iniciais do inventário — produto 13040 (CP ALMOF DONATELLA) ──────
+    try:
+        p13040 = con.execute("SELECT id FROM produtos WHERE codigo='13040'").fetchone()
+        if p13040:
+            estampas_13040 = [
+                ("Estampa 4",  "estampa_04.jpg"),
+                ("Estampa 5",  "estampa_05.jpg"),
+                ("Estampa 6",  "estampa_06.jpg"),
+                ("Estampa 8",  "estampa_08.jpg"),
+                ("Estampa 9",  "estampa_09.jpg"),
+                ("Estampa 10", "estampa_10.jpg"),
+                ("Estampa 11", "estampa_11.jpg"),
+                ("Estampa 17", "estampa_17.jpg"),
+                ("Estampa 18", "estampa_18.jpg"),
+                ("Estampa 21", "estampa_21.jpg"),
+                ("Estampa 22", "estampa_22.jpg"),
+                ("Estampa 23", "estampa_23.jpg"),
+                ("Estampa 25", "estampa_25.jpg"),
+                ("Estampa 26", "estampa_26.jpg"),
+                ("Estampa 27", "estampa_27.jpg"),
+                ("Estampa 28", "estampa_28.jpg"),
+                ("Estampa 29", "estampa_29.jpg"),
+                ("Estampa 30", "estampa_30.jpg"),
+                ("Estampa 31", "estampa_31.jpg"),
+                ("Estampa 32", "estampa_32.jpg"),
+                ("Estampa 35", "estampa_35.jpg"),
+                ("Estampa 36", "estampa_36.jpg"),
+                ("Estampa 37", "estampa_37.jpg"),
+                ("Estampa 38", "estampa_38.jpg"),
+                ("Estampa 39", "estampa_39.jpg"),
+                ("Estampa 40", "estampa_40.jpg"),
+                ("Estampa 41", "estampa_41.jpg"),
+                ("Estampa 42", "estampa_42.jpg"),
+                ("Estampa 43", "estampa_43.jpg"),
+                ("Estampa 44", "estampa_44.jpg"),
+                ("Estampa 45", "estampa_45.jpg"),
+                ("Estampa 46", "estampa_46.jpg"),
+                ("Estampa 47", "estampa_47.jpg"),
+                ("Estampa 48", "estampa_48.jpg"),
+                ("Estampa 49", "estampa_49.jpg"),
+            ]
+            for cor, foto in estampas_13040:
+                existing = con.execute(
+                    "SELECT id FROM inventario_estoque WHERE produto_id=? AND cor=?",
+                    (p13040["id"], cor)
+                ).fetchone()
+                if existing:
+                    con.execute(
+                        "UPDATE inventario_estoque SET foto_estampa=? WHERE id=?",
+                        (foto, existing["id"])
+                    )
+                else:
+                    con.execute(
+                        "INSERT INTO inventario_estoque (produto_id, cor, foto_estampa) VALUES (?,?,?)",
+                        (p13040["id"], cor, foto)
+                    )
             con.commit()
     except Exception:
         pass

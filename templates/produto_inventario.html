@@ -30,6 +30,9 @@
 
   /* ── Modo visualização ── */
   .td-cor-view { font-weight:700; color:#5C442C; min-width:110px; }
+  .td-foto-view { width:56px; text-align:center; }
+  .est-thumb { width:48px; height:48px; object-fit:contain; border:1px solid #e0d6cc; border-radius:4px; cursor:pointer; }
+  .est-thumb:hover { box-shadow:0 2px 8px rgba(0,0,0,.2); }
   .td-num-view { text-align:right; min-width:60px; color:#333; }
   .td-text-view { min-width:90px; color:#333; }
   .td-vazio    { color:#ccc; text-align:center; }
@@ -101,7 +104,8 @@
       <table class="inv-table">
         <thead>
           <tr>
-            <th>Cor</th>
+            <th>Foto</th>
+            <th>Cor/Est</th>
             <th>Est. Atual</th>
             <th>Est. Mín.</th>
             <th>Est. Máx.</th>
@@ -116,6 +120,14 @@
         <tbody>
           {% for item in itens %}
           <tr>
+            <td class="td-foto-view">
+              {% if item.foto_estampa %}
+                <img src="/static/estampas_donatela/{{ item.foto_estampa }}" class="est-thumb"
+                     alt="{{ item.cor }}"
+                     onclick="this.style.transform=this.style.transform?'':'scale(3) translateX(-20px)'"
+                     title="{{ item.cor }}">
+              {% else %}<span class="td-vazio">—</span>{% endif %}
+            </td>
             <td class="td-cor-view">{{ item.cor }}</td>
             <td class="td-num-view" style="font-weight:700;color:#1a7a3c">{% if item.est_atual is not none %}{{ item.est_atual }}{% else %}<span class="td-vazio">—</span>{% endif %}</td>
             <td class="td-num-view">{% if item.est_min is not none %}{{ item.est_min }}{% else %}<span class="td-vazio">—</span>{% endif %}</td>
@@ -133,7 +145,7 @@
             <td class="td-text-view">{{ item.fornecedor or '<span class="td-vazio">—</span>'|safe }}</td>
           </tr>
           {% else %}
-          <tr><td colspan="10" class="sem-itens">Nenhuma cor cadastrada. Clique em "Editar Inventário" para adicionar.</td></tr>
+          <tr><td colspan="11" class="sem-itens">Nenhuma cor cadastrada. Clique em "Editar Inventário" para adicionar.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -150,7 +162,8 @@
         <table class="inv-table">
           <thead>
             <tr>
-              <th class="td-cor-ed">Cor</th>
+              <th class="td-foto-view">Foto</th>
+              <th class="td-cor-ed">Cor/Est</th>
               <th class="td-num-ed">Est. Atual</th>
               <th class="td-num-ed">Est. Mín.</th>
               <th class="td-num-ed">Est. Máx.</th>
@@ -167,6 +180,12 @@
             {% for item in itens %}
             <tr>
               <input type="hidden" name="inv_id" value="{{ item.id }}">
+              <td class="td-foto-view">
+                {% if item.foto_estampa %}
+                  <img src="/static/estampas_donatela/{{ item.foto_estampa }}" class="est-thumb"
+                       alt="{{ item.cor }}" title="{{ item.cor }}">
+                {% else %}<span class="td-vazio">—</span>{% endif %}
+              </td>
               <td class="td-cor-ed">
                 <input type="text" name="cor" class="inv-input" value="{{ item.cor or '' }}" maxlength="40">
               </td>
@@ -213,7 +232,7 @@
               </td>
             </tr>
             {% else %}
-            <tr><td colspan="11" class="sem-itens">Nenhuma cor cadastrada. Adicione abaixo.</td></tr>
+            <tr><td colspan="12" class="sem-itens">Nenhuma cor cadastrada. Adicione abaixo.</td></tr>
             {% endfor %}
           </tbody>
         </table>
