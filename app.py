@@ -207,6 +207,7 @@ def _migrar_banco():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             produto_id INTEGER NOT NULL REFERENCES produtos(id) ON DELETE CASCADE,
             cor TEXT NOT NULL,
+            est_atual INTEGER,
             est_min INTEGER,
             est_max INTEGER,
             costureira_1 TEXT,
@@ -217,6 +218,7 @@ def _migrar_banco():
             fornecedor TEXT,
             UNIQUE(produto_id, cor)
         )""",
+        "ALTER TABLE inventario_estoque ADD COLUMN est_atual INTEGER",
     ]
     for sql in migrações:
         try:
@@ -1144,10 +1146,10 @@ def mobile_inventario_salvar_linha(produto_id):
         return val or None
     db.execute(
         """UPDATE inventario_estoque SET
-            est_min=?, est_max=?, costureira_1=?, costureira_2=?,
+            est_atual=?, est_min=?, est_max=?, costureira_1=?, costureira_2=?,
             cortado=?, est_tecido_pcs=?, ref_fornecedor=?, fornecedor=?
            WHERE id=? AND produto_id=?""",
-        (vint(data.get("est_min")), vint(data.get("est_max")),
+        (vint(data.get("est_atual")), vint(data.get("est_min")), vint(data.get("est_max")),
          vstr(data.get("costureira_1")), vstr(data.get("costureira_2")),
          vcort(data.get("cortado")), vint(data.get("est_tecido_pcs")),
          vstr(data.get("ref_fornecedor")), vstr(data.get("fornecedor")),
@@ -1155,6 +1157,46 @@ def mobile_inventario_salvar_linha(produto_id):
     )
     db.commit()
     return {"ok": True}
+
+
+@app.route("/m/inventario/<int:produto_id>/salvar", methods=["POST"])
+def mobile_inventario_salvar(produto_id):
+    db = get_db()
+    ids       = request.form.getlist("inv_id")
+    est_atuas = request.form.getlist("est_atual")
+    est_mins  = request.form.getlist("est_min")
+    est_maxs  = request.form.getlist("est_max")
+    cost1s    = request.form.getlist("costureira_1")
+    cost2s    = request.form.getlist("costureira_2")
+    corts     = request.form.getlist("cortado")
+    tecidos   = request.form.getlist("est_tecido_pcs")
+    refs      = request.form.getlist("ref_fornecedor")
+    forns     = request.form.getlist("fornecedor")
+
+    def vint(v): return int(v) if str(v).strip().lstrip('-').isdigit() else None
+    def vstr(v): return str(v).strip() or None
+    def vcort(v):
+        val = str(v).strip().upper().replace(" ", "") if v else ""
+        return val or None
+
+    for i, inv_id in enumerate(ids):
+        try:
+            db.execute(
+                """UPDATE inventario_estoque SET
+                    est_atual=?, est_min=?, est_max=?,
+                    costureira_1=?, costureira_2=?,
+                    cortado=?, est_tecido_pcs=?, ref_fornecedor=?, fornecedor=?
+                   WHERE id=? AND produto_id=?""",
+                (vint(est_atuas[i]), vint(est_mins[i]), vint(est_maxs[i]),
+                 vstr(cost1s[i]), vstr(cost2s[i]),
+                 vcort(corts[i]), vint(tecidos[i]),
+                 vstr(refs[i]), vstr(forns[i]),
+                 inv_id, produto_id)
+            )
+        except Exception:
+            pass
+    db.commit()
+    return redirect(url_for("mobile_inventario_produto", produto_id=produto_id))
 
 
 @app.route("/m/terceirizado/<int:terceirizado_id>")
@@ -1417,16 +1459,17 @@ def inventario_estoque(produto_id):
         acao = request.form.get("acao", "")
 
         if acao == "salvar":
-            ids      = request.form.getlist("inv_id")
-            cores    = request.form.getlist("cor")
-            est_mins = request.form.getlist("est_min")
-            est_maxs = request.form.getlist("est_max")
-            cost1s   = request.form.getlist("costureira_1")
-            cost2s   = request.form.getlist("costureira_2")
-            corts    = request.form.getlist("cortado")
-            tecidos  = request.form.getlist("est_tecido_pcs")
-            refs     = request.form.getlist("ref_fornecedor")
-            forns    = request.form.getlist("fornecedor")
+            ids       = request.form.getlist("inv_id")
+            cores     = request.form.getlist("cor")
+            est_atuas = request.form.getlist("est_atual")
+            est_mins  = request.form.getlist("est_min")
+            est_maxs  = request.form.getlist("est_max")
+            cost1s    = request.form.getlist("costureira_1")
+            cost2s    = request.form.getlist("costureira_2")
+            corts     = request.form.getlist("cortado")
+            tecidos   = request.form.getlist("est_tecido_pcs")
+            refs      = request.form.getlist("ref_fornecedor")
+            forns     = request.form.getlist("fornecedor")
 
             def vint(v): return int(v) if str(v).strip().lstrip('-').isdigit() else None
             def vstr(v): return str(v).strip() or None
@@ -1437,10 +1480,11 @@ def inventario_estoque(produto_id):
                 try:
                     db.execute(
                         """UPDATE inventario_estoque SET
-                            cor=?, est_min=?, est_max=?, costureira_1=?, costureira_2=?,
+                            cor=?, est_atual=?, est_min=?, est_max=?,
+                            costureira_1=?, costureira_2=?,
                             cortado=?, est_tecido_pcs=?, ref_fornecedor=?, fornecedor=?
                            WHERE id=? AND produto_id=?""",
-                        (vstr(cores[i]), vint(est_mins[i]), vint(est_maxs[i]),
+                        (vstr(cores[i]), vint(est_atuas[i]), vint(est_mins[i]), vint(est_maxs[i]),
                          vstr(cost1s[i]), vstr(cost2s[i]),
                          vcort(corts[i]), vint(tecidos[i]),
                          vstr(refs[i]), vstr(forns[i]),
