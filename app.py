@@ -1521,7 +1521,11 @@ def inventario_estoque(produto_id):
         "SELECT * FROM inventario_estoque WHERE produto_id=? ORDER BY cor COLLATE NOCASE",
         (produto_id,)
     ).fetchall()
-    return render_template("produto_inventario.html", produto=produto, itens=itens)
+    # mapa nome_upper → id para linkar costureiras a terceirizados
+    terceirizados_map = {}
+    for t in db.execute("SELECT id, nome FROM terceirizados").fetchall():
+        terceirizados_map[t["nome"].upper().strip()] = t["id"]
+    return render_template("produto_inventario.html", produto=produto, itens=itens, terceirizados_map=terceirizados_map)
 
 
 @app.route("/produtos/<int:produto_id>/editar", methods=["GET", "POST"])
