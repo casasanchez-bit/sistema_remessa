@@ -27,6 +27,14 @@ if not p:
 pid = p["id"]
 print(f"Produto Candy Color → id={pid}")
 
+# Garante que a coluna vies existe (pode não estar no banco antes do Reload)
+try:
+    db.execute("ALTER TABLE inventario_estoque ADD COLUMN vies TEXT")
+    db.commit()
+    print("Coluna 'vies' adicionada ao banco.")
+except Exception:
+    pass  # já existe
+
 # (cor principal, viés, est_atual)
 dados = [
     ("Canela",    "Palha",    10),
