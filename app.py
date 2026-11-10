@@ -1639,7 +1639,7 @@ def inventario_estoque(produto_id):
     # Overrides por código de produto
     _col_overrides = {
         '13442': {'cor': 'Estampa', 'ref_fornecedor': 'Tamanho', 'fornecedor': 'Cor Pingente'},
-        '12792': {'cor': 'Cores', 'vies': 'Viés', 'costureira_1': 'Costureira'},
+        '12792': {'cor': 'Cores', 'vies': 'Viés', 'costureira_1': 'Costureira', 'est_tecido_pcs': 'Est. Rolo'},
     }
     col.update(_col_overrides.get(produto['codigo'], {}))
 
@@ -1665,7 +1665,7 @@ def inventario_relatorio():
     }
     _col_overrides = {
         '13442': {'cor': 'Estampa', 'ref_fornecedor': 'Tamanho', 'fornecedor': 'Cor Pingente'},
-        '12792': {'cor': 'Cores', 'vies': 'Viés', 'costureira_1': 'Costureira'},
+        '12792': {'cor': 'Cores', 'vies': 'Viés', 'costureira_1': 'Costureira', 'est_tecido_pcs': 'Est. Rolo'},
     }
 
     relatorio = []
