@@ -178,16 +178,16 @@
         <thead>
           <tr>
             <th>Foto</th>
-            <th>Cor/Est</th>
+            <th>{{ col.cor }}</th>
             <th>Est. Atual</th>
             <th>Est. Mín.</th>
             <th>Est. Máx.</th>
-            <th>Costureira 1</th>
-            <th>Costureira 2</th>
-            <th>Cortado (X)</th>
-            <th>Est. Tecido (Pç)</th>
-            <th>REF Fornecedor</th>
-            <th>Fornecedor</th>
+            <th>{{ col.costureira_1 }}</th>
+            <th>{{ col.costureira_2 }}</th>
+            <th>{{ col.cortado }}</th>
+            <th>{{ col.est_tecido_pcs }}</th>
+            <th>{{ col.ref_fornecedor }}</th>
+            <th>{{ col.fornecedor }}</th>
           </tr>
         </thead>
         <tbody>
@@ -236,16 +236,16 @@
           <thead>
             <tr>
               <th class="td-foto-view">Foto</th>
-              <th class="td-cor-ed">Cor/Est</th>
+              <th class="td-cor-ed">{{ col.cor }}</th>
               <th class="td-num-ed">Est. Atual</th>
               <th class="td-num-ed">Est. Mín.</th>
               <th class="td-num-ed">Est. Máx.</th>
-              <th class="td-text-ed">Costureira 1</th>
-              <th class="td-text-ed">Costureira 2</th>
-              <th class="td-cort-ed" title="Cada X = 60 peças">Cortado (X)</th>
-              <th class="td-num-ed">Est. Tecido (Pç)</th>
-              <th class="td-text-ed">REF Fornecedor</th>
-              <th class="td-text-ed">Fornecedor</th>
+              <th class="td-text-ed">{{ col.costureira_1 }}</th>
+              <th class="td-text-ed">{{ col.costureira_2 }}</th>
+              <th class="td-cort-ed" title="Cada X = 60 peças">{{ col.cortado }}</th>
+              <th class="td-num-ed">{{ col.est_tecido_pcs }}</th>
+              <th class="td-text-ed">{{ col.ref_fornecedor }}</th>
+              <th class="td-text-ed">{{ col.fornecedor }}</th>
               <th class="td-acao"></th>
             </tr>
           </thead>

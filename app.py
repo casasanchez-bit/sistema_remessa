@@ -1584,7 +1584,24 @@ def inventario_estoque(produto_id):
         "SELECT * FROM inventario_estoque WHERE produto_id=? ORDER BY cor COLLATE NOCASE",
         (produto_id,)
     ).fetchall()
-    return render_template("produto_inventario.html", produto=produto, itens=itens)
+
+    # Labels padrão das colunas
+    col = {
+        'cor':            'Cor/Est',
+        'costureira_1':   'Costureira 1',
+        'costureira_2':   'Costureira 2',
+        'cortado':        'Cortado (X)',
+        'est_tecido_pcs': 'Est. Tecido (Pç)',
+        'ref_fornecedor': 'REF Fornecedor',
+        'fornecedor':     'Fornecedor',
+    }
+    # Overrides por código de produto
+    _col_overrides = {
+        '13442': {'cor': 'Estampa', 'ref_fornecedor': 'Tamanho', 'fornecedor': 'Cor Pingente'},
+    }
+    col.update(_col_overrides.get(produto['codigo'], {}))
+
+    return render_template("produto_inventario.html", produto=produto, itens=itens, col=col)
 
 
 @app.route("/produtos/<int:produto_id>/editar", methods=["GET", "POST"])
