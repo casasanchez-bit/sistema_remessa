@@ -51,7 +51,7 @@
   /* ── Foto estampa ── */
   .cor-corpo { display:flex; align-items:center; gap:10px; padding-right:14px; }
   .cor-corpo .cor-resumo { flex:1; min-width:0; }
-  .est-thumb-m { width:2cm; height:2cm; object-fit:contain; border:1px solid #e0d6cc; border-radius:6px; flex-shrink:0; cursor:zoom-in; background:#fff; }
+  .est-thumb-m { width:4cm; height:4cm; object-fit:contain; border:1px solid #e0d6cc; border-radius:6px; flex-shrink:0; cursor:zoom-in; background:#fff; }
   /* ── Lightbox mobile ── */
   #lb-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:9999; align-items:center; justify-content:center; flex-direction:column; gap:14px; }
   #lb-overlay.ativo { display:flex; }
@@ -195,9 +195,9 @@
         <button type="button" class="btn-salvar-card" id="btnSalvar_{{ item.id }}"
                 onclick="salvarCard({{ item.id }})">💾 Salvar</button>
       </div>
-      <div class="salvo-ok" id="ok_{{ item.id }}">✓ Salvo com sucesso</div>
 
     </div>
+    <div class="salvo-ok" id="ok_{{ item.id }}">✓ Salvo com sucesso</div>
   </div>
   {% endfor %}
 {% else %}
@@ -271,6 +271,8 @@
       btn.textContent = '💾 Salvar';
       if (data.ok) {
         atualizarResumo(id, dados);
+        fecharCard(id);
+        document.getElementById('card_' + id).scrollIntoView({ behavior: 'smooth', block: 'start' });
         var ok = document.getElementById('ok_' + id);
         ok.style.display = 'block';
         setTimeout(function() { ok.style.display = 'none'; }, 2500);
