@@ -141,9 +141,10 @@
 
     /* Larguras de coluna para caber em A4 retrato (190mm úteis) */
     .td-foto-view  { width:9mm !important; }
-    .td-cor-view   { width:26mm !important; }
-    .td-num-view   { min-width:0 !important; width:15mm !important; }
-    .td-text-view  { min-width:0 !important; width:18mm !important; }
+    .td-cor-view   { width:22mm !important; }
+    .td-vies-view  { min-width:0 !important; width:16mm !important; }
+    .td-num-view   { min-width:0 !important; width:13mm !important; }
+    .td-text-view  { min-width:0 !important; width:15mm !important; }
   }
 </style>
 
@@ -179,6 +180,7 @@
           <tr>
             <th>Foto</th>
             <th>{{ col.cor }}</th>
+            <th>{{ col.vies }}</th>
             <th>Est. Atual</th>
             <th>Est. Mín.</th>
             <th>Est. Máx.</th>
@@ -202,6 +204,7 @@
               {% else %}<span class="td-vazio">—</span>{% endif %}
             </td>
             <td class="td-cor-view">{{ item.cor }}</td>
+            <td class="td-vies-view">{{ item.vies or '<span class="td-vazio">—</span>'|safe }}</td>
             <td class="td-num-view" style="font-weight:700;color:#1a7a3c">{% if item.est_atual is not none %}{{ item.est_atual }}{% else %}<span class="td-vazio">—</span>{% endif %}</td>
             <td class="td-num-view">{% if item.est_min is not none %}{{ item.est_min }}{% else %}<span class="td-vazio">—</span>{% endif %}</td>
             <td class="td-num-view">{% if item.est_max is not none %}{{ item.est_max }}{% else %}<span class="td-vazio">—</span>{% endif %}</td>
@@ -218,7 +221,7 @@
             <td class="td-text-view">{{ item.fornecedor or '<span class="td-vazio">—</span>'|safe }}</td>
           </tr>
           {% else %}
-          <tr><td colspan="11" class="sem-itens">Nenhuma cor cadastrada. Clique em "Editar Inventário" para adicionar.</td></tr>
+          <tr><td colspan="12" class="sem-itens">Nenhuma cor cadastrada. Clique em "Editar Inventário" para adicionar.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -237,6 +240,7 @@
             <tr>
               <th class="td-foto-view">Foto</th>
               <th class="td-cor-ed">{{ col.cor }}</th>
+              <th class="td-text-ed">{{ col.vies }}</th>
               <th class="td-num-ed">Est. Atual</th>
               <th class="td-num-ed">Est. Mín.</th>
               <th class="td-num-ed">Est. Máx.</th>
@@ -263,6 +267,9 @@
               </td>
               <td class="td-cor-ed">
                 <input type="text" name="cor" class="inv-input" value="{{ item.cor or '' }}" maxlength="40">
+              </td>
+              <td class="td-text-ed">
+                <input type="text" name="vies" class="inv-input" value="{{ item.vies or '' }}" maxlength="40">
               </td>
               <td class="td-num-ed">
                 <input type="number" name="est_atual" class="inv-input" value="{{ item.est_atual if item.est_atual is not none else '' }}" min="0" style="font-weight:700;color:#1a7a3c">
@@ -307,7 +314,7 @@
               </td>
             </tr>
             {% else %}
-            <tr><td colspan="12" class="sem-itens">Nenhuma cor cadastrada. Adicione abaixo.</td></tr>
+            <tr><td colspan="13" class="sem-itens">Nenhuma cor cadastrada. Adicione abaixo.</td></tr>
             {% endfor %}
           </tbody>
         </table>

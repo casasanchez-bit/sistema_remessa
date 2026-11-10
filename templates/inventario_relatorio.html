@@ -101,6 +101,7 @@
         <tr>
           <th style="width:44px">Foto</th>
           <th>{{ bloco.col.cor }}</th>
+          <th>{{ bloco.col.vies }}</th>
           <th>Est. Atual</th>
           <th>Est. Mín.</th>
           <th>Est. Máx.</th>
@@ -122,6 +123,7 @@
             {% else %}<span class="td-vazio">—</span>{% endif %}
           </td>
           <td class="td-cor">{{ item.cor }}</td>
+          <td>{{ item.vies or '<span class="td-vazio">—</span>'|safe }}</td>
           <td class="td-num verde">{% if item.est_atual is not none %}{{ item.est_atual }}{% else %}<span class="td-vazio">—</span>{% endif %}</td>
           <td class="td-num">{% if item.est_min is not none %}{{ item.est_min }}{% else %}<span class="td-vazio">—</span>{% endif %}</td>
           <td class="td-num">{% if item.est_max is not none %}{{ item.est_max }}{% else %}<span class="td-vazio">—</span>{% endif %}</td>
@@ -138,7 +140,7 @@
           <td>{{ item.fornecedor or '<span class="td-vazio">—</span>'|safe }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="11" class="sem-itens">Nenhum item cadastrado.</td></tr>
+        <tr><td colspan="12" class="sem-itens">Nenhum item cadastrado.</td></tr>
         {% endfor %}
       </tbody>
     </table>

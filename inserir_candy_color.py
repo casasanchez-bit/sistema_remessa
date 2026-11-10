@@ -1,11 +1,9 @@
 """
-Importa dados do inventário — Candy Color (REF: verificar com usuário)
+Importa dados do inventário — Candy Color REF: 12792
 Roda no console bash do PythonAnywhere:
-  python inserir_candy_color.py
+  python inserir_candy_color.py 12792
 
-Mapeamento: cor armazena a combinação "Cor Principal c/ Viés"
-porque a mesma cor aparece com viés diferentes (ex: V. Musgo c/ Palha
-e V. Musgo c/ Vermelho são variantes distintas).
+Cor e Viés ficam em colunas separadas (exige migração de constraint já aplicada).
 """
 import sqlite3, os, sys
 
@@ -13,9 +11,6 @@ DB = os.path.join(os.path.dirname(__file__), "controle_remessa.db")
 db = sqlite3.connect(DB)
 db.row_factory = sqlite3.Row
 
-# ── Busca o produto pelo código informado na linha de comando
-# Uso: python inserir_candy_color.py 12345
-# Se não informar, tenta localizar pelo nome
 codigo = sys.argv[1] if len(sys.argv) > 1 else None
 if codigo:
     p = db.execute("SELECT id FROM produtos WHERE codigo=?", (codigo,)).fetchone()
@@ -32,48 +27,46 @@ if not p:
 pid = p["id"]
 print(f"Produto Candy Color → id={pid}")
 
-# Combinações cor principal c/ viés — cada par é uma variante única
-# est_atual: apenas as linhas que tinham número no caderno
+# (cor principal, viés, est_atual)
 dados = [
-    # (cor,                          est_atual)
-    ("Canela c/ Palha",              10),
-    ("Marinho c/ Palha",             50),
-    ("V. Musgo c/ Palha",            None),
-    ("Marrom c/ Palha",              None),
-    ("Cinza c/ Palha",               None),
-    ("V. Musgo c/ Vermelho",         None),
-    ("Marinho c/ Vermelho",          None),
-    ("Vermelho c/ Marinho",          None),
-    ("Vermelho c/ V. Musgo",         None),
-    ("Palha c/ Marrom",              None),
-    ("Palha c/ Cinza",               None),
-    ("Palha c/ Canela",              40),
-    ("Palha c/ V. Musgo",            20),
-    ("Palha c/ Marinho",             10),
-    ("Tabaco c/ Palha",              20),
+    ("Canela",    "Palha",    10),
+    ("Marinho",   "Palha",    50),
+    ("V. Musgo",  "Palha",    None),
+    ("Marrom",    "Palha",    None),
+    ("Cinza",     "Palha",    None),
+    ("V. Musgo",  "Vermelho", None),
+    ("Marinho",   "Vermelho", None),
+    ("Vermelho",  "Marinho",  None),
+    ("Vermelho",  "V. Musgo", None),
+    ("Palha",     "Marrom",   None),
+    ("Palha",     "Cinza",    None),
+    ("Palha",     "Canela",   40),
+    ("Palha",     "V. Musgo", 20),
+    ("Palha",     "Marinho",  10),
+    ("Tabaco",    "Palha",    20),
 ]
 
 inseridos = 0
 atualizados = 0
-for (cor, est_atual) in dados:
+for (cor, vies, est_atual) in dados:
     ex = db.execute(
-        "SELECT id FROM inventario_estoque WHERE produto_id=? AND cor=?",
-        (pid, cor)
+        "SELECT id FROM inventario_estoque WHERE produto_id=? AND cor=? AND (vies=? OR (vies IS NULL AND ? IS NULL))",
+        (pid, cor, vies, vies)
     ).fetchone()
     if ex:
         db.execute(
-            "UPDATE inventario_estoque SET est_atual=? WHERE id=?",
-            (est_atual, ex["id"])
+            "UPDATE inventario_estoque SET est_atual=?, vies=? WHERE id=?",
+            (est_atual, vies, ex["id"])
         )
         atualizados += 1
-        print(f"  Atualizado: {cor}")
+        print(f"  Atualizado: {cor} / {vies}")
     else:
         db.execute(
-            "INSERT INTO inventario_estoque (produto_id, cor, est_atual) VALUES (?,?,?)",
-            (pid, cor, est_atual)
+            "INSERT INTO inventario_estoque (produto_id, cor, vies, est_atual) VALUES (?,?,?,?)",
+            (pid, cor, vies, est_atual)
         )
         inseridos += 1
-        print(f"  Inserido:  {cor}")
+        print(f"  Inserido:  {cor} / {vies}")
 
 db.commit()
 db.close()

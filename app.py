@@ -220,6 +220,7 @@ def _migrar_banco():
         )""",
         "ALTER TABLE inventario_estoque ADD COLUMN est_atual INTEGER",
         "ALTER TABLE inventario_estoque ADD COLUMN foto_estampa TEXT",
+        "ALTER TABLE inventario_estoque ADD COLUMN vies TEXT",
     ]
     for sql in migrações:
         try:
@@ -227,6 +228,43 @@ def _migrar_banco():
             con.commit()
         except sqlite3.OperationalError:
             pass
+
+    # ── Migrar constraint UNIQUE(produto_id, cor) → UNIQUE(produto_id, cor, vies)
+    # Necessário para permitir mesma cor com viés diferentes (ex: Candy Color)
+    try:
+        schema_row = con.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='inventario_estoque'"
+        ).fetchone()
+        if schema_row:
+            schema_sql = schema_row[0] or ''
+            if 'UNIQUE(produto_id, cor)' in schema_sql and 'UNIQUE(produto_id, cor, vies)' not in schema_sql:
+                con.execute("""CREATE TABLE IF NOT EXISTS inventario_estoque_v2 (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    produto_id INTEGER NOT NULL REFERENCES produtos(id) ON DELETE CASCADE,
+                    cor TEXT NOT NULL,
+                    vies TEXT,
+                    est_atual INTEGER,
+                    est_min INTEGER,
+                    est_max INTEGER,
+                    costureira_1 TEXT,
+                    costureira_2 TEXT,
+                    cortado TEXT,
+                    est_tecido_pcs TEXT,
+                    ref_fornecedor TEXT,
+                    fornecedor TEXT,
+                    foto_estampa TEXT,
+                    UNIQUE(produto_id, cor, vies)
+                )""")
+                con.execute("""INSERT OR IGNORE INTO inventario_estoque_v2
+                    SELECT id, produto_id, cor, vies, est_atual, est_min, est_max,
+                           costureira_1, costureira_2, cortado, est_tecido_pcs,
+                           ref_fornecedor, fornecedor, foto_estampa
+                    FROM inventario_estoque""")
+                con.execute("DROP TABLE inventario_estoque")
+                con.execute("ALTER TABLE inventario_estoque_v2 RENAME TO inventario_estoque")
+                con.commit()
+    except Exception:
+        pass
 
     # ── Dados iniciais do inventário — produto 13027 (CP BAGUETE MODERN LINHO LISA) ──
     try:
@@ -1524,6 +1562,7 @@ def inventario_estoque(produto_id):
         if acao == "salvar":
             ids       = request.form.getlist("inv_id")
             cores     = request.form.getlist("cor")
+            viess     = request.form.getlist("vies")
             est_atuas = request.form.getlist("est_atual")
             est_mins  = request.form.getlist("est_min")
             est_maxs  = request.form.getlist("est_max")
@@ -1543,11 +1582,12 @@ def inventario_estoque(produto_id):
                 try:
                     db.execute(
                         """UPDATE inventario_estoque SET
-                            cor=?, est_atual=?, est_min=?, est_max=?,
+                            cor=?, vies=?, est_atual=?, est_min=?, est_max=?,
                             costureira_1=?, costureira_2=?,
                             cortado=?, est_tecido_pcs=?, ref_fornecedor=?, fornecedor=?
                            WHERE id=? AND produto_id=?""",
-                        (vstr(cores[i]), vint(est_atuas[i]), vint(est_mins[i]), vint(est_maxs[i]),
+                        (vstr(cores[i]), vstr(viess[i]) if i < len(viess) else None,
+                         vint(est_atuas[i]), vint(est_mins[i]), vint(est_maxs[i]),
                          vstr(cost1s[i]), vstr(cost2s[i]),
                          vcort(corts[i]), vint(tecidos[i]),
                          vstr(refs[i]), vstr(forns[i]),
@@ -1588,6 +1628,7 @@ def inventario_estoque(produto_id):
     # Labels padrão das colunas
     col = {
         'cor':            'Cor/Est',
+        'vies':           'Viés',
         'costureira_1':   'Costureira 1',
         'costureira_2':   'Costureira 2',
         'cortado':        'Cortado (X)',
@@ -1598,6 +1639,7 @@ def inventario_estoque(produto_id):
     # Overrides por código de produto
     _col_overrides = {
         '13442': {'cor': 'Estampa', 'ref_fornecedor': 'Tamanho', 'fornecedor': 'Cor Pingente'},
+        '12792': {'cor': 'Cores', 'vies': 'Viés', 'costureira_1': 'Costureira'},
     }
     col.update(_col_overrides.get(produto['codigo'], {}))
 
@@ -1616,12 +1658,14 @@ def inventario_relatorio():
     """).fetchall()
 
     _col_defaults = {
-        'cor': 'Cor/Est', 'costureira_1': 'Costureira 1', 'costureira_2': 'Costureira 2',
-        'cortado': 'Cortado (X)', 'est_tecido_pcs': 'Est. Tecido (Pç)',
-        'ref_fornecedor': 'REF Fornecedor', 'fornecedor': 'Fornecedor',
+        'cor': 'Cor/Est', 'vies': 'Viés', 'costureira_1': 'Costureira 1',
+        'costureira_2': 'Costureira 2', 'cortado': 'Cortado (X)',
+        'est_tecido_pcs': 'Est. Tecido (Pç)', 'ref_fornecedor': 'REF Fornecedor',
+        'fornecedor': 'Fornecedor',
     }
     _col_overrides = {
         '13442': {'cor': 'Estampa', 'ref_fornecedor': 'Tamanho', 'fornecedor': 'Cor Pingente'},
+        '12792': {'cor': 'Cores', 'vies': 'Viés', 'costureira_1': 'Costureira'},
     }
 
     relatorio = []
