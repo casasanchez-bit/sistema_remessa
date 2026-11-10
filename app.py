@@ -1604,6 +1604,39 @@ def inventario_estoque(produto_id):
     return render_template("produto_inventario.html", produto=produto, itens=itens, col=col)
 
 
+@app.route("/inventario/relatorio")
+def inventario_relatorio():
+    db = get_db()
+    # Apenas produtos que têm ao menos um item no inventário
+    produtos = db.execute("""
+        SELECT DISTINCT p.id, p.codigo, p.descricao
+        FROM produtos p
+        JOIN inventario_estoque ie ON ie.produto_id = p.id
+        ORDER BY p.descricao COLLATE NOCASE
+    """).fetchall()
+
+    _col_defaults = {
+        'cor': 'Cor/Est', 'costureira_1': 'Costureira 1', 'costureira_2': 'Costureira 2',
+        'cortado': 'Cortado (X)', 'est_tecido_pcs': 'Est. Tecido (Pç)',
+        'ref_fornecedor': 'REF Fornecedor', 'fornecedor': 'Fornecedor',
+    }
+    _col_overrides = {
+        '13442': {'cor': 'Estampa', 'ref_fornecedor': 'Tamanho', 'fornecedor': 'Cor Pingente'},
+    }
+
+    relatorio = []
+    for p in produtos:
+        itens = db.execute(
+            "SELECT * FROM inventario_estoque WHERE produto_id=? ORDER BY cor COLLATE NOCASE",
+            (p["id"],)
+        ).fetchall()
+        col = dict(_col_defaults)
+        col.update(_col_overrides.get(p["codigo"], {}))
+        relatorio.append({"produto": p, "itens": itens, "col": col})
+
+    return render_template("inventario_relatorio.html", relatorio=relatorio)
+
+
 @app.route("/produtos/<int:produto_id>/editar", methods=["GET", "POST"])
 def editar_produto(produto_id):
     db = get_db()

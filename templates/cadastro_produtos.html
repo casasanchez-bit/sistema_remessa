@@ -1,7 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="card">
-  <h2>Produtos</h2>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+    <h2 style="margin:0">Produtos</h2>
+    <a href="/inventario/relatorio" class="btn secondary" style="font-size:13px;padding:7px 14px;">
+      📋 Relatório Inventário TOTAL
+    </a>
+  </div>
 
   <form method="post" action="/cadastros/produto" class="grid" style="margin-bottom:14px;">
     <input name="codigo" placeholder="Código do produto" required>
