@@ -27,13 +27,49 @@ if not p:
 pid = p["id"]
 print(f"Produto Candy Color → id={pid}")
 
-# Garante que a coluna vies existe (pode não estar no banco antes do Reload)
+# Garante coluna vies e migra constraint para UNIQUE(produto_id, cor, vies)
 try:
     db.execute("ALTER TABLE inventario_estoque ADD COLUMN vies TEXT")
     db.commit()
     print("Coluna 'vies' adicionada ao banco.")
 except Exception:
     pass  # já existe
+
+try:
+    schema_row = db.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='inventario_estoque'"
+    ).fetchone()
+    schema_sql = schema_row[0] if schema_row else ''
+    if 'UNIQUE(produto_id, cor)' in schema_sql and 'UNIQUE(produto_id, cor, vies)' not in schema_sql:
+        print("Migrando constraint única para incluir viés...")
+        db.execute("""CREATE TABLE inventario_estoque_v2 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            produto_id INTEGER NOT NULL REFERENCES produtos(id) ON DELETE CASCADE,
+            cor TEXT NOT NULL,
+            vies TEXT,
+            est_atual INTEGER,
+            est_min INTEGER,
+            est_max INTEGER,
+            costureira_1 TEXT,
+            costureira_2 TEXT,
+            cortado TEXT,
+            est_tecido_pcs TEXT,
+            ref_fornecedor TEXT,
+            fornecedor TEXT,
+            foto_estampa TEXT,
+            UNIQUE(produto_id, cor, vies)
+        )""")
+        db.execute("""INSERT OR IGNORE INTO inventario_estoque_v2
+            SELECT id, produto_id, cor, vies, est_atual, est_min, est_max,
+                   costureira_1, costureira_2, cortado, est_tecido_pcs,
+                   ref_fornecedor, fornecedor, foto_estampa
+            FROM inventario_estoque""")
+        db.execute("DROP TABLE inventario_estoque")
+        db.execute("ALTER TABLE inventario_estoque_v2 RENAME TO inventario_estoque")
+        db.commit()
+        print("Constraint migrada com sucesso.")
+except Exception as e:
+    print(f"AVISO na migração de constraint: {e}")
 
 # (cor principal, viés, est_atual)
 dados = [
