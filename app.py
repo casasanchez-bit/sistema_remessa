@@ -1625,10 +1625,10 @@ def inventario_estoque(produto_id):
         (produto_id,)
     ).fetchall()
 
-    # Labels padrão das colunas
+    # Labels padrão das colunas (vies='' = coluna oculta; só aparece quando override define label)
     col = {
         'cor':            'Cor/Est',
-        'vies':           'Viés',
+        'vies':           '',
         'costureira_1':   'Costureira 1',
         'costureira_2':   'Costureira 2',
         'cortado':        'Cortado (X)',
@@ -1662,7 +1662,7 @@ def inventario_relatorio():
     """).fetchall()
 
     _col_defaults = {
-        'cor': 'Cor/Est', 'vies': 'Viés', 'costureira_1': 'Costureira 1',
+        'cor': 'Cor/Est', 'vies': '', 'costureira_1': 'Costureira 1',
         'costureira_2': 'Costureira 2', 'cortado': 'Cortado (X)',
         'est_tecido_pcs': 'Est. Tecido (Pç)', 'ref_fornecedor': 'REF Fornecedor',
         'fornecedor': 'Fornecedor',
