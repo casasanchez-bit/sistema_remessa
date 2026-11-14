@@ -90,7 +90,7 @@ else:
 # Almofada Realce
 # ══════════════════════════════════════════════════════════════════════════════
 print("\n=== Almofada Realce ===")
-p = buscar(['09111', '0911', '9111'], '%ALMOF%REALCE%')
+p = buscar(['11882'], '%ALMOF%REALCE%')
 if not p:
     print("  PRODUTO NÃO ENCONTRADO — cadastre no sistema primeiro")
 else:
